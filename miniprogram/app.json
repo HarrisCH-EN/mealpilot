@@ -1,0 +1,6 @@
+{
+  "pages": ["pages/recommend/index", "pages/menu/index", "pages/recipes/index", "pages/settings/index"],
+  "window": {"navigationBarTitleText":"家宴计划","navigationBarBackgroundColor":"#fbf8f2","navigationBarTextStyle":"black","backgroundColor":"#fbf8f2"},
+  "tabBar": {"color":"#8b8174","selectedColor":"#c65d3a","backgroundColor":"#fffdf9","list":[{"pagePath":"pages/recommend/index","text":"推荐"},{"pagePath":"pages/menu/index","text":"菜单"},{"pagePath":"pages/recipes/index","text":"菜谱"},{"pagePath":"pages/settings/index","text":"设置"}]},
+  "style":"v2","sitemapLocation":"sitemap.json"
+}

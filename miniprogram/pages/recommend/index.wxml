@@ -1,0 +1,8 @@
+<view class="page">
+  <view class="eyebrow">JIA YAN PLAN</view><view class="title">今天，吃点好的。</view>
+  <view class="card hero"><view class="subtle">{{date}} · {{mealLabel}}</view><view class="hero-title">为 {{peopleCount}} 位家人配一桌菜</view><view class="subtle">{{modeLabel}} · 最多 {{maxMinutes}} 分钟</view><button class="button" bindtap="generate">生成今日推荐</button></view>
+  <view class="card"><view class="section-title">推荐条件</view><view class="row"><text>用餐人数</text><stepper value="{{peopleCount}}" bindchange="changePeople" /></view><view class="row"><text>最大耗时</text><slider min="30" max="180" value="{{maxMinutes}}" show-value bindchange="changeMinutes" /></view><view><text class="subtle">模式</text><view><text wx:for="{{modes}}" wx:key="value" class="chip {{mode===item.value?'active':''}}" data-value="{{item.value}}" bindtap="changeMode">{{item.label}}</text></view></view></view>
+  <view wx:if="{{loading}}" class="empty">正在为你挑选食材…</view>
+  <view wx:if="{{error}}" class="card danger">{{error}}</view>
+  <view wx:if="{{recommendation}}" class="card"><view class="row"><view class="section-title">这一桌</view><text class="chip">{{recommendation.totalCookMinutes}} 分钟</text></view><view wx:for="{{recommendation.items}}" wx:key="id" class="dish row"><view><text class="dish-title">{{item.title}}</text><view class="subtle">{{item.category}} · {{item.cookMinutes}} 分钟</view><view class="subtle">{{item.score.reason}}</view></view><text class="score">{{item.score.total}}</text></view><view class="insight">综合评分 {{recommendation.totalScore}} · 时令 {{recommendation.scoreBreakdown.season}} · 偏好 {{recommendation.scoreBreakdown.preference}}</view><button class="button secondary" bindtap="apply">确认并加入菜单</button></view>
+</view>
