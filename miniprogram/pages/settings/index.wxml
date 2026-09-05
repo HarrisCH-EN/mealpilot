@@ -1,1 +1,131 @@
-<view class="page"><view class="eyebrow">SETTINGS</view><view class="title">设置</view><view class="card"><view class="section-title">当前账户</view><view class="row"><text>{{user.display_name || '演示用户'}}</text><button class="button secondary" bindtap="login">重新登录</button></view></view><view class="card"><view class="section-title">家庭空间</view><view wx:if="{{membership}}"><view class="row"><text>{{membership.family_name}}</text><text class="chip">{{membership.role==='owner'?'所有者':'成员'}}</text></view><view class="subtle">邀请码：{{membership.invite_code}}</view><button class="button ghost" bindtap="copyCode">复制邀请码</button></view><view wx:else><button class="button" bindtap="createFamily">创建家庭</button><button class="button secondary" bindtap="joinFamily">输入邀请码加入</button></view></view><view class="card"><view class="section-title">数据洞察</view><view class="row"><text>菜单使用与评分</text><button class="button ghost" bindtap="insights">查看洞察</button></view><view wx:if="{{insight}}" class="insight">已记录 {{insight.summary.menuCount}} 个菜单、{{insight.summary.itemCount}} 道菜，平均评分 {{insight.summary.averageRating}}</view></view></view>
+<view class="page settings-page" style="{{navStyle}}">
+  <view wx:if="{{loading}}" class="settings-loading" aria-label="正在加载设置">
+    <view class="settings-loading__title"></view>
+    <view class="settings-loading__subtitle"></view>
+    <view class="settings-skeleton settings-skeleton--profile"></view>
+    <view class="settings-skeleton settings-skeleton--dashboard"></view>
+    <view class="settings-skeleton settings-skeleton--group"></view>
+  </view>
+
+  <view wx:elif="{{error && !user.display_name}}" class="settings-error">
+    <image class="settings-error__icon settings-icon" src="/assets/icons/settings/account.png" mode="aspectFit"></image>
+    <view class="settings-error__title">还没有登录</view>
+    <view class="settings-error__copy">当前仅支持本地演示登录。</view>
+    <button class="settings-action settings-action--primary" bindtap="login">演示登录</button>
+  </view>
+
+  <view wx:else class="settings-content">
+    <view class="settings-header">
+      <view class="settings-header__copy">
+        <view class="settings-header__title">设置</view>
+        <view class="settings-header__subtitle">用美食，连接家人的每一餐。</view>
+      </view>
+      <view class="settings-header__art" aria-hidden="true">
+        <text class="settings-art__heart">♥</text>
+        <view class="settings-art__house">
+          <view class="settings-art__roof"></view>
+          <view class="settings-art__door"></view>
+          <view class="settings-art__window"></view>
+        </view>
+        <view class="settings-art__tree settings-art__tree--left"><view></view></view>
+        <view class="settings-art__tree settings-art__tree--right"><view></view></view>
+      </view>
+    </view>
+
+    <view class="settings-profile" bindtap="handleUserTap">
+      <view class="settings-profile__avatar">{{userInitial}}</view>
+      <view class="settings-profile__copy">
+        <view class="settings-profile__name">{{user.display_name || '演示用户'}}</view>
+        <view class="settings-profile__meta">本地演示账户</view>
+      </view>
+      <view class="settings-chevron" aria-hidden="true"></view>
+    </view>
+
+    <view class="settings-section settings-section--dashboard">
+      <view class="settings-section__title">家庭管理</view>
+      <view wx:if="{{membership}}" class="settings-dashboard">
+        <view class="settings-quick-card" bindtap="showFamilyInfo">
+          <image class="settings-quick-card__icon" src="/assets/icons/settings/family.png" mode="aspectFit"></image>
+          <view class="settings-quick-card__title">家庭信息</view>
+          <view class="settings-quick-card__subtitle">{{familyMemberCount}} 位成员</view>
+        </view>
+        <view class="settings-quick-card" bindtap="copyCode">
+          <image class="settings-quick-card__icon" src="/assets/icons/settings/invite.png" mode="aspectFit"></image>
+          <view class="settings-quick-card__title">家庭邀请码</view>
+          <view class="settings-quick-card__subtitle settings-quick-card__subtitle--code">{{membership.invite_code || '—'}}</view>
+        </view>
+        <view class="settings-quick-card" bindtap="toggleMembers">
+          <image class="settings-quick-card__icon" src="/assets/icons/settings/member.png" mode="aspectFit"></image>
+          <view class="settings-quick-card__title">家庭成员</view>
+          <view class="settings-quick-card__subtitle">{{familyMemberCount}} 位成员</view>
+        </view>
+      </view>
+      <view wx:if="{{membership && membersExpanded}}" class="settings-members settings-members--dashboard">
+        <view wx:for="{{family.members}}" wx:key="id" class="settings-member">
+          <view class="settings-member__avatar">{{item.initial}}</view>
+          <view class="settings-member__copy">
+            <view class="settings-member__name">{{item.nickname || item.displayName}}</view>
+            <view class="settings-member__role">{{item.role === 'owner' ? '所有者' : '家庭成员'}}</view>
+          </view>
+        </view>
+      </view>
+      <view wx:if="{{!membership}}" class="settings-group settings-group--empty">
+        <view class="settings-empty__title">建立你们的家庭餐桌</view>
+        <view class="settings-empty__copy">创建家庭，或用邀请码加入已有家庭。</view>
+        <view class="settings-empty__actions">
+          <button class="settings-action settings-action--primary" bindtap="createFamily">创建家庭</button>
+          <button class="settings-action settings-action--secondary" bindtap="joinFamily">加入家庭</button>
+        </view>
+      </view>
+    </view>
+
+    <view class="settings-section">
+      <view class="settings-section__title">饮食与账户</view>
+      <view class="settings-group">
+        <view class="settings-row settings-row--disabled" bindtap="showUnavailable">
+          <image class="settings-icon" src="/assets/icons/settings/taste.png" mode="aspectFit"></image>
+          <view class="settings-row__copy"><view class="settings-row__title">家庭口味偏好</view></view>
+          <text class="settings-row__status">即将开放</text>
+        </view>
+        <view class="settings-row settings-row--disabled" bindtap="showUnavailable">
+          <image class="settings-icon" src="/assets/icons/settings/restriction.png" mode="aspectFit"></image>
+          <view class="settings-row__copy"><view class="settings-row__title">成员忌口</view></view>
+          <text class="settings-row__status">即将开放</text>
+        </view>
+        <view class="settings-row settings-row--disabled" bindtap="showUnavailable">
+          <image class="settings-icon" src="/assets/icons/settings/account.png" mode="aspectFit"></image>
+          <view class="settings-row__copy"><view class="settings-row__title">账号</view></view>
+          <text class="settings-row__status">演示模式</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="settings-section">
+      <view class="settings-section__title">更多</view>
+      <view class="settings-group">
+        <view wx:if="{{membership}}" class="settings-row" bindtap="insights">
+          <image class="settings-icon" src="/assets/icons/settings/insight.png" mode="aspectFit"></image>
+          <view class="settings-row__copy"><view class="settings-row__title">看看最近吃了什么</view></view>
+          <view wx:if="{{insightLoading}}" class="settings-row__loading"></view>
+          <view wx:else class="settings-chevron" aria-hidden="true"></view>
+        </view>
+        <view class="settings-row settings-row--disabled" bindtap="showUnavailable">
+          <image class="settings-icon" src="/assets/icons/settings/help.png" mode="aspectFit"></image>
+          <view class="settings-row__copy"><view class="settings-row__title">帮助与反馈</view></view>
+          <text class="settings-row__status">即将开放</text>
+        </view>
+        <view class="settings-row" bindtap="goAbout">
+          <image class="settings-icon" src="/assets/icons/settings/about.png" mode="aspectFit"></image>
+          <view class="settings-row__copy"><view class="settings-row__title">关于我们</view></view>
+          <view class="settings-chevron" aria-hidden="true"></view>
+        </view>
+        <view class="settings-row" bindtap="clearCache">
+          <image class="settings-icon" src="/assets/icons/settings/cache.png" mode="aspectFit"></image>
+          <view class="settings-row__copy"><view class="settings-row__title">清理缓存</view></view>
+          <text wx:if="{{cacheLabel}}" class="settings-row__status">{{cacheLabel}}</text>
+          <view class="settings-chevron" aria-hidden="true"></view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

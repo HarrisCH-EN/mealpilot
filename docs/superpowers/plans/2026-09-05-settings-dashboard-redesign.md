@@ -73,7 +73,7 @@ Header 使用相对容器承载 CSS 房屋/树/爱心装饰，装饰不覆盖标
 
 - [ ] **Step 1: 将设置页原生导航背景设为白色**
 
-保持默认原生导航栏，不改成 custom navigation，不添加假 TabBar；将页面背景元信息与白底 UI 对齐。
+使用 `navigationStyle: "custom"`，在 JS 中根据状态栏和 `wx.getMenuButtonBoundingClientRect()` 动态设置页面顶部留白；不添加返回按钮或假 TabBar，将页面背景元信息与白底 UI 对齐。
 
 - [ ] **Step 2: 静态校验事件和资源**
 
