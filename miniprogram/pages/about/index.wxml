@@ -1,23 +1,46 @@
 <view class="page about-page">
-  <view class="about-header" style="{{navStyle}}">
-    <button class="about-back" bindtap="goBack" aria-label="返回"><image src="/assets/icons/recipes/back.png" mode="aspectFit" /></button>
-    <view class="about-header__title">关于我们</view>
-    <view class="about-header__spacer"></view>
+  <view class="about-nav" style="{{navStyle}}">
+    <view class="about-nav__slot about-nav__left-slot">
+      <button class="about-nav__button about-nav__back" aria-label="返回" bindtap="goBack">
+        <image class="about-nav__icon about-nav__icon--back" src="/assets/icons/recipes/back.png" mode="aspectFit" />
+      </button>
+    </view>
+    <view class="about-nav__title">关于</view>
+    <view class="about-nav__slot about-nav__spacer"></view>
   </view>
 
-  <view class="about-hero">
-    <view class="about-logo"><view class="about-logo__bowl"></view><view class="about-logo__steam about-logo__steam--left"></view><view class="about-logo__steam about-logo__steam--right"></view></view>
-    <view class="about-name">一起吃饭</view>
-    <view class="about-tagline">用美食，记录生活的温度。</view>
-    <view class="about-version">{{versionLabel}}</view>
-  </view>
+  <scroll-view class="about-main" scroll-y enhanced show-scrollbar="{{false}}" style="{{contentStyle}}">
+    <view class="about-hero">
+      <image class="about-logo" src="/assets/brand/logo.png" mode="aspectFit" />
+      <view class="about-name">饭有谱</view>
+      <view class="about-tagline">让每一餐，都有谱。</view>
+      <view class="about-version">{{versionLabel}}</view>
+    </view>
 
-  <view class="about-group">
-    <view class="about-row" bindtap="showVersion"><image class="about-icon" src="/assets/icons/about/document.png" mode="aspectFit"></image><view class="about-row__copy">版本更新</view><text class="about-row__value">{{versionLabel}}</text><image class="about-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></view>
-    <view class="about-row about-row--disabled" bindtap="showUnavailable"><image class="about-icon" src="/assets/icons/about/shield.png" mode="aspectFit"></image><view class="about-row__copy">隐私政策</view><text class="about-row__status">即将开放</text></view>
-    <view class="about-row about-row--disabled" bindtap="showUnavailable"><image class="about-icon" src="/assets/icons/about/agreement.png" mode="aspectFit"></image><view class="about-row__copy">用户协议</view><text class="about-row__status">即将开放</text></view>
-    <view class="about-row about-row--disabled" bindtap="showUnavailable"><image class="about-icon" src="/assets/icons/about/heart.png" mode="aspectFit"></image><view class="about-row__copy">给我们评分</view><text class="about-row__status">即将开放</text></view>
-  </view>
+    <view class="about-group">
+      <view class="about-row" bindtap="showVersion">
+        <image class="about-icon" src="/assets/icons/about/document.png" mode="aspectFit"></image>
+        <view class="about-row__copy">版本更新</view>
+        <text class="about-row__value">{{versionLabel}}</text>
+        <image class="about-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
+      </view>
+      <view class="about-row about-row--disabled" bindtap="showUnavailable">
+        <image class="about-icon" src="/assets/icons/about/shield.png" mode="aspectFit"></image>
+        <view class="about-row__copy">隐私政策</view>
+        <text class="about-row__status">即将开放</text>
+      </view>
+      <view class="about-row about-row--disabled" bindtap="showUnavailable">
+        <image class="about-icon" src="/assets/icons/about/agreement.png" mode="aspectFit"></image>
+        <view class="about-row__copy">用户协议</view>
+        <text class="about-row__status">即将开放</text>
+      </view>
+      <view class="about-row about-row--disabled" bindtap="showUnavailable">
+        <image class="about-icon" src="/assets/icons/about/heart.png" mode="aspectFit"></image>
+        <view class="about-row__copy">给我们评分</view>
+        <text class="about-row__status">即将开放</text>
+      </view>
+    </view>
 
-  <view class="about-motto"><view>好好吃饭，</view><view>就是好好生活。</view><image class="about-heart" src="/assets/icons/about/heart.png" mode="aspectFit" /></view>
+    <view class="about-motto">好好吃饭，好好生活。</view>
+  </scroll-view>
 </view>

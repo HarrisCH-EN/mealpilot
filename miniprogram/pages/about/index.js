@@ -1,23 +1,37 @@
 function getNavigationLayout() {
   const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
   const statusBarHeight = Number(windowInfo.statusBarHeight || 20)
+  const windowWidth = Number(windowInfo.windowWidth || 375)
   let capsule = null
   try {
     capsule = wx.getMenuButtonBoundingClientRect()
-  } catch (_error) {
-    capsule = null
+  } catch (_error) { capsule = null }
+  const menuButtonTop = Number(capsule && capsule.top)
+  const menuButtonBottom = Number(capsule && capsule.bottom)
+  const menuButtonHeight = Number(capsule && capsule.height)
+  const hasMenuButton = Number.isFinite(menuButtonTop)
+    && Number.isFinite(menuButtonBottom)
+    && Number.isFinite(menuButtonHeight)
+    && menuButtonHeight > 0
+    && menuButtonBottom >= menuButtonTop
+  const rpxToPx = (rpx) => rpx * windowWidth / 750
+  const capsuleSpacing = rpxToPx(24)
+  const navigationHeight = rpxToPx(80)
+  const heroSpacing = rpxToPx(32)
+  const navTop = (hasMenuButton ? menuButtonBottom : statusBarHeight) + capsuleSpacing
+  const navBottom = navTop + navigationHeight
+  const pageInset = rpxToPx(36)
+  return {
+    navStyle: `top:${navTop}px;height:${navigationHeight}px;padding:0 ${pageInset}px;`,
+    contentStyle: `padding-top:${navBottom + heroSpacing}px;`
   }
-  const contentHeight = capsule && capsule.height
-    ? capsule.height + Math.max(0, capsule.top - statusBarHeight) * 2
-    : 44
-  const navigationHeight = statusBarHeight + contentHeight
-  return `height:${navigationHeight}px;padding-top:${statusBarHeight}px;`
 }
 
 Page({
   data: {
     versionLabel: '开发预览版',
-    navStyle: ''
+    navStyle: '',
+    contentStyle: ''
   },
 
   onLoad() {
@@ -33,7 +47,7 @@ Page({
     } catch (error) {
       console.warn('读取小程序版本失败', error)
     }
-    this.setData({ versionLabel, navStyle: getNavigationLayout() })
+    this.setData({ versionLabel, ...getNavigationLayout() })
   },
 
   goBack() {
