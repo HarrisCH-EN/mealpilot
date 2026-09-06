@@ -1,0 +1,54 @@
+.recipe-cloud-page,
+.recipe-module-layer {
+  --recipe-primary: #ff385c;
+  --recipe-primary-active: #e91e4d;
+  --recipe-primary-soft: #fff0f3;
+  --recipe-primary-muted: #f3b8c3;
+  --recipe-text-primary: #151515;
+  --recipe-text-secondary: #777777;
+  --recipe-text-tertiary: #aaaaaa;
+  --recipe-surface: #ffffff;
+  --recipe-surface-strong: #ffffff;
+  --recipe-border: #f0f0f0;
+  --recipe-shadow-card: 0 6rpx 20rpx rgba(0, 0, 0, .045);
+  --recipe-shadow-float: 0 8rpx 22rpx rgba(0, 0, 0, .06);
+  --recipe-radius-shell: 38rpx;
+  --recipe-radius-card: 28rpx;
+  --recipe-radius-image: 22rpx;
+  --recipe-radius-control: 18rpx;
+}
+
+.recipe-cloud-page {
+  color: var(--recipe-text-primary);
+  background: #ffffff;
+  background-color: #fff;
+}
+
+.recipe-module-layer {
+  background: var(--recipe-surface-strong);
+}
+
+.recipe-glass-card {
+  border: 1rpx solid var(--recipe-border);
+  border-radius: var(--recipe-radius-card);
+  background: var(--recipe-surface);
+  box-shadow: var(--recipe-shadow-card);
+}
+
+.recipe-module-layer .sheet-close__icon {
+  display: block;
+  width: 26rpx;
+  height: 26rpx;
+}
+
+.recipe-module-layer .picker-field__action {
+  display: flex;
+  align-items: center;
+  gap: 4rpx;
+}
+
+.recipe-module-layer .picker-field__icon {
+  display: block;
+  width: 20rpx;
+  height: 20rpx;
+}

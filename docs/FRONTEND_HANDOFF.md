@@ -40,6 +40,13 @@
 - 所有可见按钮必须保留真实行为、导航或明确提示；不能为了界面效果放置无响应按钮。
 - 推荐页不能取代手动点餐：推荐仅辅助，菜单页必须继续支持手动加菜/删菜。
 
+## 全局图标资源规范
+
+- 所有 UI icon 必须统一使用 PNG 资源插入；禁止使用 emoji、文字字符、ASCII 符号、CSS 绘制图标或 inline SVG 代替 icon。
+- PNG icon 统一放在 `E:\Database_Design\miniprogram\assets\icons\`，按功能模块放入对应子目录，例如 `recipes/`、`menu/`、`settings/`。
+- WXML 统一使用原生 `<image>` 引用 `/assets/icons/<module>/<name>.png`，并使用 `mode="aspectFit"` 保持图标比例。
+- 新增 icon 必须先补充真实 PNG 文件，再接入页面；禁止使用截图裁片、临时占位图或可见文字伪造 icon。
+
 ## 已可调用的 API
 
 基础地址：`http://127.0.0.1:3000/api`。除 `POST /auth/dev-login` 外，均需要 Bearer Token；`utils/api.js` 已自动处理。

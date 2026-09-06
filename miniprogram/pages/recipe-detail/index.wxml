@@ -1,0 +1,106 @@
+<view class="detail-page recipe-cloud-page">
+  <view class="detail-nav" style="{{navStyle}}">
+    <view class="detail-nav__slot detail-nav__left-slot">
+      <button class="detail-nav__button detail-nav__back" aria-label="返回" bindtap="back"><image class="detail-nav__icon detail-nav__icon--back" src="/assets/icons/recipes/back.png" mode="aspectFit" /></button>
+    </view>
+    <view class="detail-nav__title">菜品详情</view>
+    <view class="detail-nav__slot detail-nav__actions">
+      <button class="detail-nav__button detail-nav__favorite {{isFavorite?'detail-nav__favorite--active':''}}" aria-label="{{isFavorite?'取消本机收藏':'添加本机收藏'}}" bindtap="toggleFavorite"><image class="detail-nav__icon" src="{{isFavorite ? '/assets/icons/recipes/heart-filled.png' : '/assets/icons/recipes/heart-outline.png'}}" mode="aspectFit" /></button>
+      <button class="detail-nav__button detail-nav__more" aria-label="更多操作" bindtap="openMore"><image class="detail-nav__icon" src="/assets/icons/recipes/more.png" mode="aspectFit" /></button>
+    </view>
+  </view>
+
+  <scroll-view class="detail-main" scroll-y enhanced show-scrollbar="{{false}}" style="{{contentStyle}}">
+    <view wx:if="{{loading}}" class="detail-loading">
+      <view class="skeleton detail-skeleton detail-skeleton--hero"></view>
+      <view class="skeleton detail-skeleton detail-skeleton--title"></view>
+      <view class="skeleton detail-skeleton detail-skeleton--card"></view>
+    </view>
+
+    <view wx:if="{{error}}" class="detail-state">
+      <view class="state-panel state-panel--error">
+        <view class="state-panel__title">没有找到这道菜</view>
+        <view>{{error}}</view>
+        <button class="button button--secondary button--small state-action" bindtap="load">重试</button>
+      </view>
+    </view>
+
+    <view wx:if="{{recipe}}" class="detail-content">
+      <view class="detail-hero">
+        <view class="plate-shell">
+          <view class="plate-rim">
+            <image wx:if="{{recipe.coverUrl}}" class="detail-photo" src="{{recipe.coverUrl}}" mode="aspectFill" binderror="handleImageError" />
+            <view wx:else class="detail-photo detail-photo--placeholder"><icon type="photo" size="50" color="#aaaaaa" /></view>
+          </view>
+        </view>
+      </view>
+
+      <view class="detail-copy">
+        <view class="detail-title">{{recipe.title}}</view>
+        <view class="detail-subtitle">{{recipe.category}} · 家庭菜谱</view>
+      </view>
+
+      <view class="detail-meta">
+        <view class="detail-meta__item">
+          <view class="detail-meta__value">{{recipe.difficultyText}}</view>
+          <view class="detail-meta__label">难度</view>
+        </view>
+        <view class="detail-meta__item">
+          <view class="detail-meta__value">{{recipe.cookMinutes}}分钟</view>
+          <view class="detail-meta__label">烹饪时间</view>
+        </view>
+        <view class="detail-meta__item">
+          <view class="detail-meta__value">{{recipe.servings}}人份</view>
+          <view class="detail-meta__label">适合人数</view>
+        </view>
+      </view>
+
+      <view class="detail-description">{{recipe.description || '家常好味，适合与家人一起分享。'}}</view>
+
+      <view class="detail-card ingredient-card">
+        <view class="detail-card__header">
+          <view class="detail-card__title">食材</view>
+          <view class="detail-card__count">{{recipe.ingredients.length}} 种主要食材</view>
+        </view>
+        <view wx:if="{{!recipe.ingredients.length}}" class="detail-card__empty">还没有记录食材明细。</view>
+        <view wx:for="{{recipe.ingredients}}" wx:key="ingredientId" class="ingredient-line">
+          <view class="ingredient-line__copy">
+            <view class="ingredient-line__name">{{item.name}}</view>
+            <view wx:if="{{item.note}}" class="ingredient-line__note">{{item.note}}</view>
+          </view>
+          <view class="ingredient-line__amount">{{item.amountGrams}} g</view>
+        </view>
+      </view>
+
+      <view class="detail-card steps-card">
+        <view class="detail-card__header">
+          <view class="detail-card__title">制作步骤</view>
+          <view class="detail-card__count">{{recipe.stepList.length}} 步</view>
+        </view>
+        <view wx:if="{{!recipe.stepList.length}}" class="detail-card__empty">还没有记录制作步骤。</view>
+        <view wx:for="{{recipe.stepList}}" wx:key="number" class="step-line">
+          <view class="step-number">{{item.number}}</view>
+          <view class="step-content">
+            <view class="step-title">第 {{item.ordinal}} 步</view>
+            <view class="step-copy">{{item.text}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </scroll-view>
+
+  <view wx:if="{{recipe}}" class="detail-footer">
+    <button class="detail-footer__button detail-footer__edit" bindtap="edit"><image class="detail-footer__icon" src="/assets/icons/recipes/edit.png" mode="aspectFit" />编辑菜品</button>
+    <button class="detail-footer__button detail-footer__add" bindtap="openAdd"><image class="detail-footer__icon" src="/assets/icons/recipes/add-white.png" mode="aspectFit" />加入菜单</button>
+  </view>
+</view>
+
+<view wx:if="{{sheetOpen}}" class="sheet-mask" bindtap="closeSheet" catchtouchmove="noop"></view>
+<view wx:if="{{sheetOpen}}" class="bottom-sheet recipe-module-layer detail-sheet" catchtap="noop" catchtouchmove="noop">
+  <view class="sheet-handle"></view>
+  <view class="row"><view class="sheet-title">加入菜单</view><button class="sheet-close" aria-label="关闭" bindtap="closeSheet"><image class="sheet-close__icon" src="/assets/icons/recipes/close.png" mode="aspectFit" /></button></view>
+  <view class="sheet-section"><text class="field-label">选择日期</text><picker mode="date" value="{{menuDate}}" bindchange="changeMenuDate"><view class="picker-field"><text>{{menuDate}}</text><view class="subtle picker-field__action">更改<image class="picker-field__icon" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></view></view></picker></view>
+  <view class="sheet-section"><text class="field-label">选择餐次</text><view class="meal-picker"><view wx:for="{{mealTypes}}" wx:key="value" class="meal-choice {{mealType===item.value?'meal-choice--active':''}}" data-value="{{item.value}}" bindtap="selectMeal">{{item.label}}</view></view></view>
+  <view class="sheet-section"><text class="field-label">备注</text><input class="input" value="{{note}}" maxlength="80" placeholder="例如：少盐、不要香菜（选填）" bindinput="changeNote" /></view>
+  <button class="button button--primary button--block sheet-confirm" loading="{{adding}}" disabled="{{adding}}" bindtap="confirmAdd">{{adding ? '正在加入' : '确认加入菜单'}}</button>
+</view>

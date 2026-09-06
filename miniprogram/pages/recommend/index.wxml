@@ -1,8 +1,56 @@
-<view class="page">
-  <view class="eyebrow">JIA YAN PLAN</view><view class="title">今天，吃点好的。</view>
-  <view class="card hero"><view class="subtle">{{date}} · {{mealLabel}}</view><view class="hero-title">为 {{peopleCount}} 位家人配一桌菜</view><view class="subtle">{{modeLabel}} · 最多 {{maxMinutes}} 分钟</view><button class="button" bindtap="generate">生成今日推荐</button></view>
-  <view class="card"><view class="section-title">推荐条件</view><view class="row"><text>用餐人数</text><stepper value="{{peopleCount}}" bindchange="changePeople" /></view><view class="row"><text>最大耗时</text><slider min="30" max="180" value="{{maxMinutes}}" show-value bindchange="changeMinutes" /></view><view><text class="subtle">模式</text><view><text wx:for="{{modes}}" wx:key="value" class="chip {{mode===item.value?'active':''}}" data-value="{{item.value}}" bindtap="changeMode">{{item.label}}</text></view></view></view>
-  <view wx:if="{{loading}}" class="empty">正在为你挑选食材…</view>
-  <view wx:if="{{error}}" class="card danger">{{error}}</view>
-  <view wx:if="{{recommendation}}" class="card"><view class="row"><view class="section-title">这一桌</view><text class="chip">{{recommendation.totalCookMinutes}} 分钟</text></view><view wx:for="{{recommendation.items}}" wx:key="id" class="dish row"><view><text class="dish-title">{{item.title}}</text><view class="subtle">{{item.category}} · {{item.cookMinutes}} 分钟</view><view class="subtle">{{item.score.reason}}</view></view><text class="score">{{item.score.total}}</text></view><view class="insight">综合评分 {{recommendation.totalScore}} · 时令 {{recommendation.scoreBreakdown.season}} · 偏好 {{recommendation.scoreBreakdown.preference}}</view><button class="button secondary" bindtap="apply">确认并加入菜单</button></view>
+<view class="page recommend-page">
+  <view wx:if="{{screen === 'initial' || screen === 'loading'}}" class="recommend-initial {{screen === 'loading' ? 'recommend-initial--loading' : ''}}">
+    <view class="recommend-date">{{dateCaption}}</view>
+    <view class="recommend-greeting">晚上好，</view>
+    <view class="recommend-question">今天吃什么？</view>
+    <view class="recommend-intro">根据家人的口味和最近的菜单，<br />我已经有几个想法了。</view>
+    <view class="recommend-action-space"></view>
+    <button class="decision-cta decision-cta--circle {{screen === 'loading' ? 'decision-cta--loading' : ''}}" disabled="{{loading}}" bindtap="generate">
+      <text class="decision-cta__label">{{screen === 'loading' ? '正在帮你选…' : '帮我选'}}</text>
+      <image wx:if="{{screen !== 'loading'}}" class="decision-cta__arrow" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
+    </button>
+    <view wx:if="{{screen === 'initial'}}" class="context-summary" bindtap="togglePreferences"><text>{{peopleCount}} 人 · 晚餐 · {{modeLabel}}</text><image class="context-summary__arrow" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></view>
+    <view wx:if="{{screen === 'loading'}}" class="thinking-copy">正在帮你想今晚这一餐</view>
+    <view wx:if="{{preferenceOpen && screen === 'initial'}}" class="preference-mask" bindtap="togglePreferences"></view>
+    <view wx:if="{{preferenceOpen && screen === 'initial'}}" class="preference-sheet recommend-enter" catchtap="noop">
+      <view class="sheet-handle"></view>
+      <view class="preference-sheet__title">今晚偏好</view>
+      <view class="preference-row"><text>用餐人数</text><view class="stepper"><button class="stepper__button" data-delta="-1" bindtap="changePeople" aria-label="减少人数"><image class="stepper__icon" src="/assets/icons/recipes/remove.png" mode="aspectFit" /></button><text class="stepper__value">{{peopleCount}} 人</text><button class="stepper__button stepper__button--primary" data-delta="1" bindtap="changePeople" aria-label="增加人数"><image class="stepper__icon" src="/assets/icons/recipes/add-pink.png" mode="aspectFit" /></button></view></view>
+      <picker range="{{timeOptions}}" range-key="label" value="{{timeOptionIndex}}" bindchange="changeTime"><view class="preference-row preference-row--picker"><text>烹饪时间</text><view class="preference-value">{{timeLabel}}<image class="preference-value__icon" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></view></view></picker>
+      <view class="preference-block"><view class="preference-label">推荐倾向</view><view class="mode-list"><view wx:for="{{modes}}" wx:key="value" class="mode-chip {{selectedMode === item.value ? 'mode-chip--active' : ''}}" data-value="{{item.value}}" bindtap="changeMode">{{item.label}}</view></view></view>
+      <view class="preference-row preference-row--last"><view><view>家庭忌口</view><view class="preference-help">已自动考虑</view></view></view>
+      <button class="button button--text preference-done" bindtap="togglePreferences">完成</button>
+    </view>
+  </view>
+
+  <view wx:if="{{screen === 'result'}}" class="recommend-result">
+    <view class="result-heading result-enter result-enter--1"><view class="recommend-date">{{dateCaption}}</view><view class="result-title">今晚就吃这些</view><view class="result-subtitle">根据 {{peopleCount}} 位家人的口味，为你搭配了 {{recommendation.items.length}} 道菜。</view></view>
+    <view class="result-content result-content--{{resultMotion}} {{regenerating ? 'result-content--refreshing' : ''}} {{applying ? 'result-content--confirming' : ''}}">
+      <view class="result-list result-enter result-enter--2">
+        <view wx:for="{{recommendation.items}}" wx:key="id" class="result-dish {{index === 0 ? 'result-dish--primary' : ''}}">
+          <image wx:if="{{item.coverUrl}}" class="result-dish__thumb" src="{{item.coverUrl}}" mode="aspectFill" data-index="{{index}}" binderror="handleImageError" />
+          <view wx:else class="result-dish__thumb result-dish__thumb--empty"><image src="/assets/icons/common/photo.png" mode="aspectFit" /></view>
+          <view class="result-dish__copy"><view class="result-dish__title-row"><text class="result-dish__name">{{item.title}}</text><text wx:if="{{index === 0}}" class="result-dish__role">主菜</text></view><view wx:if="{{item.description}}" class="result-dish__description">{{item.description}}</view><view class="result-dish__meta">{{item.category}} · {{item.cookMinutes}} 分钟 · {{item.difficultyText}}</view></view>
+        </view>
+      </view>
+      <view class="result-note result-enter result-enter--3"><view class="result-note__dot"></view><view><view class="result-note__summary">{{recommendation.items.length}} 道菜 · 约 {{recommendation.totalCookMinutes}} 分钟</view><view class="result-note__reason">{{recommendation.reason}}</view></view></view>
+    </view>
+    <view class="result-decision-dock result-enter result-enter--4 {{applying ? 'result-decision-dock--confirming' : ''}}">
+      <view class="result-actions"><button class="result-refresh" disabled="{{applying || regenerating}}" bindtap="generate">{{regenerating ? '正在换一组…' : '换一组'}}</button><button class="result-confirm" loading="{{applying}}" disabled="{{applying || regenerating || applied}}" bindtap="apply">{{applying ? '正在安排…' : (applied ? '已加入菜单' : '就吃这些')}}</button></view>
+      <view class="decision-secondary-actions">
+        <view class="decision-secondary-action"><button class="decision-secondary-action__icon decision-back" disabled="{{applying || regenerating}}" bindtap="backToInitial" aria-label="返回"><image src="/assets/icons/recipes/back.png" mode="aspectFit" /></button><text>返回</text></view>
+        <view class="decision-secondary-action"><button class="decision-secondary-action__icon decision-manual" disabled="{{applying || regenerating}}" bindtap="chooseManually" aria-label="自己选"><image src="/assets/icons/recipes/add-pink.png" mode="aspectFit" /></button><text>自己选</text></view>
+      </view>
+    </view>
+  </view>
+
+  <view wx:if="{{screen === 'confirmed'}}" class="recommend-confirmed recommend-enter">
+    <view class="confirmed-mark"><image src="/assets/icons/common/check.png" mode="aspectFit" /></view><view class="confirmed-title">今晚安排好了</view><view class="confirmed-subtitle">{{recommendation.items.length}} 道菜已加入你的菜单</view>
+    <view class="confirmed-list"><view wx:for="{{recommendation.items}}" wx:key="id" class="confirmed-dish"><image wx:if="{{item.coverUrl}}" class="confirmed-dish__thumb" src="{{item.coverUrl}}" mode="aspectFill" data-index="{{index}}" binderror="handleImageError" /><view wx:else class="confirmed-dish__thumb confirmed-dish__thumb--empty"><image src="/assets/icons/common/photo.png" mode="aspectFit" /></view><view class="confirmed-dish__copy"><view class="confirmed-dish__title">{{item.title}}</view><view class="confirmed-dish__meta">{{item.cookMinutes}} 分钟</view></view></view></view>
+    <view class="confirmed-summary"><text>预计总时长</text><text>约 {{recommendation.totalCookMinutes}} 分钟</text></view>
+    <view class="confirmed-actions"><button class="confirmed-menu-button" bindtap="viewMenu">查看菜单</button><button class="confirmed-recipe-button" bindtap="viewRecipe">查看做法</button></view>
+    <view class="confirmed-return"><button class="decision-secondary-action__icon decision-back" bindtap="backToResult" aria-label="返回"><image src="/assets/icons/recipes/back.png" mode="aspectFit" /></button><text>返回</text></view>
+  </view>
+
+  <view wx:if="{{screen === 'error'}}" class="recommend-error recommend-enter"><view class="error-title">刚才没想好，再试一次。</view><button class="button button--primary button--block" bindtap="retry">再试一次</button></view>
 </view>

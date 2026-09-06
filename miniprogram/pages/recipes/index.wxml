@@ -1,1 +1,95 @@
-<view class="page"><view class="row"><view><view class="eyebrow">RECIPES</view><view class="title">家庭菜谱</view></view><button class="button" bindtap="add">新增菜谱</button></view><input class="input" placeholder="搜索菜名" value="{{keyword}}" bindinput="search"/><view><text wx:for="{{categories}}" wx:key="*this" class="chip {{category===item?'active':''}}" data-category="{{item}}" bindtap="filter">{{item}}</text></view><view wx:if="{{loading}}" class="empty">正在加载…</view><view wx:if="{{!loading && !recipes.length}}" class="card empty">还没有符合条件的菜谱</view><view wx:for="{{recipes}}" wx:key="id" class="card row"><view bindtap="detail" data-id="{{item.id}}"><view class="dish-title">{{item.title}}</view><view class="subtle">{{item.category}} · {{item.cookMinutes}} 分钟 · 难度 {{item.difficulty}}</view></view><button class="button ghost danger" data-id="{{item.id}}" bindtap="remove">删除</button></view></view>
+<view class="page recipes-page recipe-cloud-page">
+  <view class="page-header recipes-header">
+    <view class="page-header__copy">
+      <view class="recipes-title">菜谱</view>
+      <view class="recipes-subtitle">从家里的拿手菜开始点餐。</view>
+    </view>
+    <button class="page-header__action add-recipe-button" aria-label="新增菜谱" bindtap="addRecipe"><image class="add-recipe-button__icon" src="/assets/icons/recipes/add-white.png" mode="aspectFit" /></button>
+  </view>
+
+  <view class="recipe-search">
+    <image class="recipe-search__icon" src="/assets/icons/recipes/search-pink.png" mode="aspectFit"></image>
+    <input class="recipe-search__input" value="{{keyword}}" placeholder="搜索菜名" placeholder-class="recipe-search__placeholder" confirm-type="search" bindinput="changeKeyword" bindconfirm="submitSearch" />
+  </view>
+
+  <view class="catalog-body">
+    <scroll-view scroll-y class="category-rail" enhanced show-scrollbar="{{false}}">
+      <view wx:for="{{categories}}" wx:key="*this" class="category-item {{category===item?'category-item--active':''}}" data-category="{{item}}" bindtap="filter">
+        <view class="category-item__indicator"></view>
+        <text>{{item}}</text>
+      </view>
+    </scroll-view>
+
+    <scroll-view scroll-y class="recipe-list" enhanced show-scrollbar="{{false}}" scroll-with-animation>
+      <view class="recipe-list__inner">
+        <view class="recipe-list__head">
+          <view class="recipe-list__title">{{category}}</view>
+          <view class="recipe-list__count">{{recipes.length}} 道菜谱</view>
+        </view>
+
+        <view wx:if="{{loading}}" class="recipe-grid recipe-grid--loading">
+          <view wx:for="{{skeletonItems}}" wx:key="*this" class="recipe-skeleton skeleton"></view>
+        </view>
+
+        <view wx:if="{{error}}" class="state-panel state-panel--error compact-state">
+          <view class="state-panel__title">没有加载出来</view>
+          <view>{{error}}</view>
+          <button class="button button--secondary button--small state-action" bindtap="load">重试</button>
+        </view>
+
+        <view wx:if="{{!loading && !error && !recipes.length}}" class="state-panel compact-state">
+          <view class="empty-illustration"><image class="empty-search-icon" src="/assets/icons/recipes/search-pink.png" mode="aspectFit"></image></view>
+          <view class="state-panel__title">这里还没有菜</view>
+          <view>换个分类，或添加一道家里的拿手菜。</view>
+          <button class="button button--secondary button--small state-action" bindtap="addRecipe">新增菜谱</button>
+        </view>
+
+        <view wx:if="{{!loading && !error && recipes.length}}" class="recipe-grid">
+          <view wx:for="{{recipes}}" wx:key="id" class="recipe-card" data-id="{{item.id}}" bindtap="detail">
+            <view class="recipe-card__media">
+              <image wx:if="{{item.coverUrl && !item.hasImageError}}" class="recipe-card__photo" src="{{item.coverUrl}}" mode="aspectFill" data-index="{{index}}" binderror="handleImageError" />
+              <view wx:else class="recipe-card__photo recipe-card__photo--placeholder">
+                <image class="recipe-card__photo-placeholder-icon" src="/assets/icons/common/photo.png" mode="aspectFit" />
+              </view>
+            </view>
+            <view class="recipe-card__body">
+              <view class="recipe-card__title">{{item.title}}</view>
+              <view class="recipe-card__meta">
+                <text class="recipe-card__duration">{{item.cookMinutes}}分钟</text>
+                <view class="recipe-card__stars" aria-label="{{item.difficultyText}}">
+                  <image wx:for="{{item.difficultyStars}}" wx:for-item="starActive" wx:for-index="starIndex" wx:key="starIndex" class="recipe-card__star" src="{{starActive ? '/assets/icons/recipes/star-active.png' : '/assets/icons/recipes/star-inactive.png'}}" mode="aspectFit" />
+                </view>
+                <button class="recipe-card__menu" data-id="{{item.id}}" aria-label="加入菜单" catchtap="openAdd"><image class="recipe-card__menu-icon" src="/assets/icons/recipes/add-pink.png" mode="aspectFit" /></button>
+              </view>
+            </view>
+          </view>
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+</view>
+
+<view wx:if="{{sheetOpen}}" class="sheet-mask" bindtap="closeSheet" catchtouchmove="noop"></view>
+<view wx:if="{{sheetOpen}}" class="bottom-sheet recipe-module-layer recipe-sheet" catchtap="noop" catchtouchmove="noop">
+  <view class="sheet-handle"></view>
+  <view class="row sheet-head">
+    <view>
+      <view class="sheet-title">加入菜单</view>
+      <view class="subtle">{{selectedRecipe.title}} · {{selectedRecipe.cookMinutes}} 分钟</view>
+    </view>
+    <button class="sheet-close" aria-label="关闭" bindtap="closeSheet"><image class="sheet-close__icon" src="/assets/icons/recipes/close.png" mode="aspectFit" /></button>
+  </view>
+  <view class="sheet-section">
+    <text class="field-label">选择日期</text>
+    <picker mode="date" value="{{menuDate}}" bindchange="changeMenuDate"><view class="picker-field"><text>{{menuDate}}</text><view class="subtle picker-field__action">更改<image class="picker-field__icon" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></view></view></picker>
+  </view>
+  <view class="sheet-section">
+    <text class="field-label">选择餐次</text>
+    <view class="meal-picker"><view wx:for="{{mealTypes}}" wx:key="value" class="meal-choice {{mealType===item.value?'meal-choice--active':''}}" data-value="{{item.value}}" bindtap="selectMeal">{{item.label}}</view></view>
+  </view>
+  <view class="sheet-section">
+    <text class="field-label">备注</text>
+    <input class="input" value="{{note}}" maxlength="80" placeholder="例如：少盐、不要香菜（选填）" bindinput="changeNote" />
+  </view>
+  <button class="button button--primary button--block sheet-confirm" loading="{{adding}}" disabled="{{adding}}" bindtap="confirmAdd">{{adding ? '正在加入' : '确认加入菜单'}}</button>
+</view>

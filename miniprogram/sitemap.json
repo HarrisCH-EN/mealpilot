@@ -1,1 +1,9 @@
-{"desc":"家宴计划"}
+{
+  "desc": "家宴计划",
+  "rules": [
+    {
+      "action": "allow",
+      "page": "*"
+    }
+  ]
+}

@@ -26,7 +26,7 @@ page {
 .settings-header__title { color: var(--settings-text-primary); font-size: 56rpx; font-weight: 800; letter-spacing: -1.2rpx; line-height: 1.16; }
 .settings-header__subtitle { margin-top: 10rpx; color: #9a9a9a; font-size: 24rpx; line-height: 1.5; }
 .settings-header__art { position: absolute; top: 2rpx; right: 0; width: 138rpx; height: 112rpx; pointer-events: none; }
-.settings-art__heart { position: absolute; top: 0; left: 16rpx; color: #ffbdcb; font-size: 28rpx; line-height: 1; }
+.settings-art__heart { position: absolute; top: 0; left: 16rpx; display: block; width: 28rpx; height: 28rpx; opacity: .72; }
 .settings-art__house { position: absolute; right: 25rpx; bottom: 13rpx; width: 64rpx; height: 48rpx; border: 2rpx solid #ffd2dc; border-radius: 6rpx 6rpx 8rpx 8rpx; background: #fffaf9; }
 .settings-art__roof { position: absolute; top: -28rpx; left: 5rpx; width: 48rpx; height: 48rpx; border-top: 7rpx solid #f06a7f; border-left: 7rpx solid #f06a7f; transform: rotate(45deg); }
 .settings-art__door { position: absolute; bottom: 0; left: 26rpx; width: 14rpx; height: 22rpx; border-radius: 5rpx 5rpx 0 0; background: #ffd7b0; }
@@ -62,7 +62,7 @@ page {
 .settings-row__copy { min-width: 0; flex: 1; }
 .settings-row__title { overflow: hidden; color: var(--settings-text-primary); font-size: 28rpx; font-weight: 500; line-height: 1.35; text-overflow: ellipsis; white-space: nowrap; }
 .settings-row__status { max-width: 150rpx; flex-shrink: 0; overflow: hidden; color: var(--settings-text-tertiary); font-size: 21rpx; line-height: 1.3; text-overflow: ellipsis; white-space: nowrap; }
-.settings-chevron { width: 16rpx; height: 16rpx; flex: 0 0 16rpx; margin-left: 2rpx; border-top: 2rpx solid #9aa0a8; border-right: 2rpx solid #9aa0a8; transform: rotate(45deg); }
+.settings-chevron { display: block; width: 22rpx; height: 22rpx; flex: 0 0 22rpx; margin-left: 2rpx; }
 .settings-row__loading { width: 26rpx; height: 26rpx; flex: 0 0 26rpx; border: 2rpx solid var(--settings-accent-soft); border-top-color: var(--settings-accent); border-radius: 50%; animation: settings-spin 680ms linear infinite; }
 
 .settings-members { overflow: hidden; }

@@ -1,0 +1,116 @@
+<view class="form-page recipe-cloud-page">
+  <view class="form-nav" style="{{navStyle}}">
+    <button class="form-nav__back" aria-label="返回" bindtap="back"><image class="form-nav__back-icon" src="/assets/icons/recipes/back.png" mode="aspectFit" /></button>
+    <view class="form-nav__title">{{isEdit ? '编辑菜谱' : '新增菜谱'}}</view>
+    <button class="form-nav__save" loading="{{saving}}" disabled="{{saving || loading}}" bindtap="save">{{saving ? '保存中' : '保存'}}</button>
+  </view>
+
+  <scroll-view class="form-main" scroll-y enhanced show-scrollbar="{{false}}" style="{{contentStyle}}">
+    <view wx:if="{{loading}}" class="form-loading">
+      <view class="skeleton form-skeleton form-skeleton--cover"></view>
+      <view class="skeleton form-skeleton"></view>
+      <view class="skeleton form-skeleton"></view>
+    </view>
+
+    <view wx:else class="editor-content">
+      <view class="editor-section cover-section">
+        <view class="editor-section__header">
+          <view class="editor-section__title">菜品图片</view>
+          <view class="editor-section__count">当前单封面</view>
+        </view>
+        <view class="form-cover recipe-glass-card">
+          <image wx:if="{{coverUrl}}" class="form-cover__image" src="{{coverUrl}}" mode="aspectFill" binderror="handleCoverError" />
+          <view wx:else class="form-cover__placeholder">
+            <icon type="photo" size="34" color="#aaaaaa" />
+            <view class="form-cover__empty">暂无可用封面</view>
+          </view>
+        </view>
+        <view class="capability-note">目前支持单张封面。</view>
+      </view>
+
+      <view class="editor-card basic-info-card recipe-glass-card">
+        <view class="editor-card__title">基础信息</view>
+        <view class="form-field">
+          <text class="form-field__label">菜名</text>
+          <input class="form-field__input" value="{{form.title}}" maxlength="40" placeholder="例如：香菇蒸鸡" placeholder-class="form-placeholder" data-field="title" bindinput="updateField" />
+        </view>
+        <view class="form-field">
+          <text class="form-field__label">一句介绍</text>
+          <input class="form-field__input" value="{{form.description}}" maxlength="120" placeholder="写下这道菜的特点" placeholder-class="form-placeholder" data-field="description" bindinput="updateField" />
+        </view>
+        <view class="selector-row">
+          <picker class="selector-row__item" range="{{categories}}" value="{{categoryIndex}}" bindchange="changeCategory">
+            <view class="selector-field"><view><view class="selector-field__label">分类</view><view class="selector-field__value">{{form.category}}</view></view><image class="selector-field__arrow" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></view>
+          </picker>
+          <picker class="selector-row__item" range="{{difficulties}}" range-key="label" value="{{difficultyIndex}}" bindchange="changeDifficulty">
+            <view class="selector-field"><view><view class="selector-field__label">难度</view><view class="selector-field__value">{{difficultyText}}</view></view><image class="selector-field__arrow" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></view>
+          </picker>
+        </view>
+        <view class="number-row">
+          <view class="number-field"><text class="number-field__label">烹饪时间（分钟）</text><input class="number-field__input" type="number" value="{{form.cookMinutes}}" data-field="cookMinutes" bindinput="updateField" /></view>
+          <view class="number-field"><text class="number-field__label">份量（人数）</text><input class="number-field__input" type="number" value="{{form.servings}}" data-field="servings" bindinput="updateField" /></view>
+        </view>
+      </view>
+
+      <view class="editor-card ingredient-card recipe-glass-card">
+        <view class="editor-card__header">
+          <view><view class="editor-card__title">食材</view><view class="editor-card__subtitle">选择食材并填写克数，可选备注。</view></view>
+          <button class="editor-card__add" bindtap="openIngredientSheet"><image class="editor-card__add-icon" src="/assets/icons/recipes/add-pink.png" mode="aspectFit" />添加</button>
+        </view>
+        <view wx:if="{{!form.ingredients.length}}" class="editor-empty">暂未添加食材</view>
+        <view wx:for="{{form.ingredients}}" wx:key="ingredientId" class="ingredient-row" data-index="{{index}}" bindtap="editIngredient">
+          <image class="ingredient-row__handle" src="/assets/icons/recipes/drag.png" mode="aspectFit" />
+          <view class="ingredient-row__avatar"><icon type="photo" size="22" color="#aaaaaa" /></view>
+          <view class="ingredient-row__copy">
+            <view class="ingredient-row__name">{{item.ingredientName}}</view>
+            <view class="ingredient-row__amount">{{item.amountGrams}} g</view>
+            <view wx:if="{{item.note}}" class="ingredient-row__note">{{item.note}}</view>
+          </view>
+          <button class="ingredient-row__remove" aria-label="删除食材" data-index="{{index}}" catchtap="removeIngredient"><image class="ingredient-row__remove-icon" src="/assets/icons/recipes/remove.png" mode="aspectFit" /></button>
+        </view>
+      </view>
+
+      <view class="editor-card steps-editor recipe-glass-card">
+        <view class="editor-card__header">
+          <view><view class="editor-card__title">制作步骤</view><view class="editor-card__subtitle">每个步骤单独编辑，保存后仍使用现有文本格式。</view></view>
+          <view class="editor-card__count">{{stepItems.length}} 步</view>
+        </view>
+        <view wx:if="{{!stepItems.length}}" class="editor-empty">还没有制作步骤</view>
+        <view wx:for="{{stepItems}}" wx:key="key" class="step-editor">
+          <view class="step-editor__head">
+            <view class="step-editor__number">{{index < 9 ? '0' + (index + 1) : index + 1}}</view>
+            <view class="step-editor__label">步骤 {{index + 1}}</view>
+            <view class="step-editor__actions">
+              <button class="step-editor__move" aria-label="上移" disabled="{{index===0}}" data-index="{{index}}" data-direction="-1" catchtap="moveStep"><image class="step-editor__action-icon" src="/assets/icons/recipes/chevron-up.png" mode="aspectFit" /></button>
+              <button class="step-editor__move" aria-label="下移" disabled="{{index===stepItems.length-1}}" data-index="{{index}}" data-direction="1" catchtap="moveStep"><image class="step-editor__action-icon" src="/assets/icons/recipes/chevron-down.png" mode="aspectFit" /></button>
+              <button class="step-editor__remove" aria-label="删除步骤" data-index="{{index}}" catchtap="removeStep"><image class="step-editor__action-icon" src="/assets/icons/recipes/remove.png" mode="aspectFit" /></button>
+            </view>
+          </view>
+          <textarea class="step-editor__input" auto-height value="{{item.text}}" maxlength="500" placeholder="描述这一步怎么做" placeholder-class="form-placeholder" data-index="{{index}}" bindinput="updateStep" />
+        </view>
+        <button class="add-step-button" bindtap="addStep"><image class="add-step-button__icon" src="/assets/icons/recipes/add-pink.png" mode="aspectFit" />添加步骤</button>
+      </view>
+
+      <view class="editor-bottom-note">修改会保存到当前家庭菜谱；本页未改变后端数据结构。</view>
+    </view>
+  </scroll-view>
+</view>
+
+<view wx:if="{{ingredientSheetOpen}}" class="sheet-mask" bindtap="closeIngredientSheet" catchtouchmove="noop"></view>
+<view wx:if="{{ingredientSheetOpen}}" class="bottom-sheet recipe-module-layer ingredient-sheet" catchtap="noop" catchtouchmove="noop">
+  <view class="sheet-handle"></view>
+  <view class="ingredient-sheet__header">
+    <view><view class="sheet-title">{{editingIngredientIndex>=0 ? '编辑食材' : '添加食材'}}</view><view class="ingredient-sheet__subtitle">食材数量统一按克保存。</view></view>
+    <button class="sheet-close" aria-label="关闭" bindtap="closeIngredientSheet"><image class="sheet-close__icon" src="/assets/icons/recipes/close.png" mode="aspectFit" /></button>
+  </view>
+  <view class="sheet-section">
+    <text class="field-label">食材</text>
+    <picker range="{{ingredientsOptions}}" range-key="name" value="{{ingredientOptionIndex}}" bindchange="changeIngredientDraftChoice"><view class="picker-field"><text>{{ingredientDraft.ingredientName}}</text><view class="subtle picker-field__action">选择<image class="picker-field__icon" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></view></view></picker>
+  </view>
+  <view class="ingredient-sheet__grid">
+    <view class="sheet-section ingredient-sheet__amount"><text class="field-label">数量</text><input class="input" type="digit" value="{{ingredientDraft.amountGrams}}" placeholder="160" data-field="amountGrams" bindinput="updateIngredientDraft" /></view>
+    <view class="sheet-section ingredient-sheet__unit"><text class="field-label">单位</text><view class="picker-field ingredient-unit">g</view></view>
+  </view>
+  <view class="sheet-section"><text class="field-label">备注（可选）</text><input class="input" value="{{ingredientDraft.note}}" maxlength="40" placeholder="例如：去虾线" data-field="note" bindinput="updateIngredientDraft" /></view>
+  <view class="ingredient-sheet__actions"><button class="ingredient-sheet__cancel" bindtap="closeIngredientSheet">取消</button><button class="ingredient-sheet__confirm" bindtap="confirmIngredient">{{editingIngredientIndex>=0 ? '保存食材' : '添加食材'}}</button></view>
+</view>

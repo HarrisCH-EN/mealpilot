@@ -21,7 +21,7 @@
         <view class="settings-header__subtitle">用美食，连接家人的每一餐。</view>
       </view>
       <view class="settings-header__art" aria-hidden="true">
-        <text class="settings-art__heart">♥</text>
+        <image class="settings-art__heart" src="/assets/icons/about/heart.png" mode="aspectFit" />
         <view class="settings-art__house">
           <view class="settings-art__roof"></view>
           <view class="settings-art__door"></view>
@@ -38,7 +38,7 @@
         <view class="settings-profile__name">{{user.display_name || '演示用户'}}</view>
         <view class="settings-profile__meta">本地演示账户</view>
       </view>
-      <view class="settings-chevron" aria-hidden="true"></view>
+      <image class="settings-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
     </view>
 
     <view class="settings-section settings-section--dashboard">
@@ -107,7 +107,7 @@
           <image class="settings-icon" src="/assets/icons/settings/insight.png" mode="aspectFit"></image>
           <view class="settings-row__copy"><view class="settings-row__title">看看最近吃了什么</view></view>
           <view wx:if="{{insightLoading}}" class="settings-row__loading"></view>
-          <view wx:else class="settings-chevron" aria-hidden="true"></view>
+          <image wx:else class="settings-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
         </view>
         <view class="settings-row settings-row--disabled" bindtap="showUnavailable">
           <image class="settings-icon" src="/assets/icons/settings/help.png" mode="aspectFit"></image>
@@ -117,13 +117,13 @@
         <view class="settings-row" bindtap="goAbout">
           <image class="settings-icon" src="/assets/icons/settings/about.png" mode="aspectFit"></image>
           <view class="settings-row__copy"><view class="settings-row__title">关于我们</view></view>
-          <view class="settings-chevron" aria-hidden="true"></view>
+          <image class="settings-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
         </view>
         <view class="settings-row" bindtap="clearCache">
           <image class="settings-icon" src="/assets/icons/settings/cache.png" mode="aspectFit"></image>
           <view class="settings-row__copy"><view class="settings-row__title">清理缓存</view></view>
           <text wx:if="{{cacheLabel}}" class="settings-row__status">{{cacheLabel}}</text>
-          <view class="settings-chevron" aria-hidden="true"></view>
+          <image class="settings-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
         </view>
       </view>
     </view>

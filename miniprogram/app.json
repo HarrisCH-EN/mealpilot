@@ -1,6 +1,31 @@
 {
-  "pages": ["pages/recommend/index", "pages/menu/index", "pages/recipes/index", "pages/settings/index"],
-  "window": {"navigationBarTitleText":"家宴计划","navigationBarBackgroundColor":"#fbf8f2","navigationBarTextStyle":"black","backgroundColor":"#fbf8f2"},
-  "tabBar": {"color":"#8b8174","selectedColor":"#c65d3a","backgroundColor":"#fffdf9","list":[{"pagePath":"pages/recommend/index","text":"推荐"},{"pagePath":"pages/menu/index","text":"菜单"},{"pagePath":"pages/recipes/index","text":"菜谱"},{"pagePath":"pages/settings/index","text":"设置"}]},
+  "pages": [
+    "pages/recommend/index",
+    "pages/menu/index",
+    "pages/recipes/index",
+    "pages/settings/index",
+    "pages/recipe-detail/index",
+    "pages/recipe-form/index",
+    "pages/about/index"
+  ],
+  "window": {
+    "navigationBarTitleText": "",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundColor": "#ffffff",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#6a6a6a",
+    "selectedColor": "#ff385c",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "white",
+    "list": [
+      {"pagePath":"pages/recommend/index","text":"推荐","iconPath":"assets/tab/recommend-outline.png","selectedIconPath":"assets/tab/recommend-filled.png"},
+      {"pagePath":"pages/menu/index","text":"菜单","iconPath":"assets/tab/menu-outline.png","selectedIconPath":"assets/tab/menu-filled.png"},
+      {"pagePath":"pages/recipes/index","text":"菜谱","iconPath":"assets/tab/recipes-outline.png","selectedIconPath":"assets/tab/recipes-filled.png"},
+      {"pagePath":"pages/settings/index","text":"设置","iconPath":"assets/tab/settings-outline.png","selectedIconPath":"assets/tab/settings-filled.png"}
+    ]
+  },
   "style":"v2","sitemapLocation":"sitemap.json"
 }

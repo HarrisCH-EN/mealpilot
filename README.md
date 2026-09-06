@@ -14,6 +14,13 @@
 - 当前前端 v1 来源任务：`codex://threads/01a06b21-684c-7961-babc-cd44932fa41a`。
 - 当前工作区里的前端 v1 文件是后续设计升级的基础。它们包含尚未提交的修改，禁止使用 `git reset --hard`、`git checkout --` 或其他命令丢弃这些文件。
 
+### 1.1 全局图标资源规范
+
+- 本项目所有 UI icon 统一使用 PNG 资源插入；禁止使用 emoji、文字字符、ASCII 符号、CSS 绘制图标或 inline SVG 代替 icon。
+- icon 资源必须集中放置在 `E:\Database_Design\miniprogram\assets\icons\` 下，并按模块建立子目录，例如 `recipes/`、`menu/`、`settings/`。
+- WXML 中统一通过原生 `<image src="/assets/icons/<module>/<name>.png" mode="aspectFit" />` 引用；新增 icon 先生成或导入 PNG，再接入页面。
+- 不得把截图裁片、临时占位图或不可追溯的图标文件混入资源目录；缺失 icon 时应补充真实 PNG 资源，不得用可见文字伪造视觉效果。
+
 ## 2. 当前版本状态说明
 
 本文使用以下状态：

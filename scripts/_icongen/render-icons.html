@@ -1,0 +1,84 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  html, body { margin: 0; padding: 0; background: #ffffff; }
+  :root { --settings-card: #ffffff; --about-card: #ffffff; }
+  .grid { display: grid; grid-template-columns: repeat(4, 132px); grid-auto-rows: 132px; }
+  /* Each cell centers a fixed icon box; a 40px border keeps glyphs inside. */
+  .cell { display: flex; width: 132px; height: 132px; align-items: center; justify-content: center; }
+  .box44 { position: relative; width: 44px; height: 44px; }
+  .box42 { position: relative; width: 42px; height: 42px; }
+
+  /* ---- settings icons (44px box) ---- */
+  .settings-icon, .settings-icon--family, .settings-icon--insight { color: #000000 !important; }
+  .settings-icon { position: relative; width: 44px; height: 44px; }
+  .settings-icon::before, .settings-icon::after { position: absolute; box-sizing: border-box; border-color: currentColor; content: ''; }
+  .settings-icon--family::before, .settings-icon--member::before { top: 10px; left: 13px; width: 17px; height: 17px; border: 2px solid currentColor; border-radius: 50%; }
+  .settings-icon--family::after, .settings-icon--member::after { right: 4px; bottom: 4px; left: 4px; height: 17px; border: 2px solid currentColor; border-radius: 18px 18px 5px 5px; }
+  .settings-icon--family::before { box-shadow: -10px 7px 0 -3px var(--settings-card), -10px 7px 0 -1px currentColor; }
+  .settings-icon--invite::before { top: 8px; left: 8px; width: 28px; height: 28px; border: 2px solid currentColor; border-radius: 7px; transform: rotate(45deg); }
+  .settings-icon--invite::after { top: 15px; left: 15px; width: 14px; height: 14px; border: 2px solid currentColor; border-radius: 50%; }
+  .settings-icon--insight::before { bottom: 7px; left: 6px; width: 7px; height: 21px; border: 2px solid currentColor; border-radius: 5px 5px 0 0; box-shadow: 13px -8px 0 -2px var(--settings-card), 13px -8px 0 0 currentColor, 26px -15px 0 -2px var(--settings-card), 26px -15px 0 0 currentColor; }
+  .settings-icon--taste::before { top: 7px; left: 9px; width: 5px; height: 29px; border-left: 2px solid currentColor; box-shadow: 8px 0 0 -1px currentColor; }
+  .settings-icon--taste::after { top: 7px; right: 7px; width: 10px; height: 28px; border: 2px solid currentColor; border-top: 0; border-radius: 0 0 12px 12px; }
+  .settings-icon--restriction::before { top: 6px; left: 6px; width: 31px; height: 31px; border: 2px solid currentColor; border-radius: 50%; }
+  .settings-icon--restriction::after { top: 20px; left: 5px; width: 35px; height: 2px; background: currentColor; transform: rotate(45deg); }
+  .settings-icon--account::before { top: 6px; left: 13px; width: 17px; height: 17px; border: 2px solid currentColor; border-radius: 50%; }
+  .settings-icon--account::after { right: 5px; bottom: 5px; left: 5px; height: 16px; border: 2px solid currentColor; border-radius: 18px 18px 5px 5px; }
+  .settings-icon--help::before { top: 5px; left: 5px; width: 33px; height: 33px; border: 2px solid currentColor; border-radius: 50%; }
+  .settings-icon--help::after { top: 11px; left: 17px; width: 9px; height: 17px; border-bottom: 2px solid currentColor; border-radius: 50%; }
+  .settings-icon--about::before { top: 5px; left: 5px; width: 33px; height: 33px; border: 2px solid currentColor; border-radius: 50%; }
+  .settings-icon--about::after { top: 12px; left: 20px; width: 3px; height: 17px; border-radius: 2px; background: currentColor; box-shadow: 0 -6px 0 -1px currentColor; }
+  .settings-icon--cache::before { top: 12px; left: 7px; width: 30px; height: 24px; border: 2px solid currentColor; border-radius: 4px 4px 9px 9px; }
+  .settings-icon--cache::after { top: 6px; left: 13px; width: 18px; height: 8px; border: 2px solid currentColor; border-bottom: 0; border-radius: 8px 8px 0 0; }
+
+  /* ---- about icons (42px box) ---- */
+  .about-icon { color: #000000 !important; }
+  .about-icon { position: relative; width: 42px; height: 42px; }
+  .about-icon::before, .about-icon::after { position: absolute; box-sizing: border-box; border-color: currentColor; content: ''; }
+  .about-icon--document::before { top: 4px; left: 7px; width: 28px; height: 34px; border: 2px solid currentColor; border-radius: 4px; }
+  .about-icon--document::after { top: 14px; left: 14px; width: 14px; height: 2px; background: currentColor; box-shadow: 0 8px 0 currentColor; }
+  .about-icon--shield::before { top: 4px; left: 7px; width: 28px; height: 34px; border: 2px solid currentColor; border-radius: 15px 15px 18px 18px; transform: rotate(45deg) scale(.72); }
+  .about-icon--shield::after { top: 17px; left: 17px; width: 12px; height: 6px; border-bottom: 2px solid currentColor; border-left: 2px solid currentColor; transform: rotate(-45deg); }
+  .about-icon--agreement::before { top: 4px; left: 7px; width: 28px; height: 34px; border: 2px solid currentColor; border-radius: 4px; }
+  .about-icon--agreement::after { top: 14px; left: 14px; width: 14px; height: 2px; background: currentColor; box-shadow: 0 8px 0 currentColor, 0 16px 0 currentColor; }
+  .about-icon--heart::before { top: 7px; left: 5px; width: 31px; height: 28px; border-right: 2px solid currentColor; border-bottom: 2px solid currentColor; border-radius: 0 0 18px 0; transform: rotate(45deg); }
+
+  /* ---- menu calendar chevron ---- */
+  .menu-calendar-toggle__glyph { display: flex; width: 24px; height: 14px; align-items: flex-start; justify-content: center; }
+  .menu-calendar-toggle__glyph view { width: 14px; height: 14px; border-right: 2px solid #000000; border-bottom: 2px solid #000000; transform: rotate(45deg) translate(-2px, -2px); }
+
+  /* ---- recipes search magnifier ---- */
+  .search-svg { display: block; }
+</style>
+</head>
+<body>
+<div class="grid">
+
+  <div class="cell"><div class="box44"><div class="settings-icon settings-icon--family"></div></div></div>
+  <div class="cell"><div class="box44"><div class="settings-icon settings-icon--invite"></div></div></div>
+  <div class="cell"><div class="box44"><div class="settings-icon settings-icon--member"></div></div></div>
+  <div class="cell"><div class="box44"><div class="settings-icon settings-icon--insight"></div></div></div>
+
+  <div class="cell"><div class="box44"><div class="settings-icon settings-icon--taste"></div></div></div>
+  <div class="cell"><div class="box44"><div class="settings-icon settings-icon--restriction"></div></div></div>
+  <div class="cell"><div class="box44"><div class="settings-icon settings-icon--account"></div></div></div>
+  <div class="cell"><div class="box44"><div class="settings-icon settings-icon--help"></div></div></div>
+
+  <div class="cell"><div class="box44"><div class="settings-icon settings-icon--about"></div></div></div>
+  <div class="cell"><div class="box44"><div class="settings-icon settings-icon--cache"></div></div></div>
+  <div class="cell"><div class="box42"><div class="about-icon about-icon--document"></div></div></div>
+  <div class="cell"><div class="box42"><div class="about-icon about-icon--shield"></div></div></div>
+
+  <div class="cell"><div class="box42"><div class="about-icon about-icon--agreement"></div></div></div>
+  <div class="cell"><div class="box42"><div class="about-icon about-icon--heart"></div></div></div>
+  <div class="cell"><div class="box44"><div class="menu-calendar-toggle__glyph"><view></view></div></div></div>
+  <div class="cell"><div class="box44"><svg class="search-svg" width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><circle cx="19" cy="19" r="12" fill="none" stroke="#000000" stroke-width="3.2"/><line x1="28" y1="28" x2="37" y2="37" stroke="#000000" stroke-width="3.6" stroke-linecap="round"/></svg></div></div>
+  <div class="cell"><div class="box44"><svg width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><path d="M10 32 13 23 30 6a4 4 0 0 1 6 6L19 29l-9 3Z" fill="none" stroke="#000000" stroke-width="3" stroke-linejoin="round"/><path d="m26 10 7 7" fill="none" stroke="#000000" stroke-width="3" stroke-linecap="round"/></svg></div></div>
+  <div class="cell"><div class="box44"><svg width="44" height="44" viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg"><circle cx="10" cy="22" r="4" fill="none" stroke="#000000" stroke-width="3"/><circle cx="34" cy="10" r="4" fill="none" stroke="#000000" stroke-width="3"/><circle cx="34" cy="34" r="4" fill="none" stroke="#000000" stroke-width="3"/><path d="m14 20 16-8M14 24l16 8" fill="none" stroke="#000000" stroke-width="3" stroke-linecap="round"/></svg></div></div>
+
+</div>
+</body>
+</html>
