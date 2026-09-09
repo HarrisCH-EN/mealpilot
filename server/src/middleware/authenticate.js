@@ -21,9 +21,12 @@ async function currentMembership(database, userId) {
   const [rows] = await database.execute(
     `SELECT fm.id AS member_id, fm.family_id, fm.role, fm.nickname, f.name AS family_name, f.invite_code
      FROM family_members fm JOIN families f ON f.id = fm.family_id
-     WHERE fm.user_id = ? AND fm.status = 'active' LIMIT 1`,
+     WHERE fm.user_id = ? AND fm.status = 'active'
+     ORDER BY fm.id`,
     [userId]
   )
+
+  if (rows.length > 1) throw new HttpError(500, '账户家庭关系数据冲突')
   return rows[0] || null
 }
 

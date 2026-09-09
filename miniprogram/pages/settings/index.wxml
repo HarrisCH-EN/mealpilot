@@ -10,8 +10,9 @@
   <view wx:elif="{{error && !user.display_name}}" class="settings-error">
     <image class="settings-error__icon settings-icon" src="/assets/icons/settings/account.png" mode="aspectFit"></image>
     <view class="settings-error__title">还没有登录</view>
-    <view class="settings-error__copy">当前仅支持本地演示登录。</view>
-    <button class="settings-action settings-action--primary" bindtap="login">演示登录</button>
+    <view class="settings-error__copy">请使用微信登录后继续。</view>
+    <button class="settings-action settings-action--primary" bindtap="retryLogin">重新登录</button>
+    <button wx:if="{{allowDevLogin}}" class="settings-action settings-action--secondary" bindtap="login">本地开发登录</button>
   </view>
 
   <view wx:else class="settings-content">
@@ -35,8 +36,8 @@
     <view class="settings-profile" bindtap="handleUserTap">
       <view class="settings-profile__avatar">{{userInitial}}</view>
       <view class="settings-profile__copy">
-        <view class="settings-profile__name">{{user.display_name || '演示用户'}}</view>
-        <view class="settings-profile__meta">本地演示账户</view>
+        <view class="settings-profile__name">{{user.display_name || '微信用户'}}</view>
+        <view class="settings-profile__meta">{{allowDevLogin ? '本地开发身份' : '微信登录用户'}}</view>
       </view>
       <image class="settings-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
     </view>
@@ -80,22 +81,32 @@
     </view>
 
     <view class="settings-section">
-      <view class="settings-section__title">饮食与账户</view>
+      <view class="settings-section__title">饮食</view>
       <view class="settings-group">
-        <view class="settings-row settings-row--disabled" bindtap="showUnavailable">
+        <view class="settings-row" bindtap="goTagManagement">
           <image class="settings-icon" src="/assets/icons/settings/taste.png" mode="aspectFit"></image>
-          <view class="settings-row__copy"><view class="settings-row__title">家庭口味偏好</view></view>
-          <text class="settings-row__status">即将开放</text>
+          <view class="settings-row__copy"><view class="settings-row__title">标签管理</view></view>
+          <image class="settings-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
         </view>
-        <view class="settings-row settings-row--disabled" bindtap="showUnavailable">
+        <view class="settings-row" bindtap="goRestrictions">
           <image class="settings-icon" src="/assets/icons/settings/restriction.png" mode="aspectFit"></image>
           <view class="settings-row__copy"><view class="settings-row__title">成员忌口</view></view>
-          <text class="settings-row__status">即将开放</text>
+          <image class="settings-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
         </view>
-        <view class="settings-row settings-row--disabled" bindtap="showUnavailable">
-          <image class="settings-icon" src="/assets/icons/settings/account.png" mode="aspectFit"></image>
-          <view class="settings-row__copy"><view class="settings-row__title">账号</view></view>
-          <text class="settings-row__status">演示模式</text>
+        <view wx:if="{{membership}}" class="settings-row" bindtap="insights">
+          <image class="settings-icon" src="/assets/icons/settings/insight.png" mode="aspectFit"></image>
+          <view class="settings-row__copy"><view class="settings-row__title">看看最近吃了什么</view></view>
+          <view wx:if="{{insightLoading}}" class="settings-row__loading"></view>
+          <image wx:else class="settings-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
+        </view>
+        <view wx:if="{{insight && insightExpanded}}" class="settings-insight-card insight-card">
+          <view class="settings-insight-card__title">最近的餐桌记录</view>
+          <view class="settings-insight-card__summary insight-summary">共安排 {{insight.summary.menuCount || 0}} 次菜单 · {{insight.summary.itemCount || 0}} 道菜</view>
+          <view class="settings-insight-card__rating">平均评分 {{insight.summary.averageRating || 0}} / 5</view>
+          <view wx:if="{{insight.popular && insight.popular.length}}" class="settings-insight-card__list">
+            <view wx:for="{{insight.popular}}" wx:key="id" class="settings-insight-card__item"><text>{{index + 1}}. {{item.title}}</text><text>{{item.usedCount || 0}} 次</text></view>
+          </view>
+          <view wx:else class="settings-insight-card__empty">还没有足够的菜单记录，先安排一顿饭吧。</view>
         </view>
       </view>
     </view>
@@ -103,17 +114,6 @@
     <view class="settings-section">
       <view class="settings-section__title">更多</view>
       <view class="settings-group">
-        <view wx:if="{{membership}}" class="settings-row" bindtap="insights">
-          <image class="settings-icon" src="/assets/icons/settings/insight.png" mode="aspectFit"></image>
-          <view class="settings-row__copy"><view class="settings-row__title">看看最近吃了什么</view></view>
-          <view wx:if="{{insightLoading}}" class="settings-row__loading"></view>
-          <image wx:else class="settings-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
-        </view>
-        <view class="settings-row settings-row--disabled" bindtap="showUnavailable">
-          <image class="settings-icon" src="/assets/icons/settings/help.png" mode="aspectFit"></image>
-          <view class="settings-row__copy"><view class="settings-row__title">帮助与反馈</view></view>
-          <text class="settings-row__status">即将开放</text>
-        </view>
         <view class="settings-row" bindtap="goAbout">
           <image class="settings-icon" src="/assets/icons/settings/about.png" mode="aspectFit"></image>
           <view class="settings-row__copy"><view class="settings-row__title">关于我们</view></view>

@@ -31,6 +31,22 @@ INSERT INTO ingredients (name, calories_per_100g, protein_per_100g, fat_per_100g
 ('面粉',361,11.2,1.5,74.6),('红豆',329,19.9,0.5,63.4)
 ON DUPLICATE KEY UPDATE calories_per_100g = VALUES(calories_per_100g), protein_per_100g = VALUES(protein_per_100g), fat_per_100g = VALUES(fat_per_100g), carbohydrate_per_100g = VALUES(carbohydrate_per_100g);
 
+INSERT INTO ingredient_seasons (ingredient_id, month) VALUES
+(3,5),(3,6),(3,7),(3,8),(3,9),
+(4,10),(4,11),(4,12),(4,1),(4,2),(4,3),
+(6,6),(6,7),(6,8),(6,9),
+(10,10),(10,11),(10,12),(10,1),(10,2),(10,3),
+(27,10),(27,11),(27,12),(27,1),(27,2),(27,3),
+(28,5),(28,6),(28,7),(28,8),(28,9),
+(29,10),(29,11),(29,12),(29,1),(29,2),
+(30,10),(30,11),(30,12),(30,1),(30,2),
+(32,2),(32,3),(32,4),
+(33,5),(33,6),(33,7),(33,8),
+(39,5),(39,6),(39,7),(39,8),
+(41,5),(41,6),(41,7),(41,8),
+(46,8),(46,9),(46,10)
+ON DUPLICATE KEY UPDATE month = VALUES(month);
+
 INSERT INTO recipes (id, family_id, created_by_member_id, title, category, description, steps, cook_minutes, difficulty, servings, cover_url) VALUES
 (1,@family_id,@member_id,'番茄炒蛋','荤菜','酸甜家常，鸡蛋嫩滑，适合全家。','鸡蛋炒熟盛出；番茄炒软出汁；倒回鸡蛋快速合炒。',12,1,2,'/assets/recipes/tomato-scrambled-eggs.jpg'),
 (2,@family_id,@member_id,'蒜蓉西兰花','素菜','蒜香清爽的快手时蔬。','西兰花焯水；蒜末爆香；加入西兰花大火翻炒入味。',10,1,2,'/assets/recipes/garlic-broccoli.jpg'),
@@ -132,3 +148,49 @@ INSERT INTO recipe_ingredients (recipe_id, ingredient_id, amount_grams, note) VA
 (46,12,300,'隔夜米饭'),(46,9,80,'虾仁'),(46,2,100,'蛋液'),
 (47,52,300,'面粉'),(47,46,220,'南瓜泥'),
 (48,53,100,'提前浸泡'),(48,45,100,'淘洗');
+
+INSERT INTO tag_definitions (kind, code, name, normalized_name)
+VALUES
+('system','spicy','辣','辣'),
+('system','sour','酸','酸'),
+('system','sweet','甜','甜'),
+('system','seafood','海鲜','海鲜'),
+('system','fish','鱼','鱼'),
+('system','shrimp','虾','虾'),
+('system','crab','蟹','蟹'),
+('system','bake','烤','烤'),
+('system','steam','蒸','蒸'),
+('system','fried','炸','炸')
+ON DUPLICATE KEY UPDATE name = VALUES(name), normalized_name = VALUES(normalized_name), status = 'active';
+
+-- V1 only carries approved semantics. Legacy light/savory/dietary/method
+-- values remain outside the new relation until a later, explicit mapping.
+INSERT IGNORE INTO recipe_tags (recipe_id, tag_id)
+SELECT seed.recipe_id, td.id
+FROM (
+  SELECT 1 AS recipe_id, 'sweet' AS code UNION ALL SELECT 1, 'sour'
+  UNION ALL SELECT 13, 'sweet' UNION ALL SELECT 13, 'sour'
+  UNION ALL SELECT 19, 'spicy' UNION ALL SELECT 19, 'sweet'
+  UNION ALL SELECT 26, 'sour'
+  UNION ALL SELECT 20, 'sweet'
+  UNION ALL SELECT 23, 'sweet'
+  UNION ALL SELECT 27, 'sweet'
+  UNION ALL SELECT 28, 'sour'
+  UNION ALL SELECT 32, 'sour'
+  UNION ALL SELECT 33, 'sweet'
+  UNION ALL SELECT 36, 'sweet'
+  UNION ALL SELECT 40, 'sweet'
+  UNION ALL SELECT 47, 'sweet'
+  UNION ALL SELECT 48, 'sweet'
+) AS seed
+INNER JOIN tag_definitions td ON td.kind = 'system' AND td.code = seed.code;
+
+INSERT IGNORE INTO recipe_tags (recipe_id, tag_id)
+SELECT seed.recipe_id, td.id
+FROM (
+  SELECT 8 AS recipe_id, 'fish' AS code UNION ALL SELECT 18, 'fish' UNION ALL SELECT 35, 'fish'
+  UNION ALL SELECT 3, 'shrimp' UNION ALL SELECT 12, 'shrimp' UNION ALL SELECT 36, 'shrimp'
+  UNION ALL SELECT 42, 'shrimp' UNION ALL SELECT 46, 'shrimp'
+  UNION ALL SELECT 8, 'steam' UNION ALL SELECT 43, 'steam' UNION ALL SELECT 47, 'steam'
+) AS seed
+INNER JOIN tag_definitions td ON td.kind = 'system' AND td.code = seed.code;

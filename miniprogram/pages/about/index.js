@@ -58,7 +58,4 @@ Page({
     wx.showToast({ title: `当前为${this.data.versionLabel}`, icon: 'none' })
   },
 
-  showUnavailable() {
-    wx.showToast({ title: '功能即将开放', icon: 'none' })
-  }
 })

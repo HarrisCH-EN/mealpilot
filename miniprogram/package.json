@@ -1,0 +1,7 @@
+{
+  "name": "smart-meal-miniprogram-tests",
+  "private": true,
+  "scripts": {
+    "test": "node scripts/run-tests.js"
+  }
+}

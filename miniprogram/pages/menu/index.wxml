@@ -1,10 +1,10 @@
 <view class="page menu-page">
   <view class="page-header menu-header">
-    <view class="page-header__copy"><view class="page-title menu-header__title">今日菜单</view><view class="page-subtitle">今天吃什么，一眼就知道。</view></view>
-    <button class="page-header__action menu-add" bindtap="goRecipes" aria-label="添加菜品"><image src="/assets/icons/recipes/add-pink.png" mode="aspectFit" /></button>
+  <view class="page-header__copy"><view class="page-title menu-header__title">{{menuTitle}}</view><view class="page-subtitle">{{menuSubtitle}}</view></view>
+    <button wx:if="{{!noFamily}}" class="page-header__action menu-add" bindtap="goRecipes" aria-label="添加菜品"><image src="/assets/icons/recipes/add-pink.png" mode="aspectFit" /></button>
   </view>
 
-  <view class="menu-date-rail">
+  <view wx:if="{{!noFamily}}" class="menu-date-rail">
     <view class="date-context-row menu-date-rail__row">
       <view class="date-context-sidebar">
         <text class="date-context-sidebar__month">{{visibleMonth}}</text>
@@ -14,10 +14,17 @@
     </view>
   </view>
 
-  <view class="menu-calendar-toggle-row"><button class="menu-calendar-toggle {{calendarOpen ? 'menu-calendar-toggle--open' : ''}}" bindtap="toggleCalendar" aria-label="切换日历"><image class="menu-calendar-toggle__glyph" src="/assets/icons/menu/chevron.png" mode="aspectFit"></image></button></view>
-  <view class="menu-calendar-region {{calendarOpen ? 'menu-calendar-region--open' : ''}}" style="height: {{calendarPanelHeight}}rpx;"><view class="menu-calendar-panel"><view class="menu-calendar-panel__header"><button class="menu-calendar-panel__month-button" data-step="-1" bindtap="changeCalendarMonth" aria-label="上个月"><image src="/assets/icons/recipes/chevron-left.png" mode="aspectFit" /></button><text>{{calendarTitle}}</text><button class="menu-calendar-panel__month-button" data-step="1" bindtap="changeCalendarMonth" aria-label="下个月"><image src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></button></view><view class="menu-calendar-panel__weekdays"><text>日</text><text>一</text><text>二</text><text>三</text><text>四</text><text>五</text><text>六</text></view><view class="menu-calendar-panel__days"><view wx:for="{{calendarDays}}" wx:key="value" class="menu-calendar-day {{!item.isCurrentMonth ? 'menu-calendar-day--outside' : ''}} {{item.value === date ? 'menu-calendar-day--active' : ''}}" data-date="{{item.value}}" bindtap="selectCalendarDate"><text>{{item.day}}</text><view class="menu-calendar-day__marker-slot"><view wx:if="{{item.hasMenu}}" class="menu-calendar-day__marker {{item.isToday ? 'menu-calendar-day__marker--today' : ''}}"></view></view></view></view></view></view>
+  <view wx:if="{{!noFamily}}" class="menu-calendar-toggle-row"><button class="menu-calendar-toggle {{calendarOpen ? 'menu-calendar-toggle--open' : ''}}" bindtap="toggleCalendar" aria-label="切换日历"><image class="menu-calendar-toggle__glyph" src="/assets/icons/menu/chevron.png" mode="aspectFit"></image></button></view>
+  <view wx:if="{{!noFamily}}" class="menu-calendar-region {{calendarOpen ? 'menu-calendar-region--open' : ''}}" style="height: {{calendarPanelHeight}}rpx;"><view class="menu-calendar-panel"><view class="menu-calendar-panel__header"><button class="menu-calendar-panel__month-button" data-step="-1" bindtap="changeCalendarMonth" aria-label="上个月"><image src="/assets/icons/recipes/chevron-left.png" mode="aspectFit" /></button><text>{{calendarTitle}}</text><button class="menu-calendar-panel__month-button" data-step="1" bindtap="changeCalendarMonth" aria-label="下个月"><image src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></button></view><view class="menu-calendar-panel__weekdays"><text>日</text><text>一</text><text>二</text><text>三</text><text>四</text><text>五</text><text>六</text></view><view class="menu-calendar-panel__days"><view wx:for="{{calendarDays}}" wx:key="value" class="menu-calendar-day {{!item.isCurrentMonth ? 'menu-calendar-day--outside' : ''}} {{item.value === date ? 'menu-calendar-day--active' : ''}}" data-date="{{item.value}}" bindtap="selectCalendarDate"><text>{{item.day}}</text><view class="menu-calendar-day__marker-slot"><view wx:if="{{item.hasMenu}}" class="menu-calendar-day__marker {{item.isToday ? 'menu-calendar-day__marker--today' : ''}}"></view></view></view></view></view></view>
 
-  <view class="meal-deck {{deckAnimating ? 'meal-deck--transition' : ''}}" style="height: {{deckHeight}}rpx; --meal-card-height: {{cardHeight}}rpx;">
+  <view wx:if="{{noFamily}}" class="menu-family-empty state-panel">
+    <view class="empty-illustration"><image class="empty-search-icon" src="/assets/icons/settings/family.png" mode="aspectFit"></image></view>
+    <view class="state-panel__title">还没有加入家庭</view>
+    <view>先创建家庭或加入已有家庭，才能安排家庭菜单。</view>
+    <button class="button button--primary button--small state-action" bindtap="goFamilySetup">去设置创建或加入</button>
+  </view>
+
+  <view wx:if="{{!noFamily}}" class="meal-deck {{deckAnimating ? 'meal-deck--transition' : ''}}" style="height: {{deckHeight}}rpx; --meal-card-height: {{cardHeight}}rpx;">
     <view wx:for="{{mealCards}}" wx:for-item="card" wx:key="mealType" class="meal-note meal-note--{{card.theme}} meal-note--{{card.role}}" bindtouchstart="handleCardTouchStart" bindtouchend="handleCardTouchEnd">
       <view class="meal-note__content">
         <view class="meal-note__heading"><view class="meal-note__title-row"><view class="meal-note__title">{{card.mealTypeLabel}}</view><text wx:if="{{card.itemCount}}" class="meal-note__count">共 {{card.itemCount}} 个菜品</text></view><view class="meal-note__accent"></view></view>
@@ -26,18 +33,18 @@
         <scroll-view wx:elif="{{card.items.length}}" class="meal-note__dishes" scroll-y="{{card.items.length > 3}}" enhanced="true" show-scrollbar="false">
           <view class="meal-note__dish-group {{card.items.length > 3 ? 'meal-note__dish-group--overflow' : ''}}">
           <view wx:for="{{card.items}}" wx:key="id" class="menu-dish">
-            <image wx:if="{{item.coverUrl}}" class="menu-dish__photo" src="{{item.coverUrl}}" mode="aspectFill" data-recipe-id="{{item.recipeId}}" binderror="handleImageError" bindtap="openRecipe" />
-            <view wx:else class="menu-dish__photo menu-dish__photo--fallback" data-recipe-id="{{item.recipeId}}" bindtap="openRecipe"><image src="/assets/icons/common/photo.png" mode="aspectFit" /></view>
-            <view class="menu-dish__copy" data-recipe-id="{{item.recipeId}}" bindtap="openRecipe"><view class="menu-dish__title">{{item.title}}</view><view wx:if="{{item.description}}" class="menu-dish__description">{{item.description}}</view><view class="menu-dish__meta"><text wx:if="{{item.cookMinutes}}">{{item.cookMinutes}} 分钟</text><text wx:if="{{item.cookMinutes && item.difficultyText}}"> · </text><text wx:if="{{item.difficultyText}}">{{item.difficultyText}}</text><text wx:if="{{!item.cookMinutes && !item.difficultyText}}">{{item.category}}</text></view></view>
-            <button class="menu-dish__remove" data-id="{{item.id}}" catchtap="remove" aria-label="移除{{item.title}}"><image src="/assets/icons/recipes/remove.png" mode="aspectFit" /></button>
-          </view>
+            <image wx:if="{{item.coverUrl}}" class="menu-dish__photo" src="{{item.coverUrl}}" mode="aspectFill" data-recipe-id="{{item.recipeId}}" data-menu-item-id="{{item.id}}" data-meal-type="{{card.mealType}}" binderror="handleImageError" bindtap="openRecipe" />
+            <view wx:else class="menu-dish__photo menu-dish__photo--fallback" data-recipe-id="{{item.recipeId}}" data-menu-item-id="{{item.id}}" data-meal-type="{{card.mealType}}" bindtap="openRecipe"><image src="/assets/icons/common/photo.png" mode="aspectFit" /></view>
+            <view class="menu-dish__copy" data-recipe-id="{{item.recipeId}}" data-menu-item-id="{{item.id}}" data-meal-type="{{card.mealType}}" bindtap="openRecipe"><view class="menu-dish__title">{{item.title}}</view><view wx:if="{{item.displayTags.length}}" class="menu-dish__tags"><text wx:for="{{item.displayTags}}" wx:key="id" class="menu-dish__tag">{{item.name}}</text></view><view wx:if="{{item.description}}" class="menu-dish__description">{{item.description}}</view><view wx:if="{{item.cookMinutes || item.hasDifficulty}}" class="menu-dish__meta"><text wx:if="{{item.cookMinutes}}" class="menu-dish__time">{{item.cookMinutes}}分钟</text><view wx:if="{{item.hasDifficulty}}" class="menu-dish__stars" aria-label="难度 {{item.difficulty}} 星"><image wx:for="{{item.difficultyStars}}" wx:for-item="starActive" wx:for-index="starIndex" wx:key="starIndex" class="menu-dish__star {{starActive ? 'menu-dish__star--active' : ''}}" src="{{starActive ? '/assets/icons/recipes/star-active.png' : '/assets/icons/recipes/star-inactive.png'}}" mode="aspectFit" /></view></view><view wx:if="{{item.feedback && item.feedback.comment}}" class="menu-dish__feedback-comment">“{{item.feedback.comment}}”</view></view>
+            <button class="menu-dish__feedback" data-id="{{item.id}}" catchtap="openFeedback" aria-label="{{item.feedback ? '修改评分' : '评分'}}{{item.title}}" disabled="{{feedbackSaving}}">{{item.feedback ? item.feedback.rating + '★' : '评分'}}</button><button class="menu-dish__remove" data-id="{{item.id}}" catchtap="remove" aria-label="移除{{item.title}}" loading="{{removingItemId === item.id}}" disabled="{{removingItemId || feedbackSaving}}"><image src="/assets/icons/recipes/remove.png" mode="aspectFit" /></button>
+          </view><button wx:if="{{card.role === 'active'}}" class="meal-note__append-add" data-meal-type="{{card.mealType}}" bindtap="goRecipes" aria-label="继续添加菜品"><image src="/assets/icons/recipes/add-white.png" mode="aspectFit" /></button>
           </view>
         </scroll-view>
-        <view wx:else class="meal-note__empty"><button class="meal-note__empty-add {{card.role === 'active' && !deckAnimating ? 'meal-note__empty-add--visible' : ''}}" bindtap="goRecipes" aria-label="添加一道菜"><image src="/assets/icons/recipes/add-white.png" mode="aspectFit" /></button></view>
+        <view wx:else class="meal-note__empty"><button class="meal-note__empty-add {{card.role === 'active' && !deckAnimating ? 'meal-note__empty-add--visible' : ''}}" data-meal-type="{{card.mealType}}" bindtap="goRecipes" aria-label="添加一道菜"><image src="/assets/icons/recipes/add-white.png" mode="aspectFit" /></button></view>
         <view wx:if="{{card.items.length}}" class="meal-note__footer">{{card.note}}</view>
       </view>
     </view>
   </view>
 
-  <view class="meal-indicator" aria-label="切换早餐午餐晚餐"><view wx:for="{{mealCards}}" wx:for-item="card" wx:key="mealType" class="meal-indicator__item {{card.role === 'active' ? 'meal-indicator__item--active' : ''}}" data-index="{{index}}" bindtap="switchMeal"><text>{{card.mealTypeLabel}}</text><view class="meal-indicator__dot"></view></view></view>
+  <view wx:if="{{!noFamily}}" class="meal-indicator" aria-label="切换早餐午餐晚餐"><view wx:for="{{mealCards}}" wx:for-item="card" wx:key="mealType" class="meal-indicator__item {{card.role === 'active' ? 'meal-indicator__item--active' : ''}}" data-index="{{index}}" bindtap="switchMeal"><text>{{card.mealTypeLabel}}</text><view class="meal-indicator__dot"></view></view></view>
 </view>

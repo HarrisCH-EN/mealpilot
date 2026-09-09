@@ -7,7 +7,7 @@
 ## 现状与约束
 
 - 菜单页当前在 `miniprogram/pages/menu/index.wxml` 中通过 `menu-dish` 展示图片、菜名、简介和 `cookMinutes + difficultyText`。
-- 菜谱总览页已经使用 `star-active.png` / `star-inactive.png` 展示 3 星制难度，但星级数组目前局部定义在 `miniprogram/pages/recipes/index.js`。
+- 菜谱总览页已经使用 `star-active.png` / `star-inactive.png` 展示 3 星制难度，但星级数组目前局部定义在 `miniprogram/pages/recipes/index.js`；现有点亮资源仍是粉色，因此两页会复用同一资源并通过 WXSS 滤镜统一成深色。
 - `difficultyLabel` 现有映射为 `1 → 简单`、`2 → 适中`、`3 → 进阶`；本次菜单卡不再显示文字难度，但星级仍严格沿用同一 3 星映射。
 - 菜谱真实数据来自 recipes API 返回的 `title`、`description`、`cookMinutes`、`difficulty` 与 `coverUrl`；菜单 item 通过 recipeId 关联这些字段。
 - 当前工作区已有其他未提交修改，本次只编辑本设计涉及的新增/目标文件，不覆盖用户已有改动。
@@ -43,7 +43,7 @@ menu-dish
 ### 视觉规则
 
 - 菜名约 30rpx、600 权重、深色；简介 24rpx、灰色、单行省略；第三行 24rpx 左右，时长与星级间距约 16rpx。
-- 星级使用菜谱总览页已有 active/inactive PNG，继承深色/浅灰的稳定渲染，不使用 emoji；尺寸约 20rpx，星间距约 2rpx。
+- 星级使用菜谱总览页已有 active/inactive PNG，点亮态通过 `brightness(0) opacity(.87)` 稳定呈现深色，未点亮态保持浅灰，不使用 emoji；尺寸约 20rpx，星间距约 2rpx。
 - 图片保持约 120rpx 方形与 22rpx 圆角，三行信息整体垂直居中。
 - 早餐、午餐、晚餐继续共用同一套 `menu-dish` markup/classes。
 

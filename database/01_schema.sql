@@ -90,6 +90,47 @@ CREATE TABLE recipe_ingredients (
   CONSTRAINT fk_recipe_ingredient_ingredient FOREIGN KEY (ingredient_id) REFERENCES ingredients(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
+CREATE TABLE tag_definitions (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  family_id BIGINT UNSIGNED NULL,
+  kind ENUM('system', 'custom') NOT NULL,
+  code VARCHAR(40) NULL,
+  name VARCHAR(40) NOT NULL,
+  normalized_name VARCHAR(40) NOT NULL,
+  status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
+  created_by_member_id BIGINT UNSIGNED NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_tag_system_code (kind, code),
+  UNIQUE KEY uq_tag_family_name (family_id, normalized_name),
+  KEY idx_tag_family_status (family_id, status),
+  KEY idx_tag_kind_status (kind, status),
+  CONSTRAINT ck_tag_definition_scope CHECK (
+    (kind = 'system' AND family_id IS NULL AND code IS NOT NULL AND created_by_member_id IS NULL)
+    OR
+    (kind = 'custom' AND family_id IS NOT NULL AND code IS NULL AND created_by_member_id IS NOT NULL)
+  ),
+  CONSTRAINT fk_tag_definition_family FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
+  CONSTRAINT fk_tag_definition_creator FOREIGN KEY (created_by_member_id) REFERENCES family_members(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE recipe_tags_legacy (
+  recipe_id BIGINT UNSIGNED NOT NULL,
+  tag_type VARCHAR(40) NOT NULL,
+  tag_value VARCHAR(40) NOT NULL,
+  archived_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (recipe_id, tag_type, tag_value)
+) ENGINE=InnoDB;
+
+CREATE TABLE recipe_tags (
+  recipe_id BIGINT UNSIGNED NOT NULL,
+  tag_id BIGINT UNSIGNED NOT NULL,
+  PRIMARY KEY (recipe_id, tag_id),
+  KEY idx_recipe_tags_tag (tag_id),
+  CONSTRAINT fk_recipe_tag_recipe FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE CASCADE,
+  CONSTRAINT fk_recipe_tag_definition FOREIGN KEY (tag_id) REFERENCES tag_definitions(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
 CREATE TABLE member_category_preferences (
   member_id BIGINT UNSIGNED NOT NULL,
   category ENUM('荤菜', '素菜', '汤', '主食') NOT NULL,
@@ -115,15 +156,19 @@ CREATE TABLE recommendation_runs (
   menu_date DATE NOT NULL,
   meal_type ENUM('breakfast', 'lunch', 'dinner') NOT NULL,
   people_count TINYINT UNSIGNED NOT NULL,
-  max_cook_minutes SMALLINT UNSIGNED NOT NULL,
-  mode ENUM('balanced', 'healthy', 'quick') NOT NULL,
-  total_score DECIMAL(6,2) NOT NULL,
-  total_cook_minutes SMALLINT UNSIGNED NOT NULL,
-  score_breakdown JSON NOT NULL,
+  max_cook_minutes SMALLINT UNSIGNED NULL,
+  max_prep_minutes SMALLINT UNSIGNED NULL,
+  mode ENUM('balanced', 'healthy', 'quick') NULL,
+  total_score DECIMAL(6,2) NULL,
+  total_cook_minutes SMALLINT UNSIGNED NULL,
+  score_breakdown JSON NULL,
+  menu_structure JSON NULL,
+  session_preferences JSON NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   KEY idx_recommendation_family_date (family_id, menu_date),
   CONSTRAINT ck_recommendation_people CHECK (people_count BETWEEN 1 AND 12),
   CONSTRAINT ck_recommendation_limit CHECK (max_cook_minutes BETWEEN 10 AND 480),
+  CONSTRAINT ck_recommendation_prep_limit CHECK (max_prep_minutes IS NULL OR max_prep_minutes BETWEEN 10 AND 480),
   CONSTRAINT fk_recommendation_family FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
   CONSTRAINT fk_recommendation_member FOREIGN KEY (created_by_member_id) REFERENCES family_members(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
@@ -137,6 +182,33 @@ CREATE TABLE recommendation_items (
   UNIQUE KEY uq_recommendation_recipe (recommendation_run_id, recipe_id),
   CONSTRAINT fk_recommendation_item_run FOREIGN KEY (recommendation_run_id) REFERENCES recommendation_runs(id) ON DELETE CASCADE,
   FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE RESTRICT
+) ENGINE=InnoDB;
+
+CREATE TABLE recommendation_candidates (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  recommendation_run_id BIGINT UNSIGNED NOT NULL,
+  candidate_rank TINYINT UNSIGNED NOT NULL,
+  estimated_prep_minutes SMALLINT UNSIGNED NOT NULL,
+  total_score DECIMAL(6,2) NOT NULL,
+  score_breakdown JSON NOT NULL,
+  reason_text VARCHAR(500) NOT NULL DEFAULT '',
+  UNIQUE KEY uq_recommendation_candidate_rank (recommendation_run_id, candidate_rank),
+  CONSTRAINT ck_candidate_rank CHECK (candidate_rank BETWEEN 1 AND 3),
+  CONSTRAINT fk_candidate_run FOREIGN KEY (recommendation_run_id) REFERENCES recommendation_runs(id) ON DELETE CASCADE
+) ENGINE=InnoDB;
+
+CREATE TABLE recommendation_candidate_items (
+  recommendation_candidate_id BIGINT UNSIGNED NOT NULL,
+  recipe_id BIGINT UNSIGNED NOT NULL,
+  slot_no TINYINT UNSIGNED NOT NULL,
+  category ENUM('荤菜', '素菜', '汤', '主食') NOT NULL,
+  dish_score DECIMAL(6,2) NOT NULL,
+  reason_text VARCHAR(500) NOT NULL DEFAULT '',
+  PRIMARY KEY (recommendation_candidate_id, recipe_id),
+  UNIQUE KEY uq_candidate_item_slot (recommendation_candidate_id, slot_no),
+  CONSTRAINT ck_candidate_item_slot CHECK (slot_no >= 1),
+  CONSTRAINT fk_candidate_item_candidate FOREIGN KEY (recommendation_candidate_id) REFERENCES recommendation_candidates(id) ON DELETE CASCADE,
+  CONSTRAINT fk_candidate_item_recipe FOREIGN KEY (recipe_id) REFERENCES recipes(id) ON DELETE RESTRICT
 ) ENGINE=InnoDB;
 
 CREATE TABLE menus (

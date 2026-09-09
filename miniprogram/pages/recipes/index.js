@@ -1,20 +1,19 @@
-const { request } = require('../../utils/api')
+const { request, resolveCoverUrl, isNoActiveFamilyError } = require('../../utils/api')
+const { getMenuContextStore } = require('../../utils/menu-context')
+const { displayTags } = require('../../utils/tags')
 const {
   buildMenuItemPayload,
   buildRecipePath,
+  difficultyStars,
   difficultyLabel,
+  filterRecipesByCategory,
   normalizeFavoriteRecipeIds,
   toggleFavoriteRecipeId,
   toLocalISODate
 } = require('../../utils/ui')
 
 const RECIPE_FAVORITES_STORAGE_KEY = 'recipeFavoriteIds'
-
-function difficultyStars(value) {
-  const numericValue = Number(value)
-  const level = Number.isFinite(numericValue) ? Math.max(0, Math.min(3, numericValue)) : 0
-  return [0, 1, 2].map((index) => index < level)
-}
+const MEAL_LABELS = { breakfast: '早餐', lunch: '午餐', dinner: '晚餐' }
 
 Page({
   data: {
@@ -23,9 +22,10 @@ Page({
     skeletonItems: [1, 2, 3, 4],
     keyword: '',
     category: '全部',
-    categories: ['全部', '荤菜', '素菜', '汤', '主食'],
+    categories: ['收藏', '全部', '荤菜', '素菜', '汤', '主食'],
     loading: false,
     error: '',
+    noFamily: false,
     sheetOpen: false,
     selectedRecipe: null,
     menuDate: toLocalISODate(),
@@ -55,21 +55,27 @@ Page({
   async load() {
     this.setData({ loading: true, error: '' })
     try {
-      const recipes = await request(buildRecipePath(this.data.keyword, this.data.category))
       const favoriteIds = this.data.favoriteIds
+      const apiCategory = this.data.category === '收藏' ? '全部' : this.data.category
+      const recipes = await request(buildRecipePath(this.data.keyword, apiCategory))
+      const normalizedRecipes = recipes.map((recipe) => ({
+        ...recipe,
+        coverUrl: resolveCoverUrl(recipe.coverUrl),
+        initial: String(recipe.title || '菜').slice(0, 1),
+        difficultyText: difficultyLabel(recipe.difficulty),
+        difficultyStars: difficultyStars(recipe.difficulty),
+        displayTags: displayTags(recipe.tags, 3),
+        hasImageError: false,
+        isFavorite: favoriteIds.includes(Number(recipe.id))
+      }))
       this.setData({
-        recipes: recipes.map((recipe) => ({
-          ...recipe,
-          coverUrl: String(recipe.coverUrl || '').trim(),
-          initial: String(recipe.title || '菜').slice(0, 1),
-          difficultyText: difficultyLabel(recipe.difficulty),
-          difficultyStars: difficultyStars(recipe.difficulty),
-          hasImageError: false,
-          isFavorite: favoriteIds.includes(Number(recipe.id))
-        }))
+        noFamily: false,
+        recipes: filterRecipesByCategory(normalizedRecipes, this.data.category, favoriteIds)
       })
     } catch (error) {
-      this.setData({ error: error.message || '菜谱加载失败' })
+      this.setData(isNoActiveFamilyError(error)
+        ? { noFamily: true, error: '', recipes: [] }
+        : { noFamily: false, error: error.message || '菜谱加载失败' })
     } finally {
       this.setData({ loading: false })
     }
@@ -91,6 +97,10 @@ Page({
     wx.navigateTo({ url: '/pages/recipe-form/index' })
   },
 
+  goFamilySetup() {
+    wx.switchTab({ url: '/pages/settings/index' })
+  },
+
   detail(event) {
     wx.navigateTo({ url: `/pages/recipe-detail/index?id=${event.currentTarget.dataset.id}` })
   },
@@ -106,12 +116,13 @@ Page({
     const recipeId = Number(event.currentTarget.dataset.id)
     const favoriteIds = toggleFavoriteRecipeId(this.data.favoriteIds, recipeId)
     wx.setStorageSync(RECIPE_FAVORITES_STORAGE_KEY, favoriteIds)
+    const nextRecipes = this.data.recipes.map((recipe) => ({
+      ...recipe,
+      isFavorite: favoriteIds.includes(Number(recipe.id))
+    }))
     this.setData({
       favoriteIds,
-      recipes: this.data.recipes.map((recipe) => ({
-        ...recipe,
-        isFavorite: favoriteIds.includes(Number(recipe.id))
-      }))
+      recipes: filterRecipesByCategory(nextRecipes, this.data.category, favoriteIds)
     })
     wx.showToast({
       title: favoriteIds.includes(recipeId) ? '已收藏到本机' : '已取消本机收藏',
@@ -122,11 +133,12 @@ Page({
   openAdd(event) {
     const selectedRecipe = this.data.recipes.find((item) => item.id === Number(event.currentTarget.dataset.id))
     if (!selectedRecipe) return
+    const context = getMenuContextStore().consume('add')
     this.setData({
       sheetOpen: true,
       selectedRecipe,
-      menuDate: toLocalISODate(),
-      mealType: 'dinner',
+      menuDate: context ? context.menuDate : toLocalISODate(),
+      mealType: context ? context.mealType : 'dinner',
       note: ''
     })
   },
@@ -159,9 +171,23 @@ Page({
         this.data.mealType,
         this.data.note
       )
-      await request('/menus/items', 'POST', payload)
-      wx.showToast({ title: '已加入菜单', icon: 'success' })
+      const result = await request('/menus/items', 'POST', payload)
       this.setData({ sheetOpen: false, selectedRecipe: null })
+      const message = result.status === 'already-present'
+        ? `已在${this.data.menuDate} ${MEAL_LABELS[this.data.mealType]}`
+        : `已加入${this.data.menuDate} ${MEAL_LABELS[this.data.mealType]}`
+      wx.showModal({
+        title: result.status === 'already-present' ? '这道菜已经在菜单里' : '已加入菜单',
+        content: message,
+        confirmText: '查看菜单',
+        cancelText: '继续浏览',
+        success: (dialog) => {
+          if (dialog.confirm) {
+            getMenuContextStore().set({ action: 'focus', menuDate: this.data.menuDate, mealType: this.data.mealType, menuItemId: Number(result.itemId || 0) })
+            wx.switchTab({ url: '/pages/menu/index' })
+          }
+        }
+      })
     } catch (error) {
       wx.showToast({ title: error.message || '加入失败', icon: 'none' })
     } finally {

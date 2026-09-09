@@ -93,17 +93,53 @@ function toggleFavoriteRecipeId(value, recipeId) {
   return ids.includes(id) ? ids.filter((item) => item !== id) : ids.concat(id)
 }
 
+function filterRecipesByCategory(recipes = [], category = '全部', favoriteIds = []) {
+  if (category !== '收藏') return recipes
+  const ids = new Set(normalizeFavoriteRecipeIds(favoriteIds))
+  return recipes.filter((recipe) => ids.has(Number(recipe.id)))
+}
+
 function difficultyLabel(value) {
   return ({ 1: '简单', 2: '适中', 3: '进阶' })[Number(value)] || '适中'
+}
+
+function difficultyStars(value) {
+  const numericValue = Number(value)
+  const level = Number.isFinite(numericValue) ? Math.max(0, Math.min(3, numericValue)) : 0
+  return [0, 1, 2].map((index) => index < level)
+}
+
+function normalizeHour(hour) {
+  const value = Number(hour)
+  return Number.isInteger(value) && value >= 0 && value <= 23 ? value : new Date().getHours()
+}
+
+function getGreeting(hour) {
+  const value = normalizeHour(hour)
+  if (value >= 5 && value <= 8) return '早上好，'
+  if (value >= 9 && value <= 11) return '上午好，'
+  if (value >= 12 && value <= 17) return '下午好，'
+  return '晚上好，'
+}
+
+function getCurrentMealType(hour) {
+  const value = normalizeHour(hour)
+  if (value >= 10 && value <= 14) return 'lunch'
+  if (value >= 15 && value <= 20) return 'dinner'
+  return 'breakfast'
 }
 
 module.exports = {
   MEALS,
   buildMenuItemPayload,
   buildRecipePath,
+  difficultyStars,
   difficultyLabel,
+  getCurrentMealType,
+  getGreeting,
   normalizeMeals,
   normalizeFavoriteRecipeIds,
+  filterRecipesByCategory,
   parseLocalDate,
   parseRecipeSteps,
   serializeIngredients,

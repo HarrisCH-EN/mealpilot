@@ -36,7 +36,12 @@
       </view>
 
       <view class="detail-copy">
-        <view class="detail-title">{{recipe.title}}</view>
+        <view class="detail-title-row">
+          <text class="detail-title">{{recipe.title}}</text>
+          <view wx:if="{{recipe.tags.length}}" class="detail-tags">
+            <text wx:for="{{recipe.tags}}" wx:key="id" class="detail-tag">{{item.name}}</text>
+          </view>
+        </view>
         <view class="detail-subtitle">{{recipe.category}} · 家庭菜谱</view>
       </view>
 
@@ -89,16 +94,18 @@
     </view>
   </scroll-view>
 
+  <view wx:if="{{recipe && menuContext}}" class="detail-menu-status">已加入{{menuContextLabel}}</view>
   <view wx:if="{{recipe}}" class="detail-footer">
-    <button class="detail-footer__button detail-footer__edit" bindtap="edit"><image class="detail-footer__icon" src="/assets/icons/recipes/edit.png" mode="aspectFit" />编辑菜品</button>
-    <button class="detail-footer__button detail-footer__add" bindtap="openAdd"><image class="detail-footer__icon" src="/assets/icons/recipes/add-white.png" mode="aspectFit" />加入菜单</button>
+    <button wx:if="{{canEdit}}" class="detail-footer__button detail-footer__edit" bindtap="edit"><image class="detail-footer__icon" src="/assets/icons/recipes/edit.png" mode="aspectFit" />编辑</button>
+    <view wx:else class="detail-footer__permission">仅菜谱创建者或家庭管理员可编辑</view>
+    <button class="detail-footer__button detail-footer__add" bindtap="primaryAction"><image class="detail-footer__icon" src="/assets/icons/recipes/add-white.png" mode="aspectFit" />{{menuContext ? '查看菜单' : '加入菜单'}}</button>
   </view>
 </view>
 
 <view wx:if="{{sheetOpen}}" class="sheet-mask" bindtap="closeSheet" catchtouchmove="noop"></view>
 <view wx:if="{{sheetOpen}}" class="bottom-sheet recipe-module-layer detail-sheet" catchtap="noop" catchtouchmove="noop">
   <view class="sheet-handle"></view>
-  <view class="row"><view class="sheet-title">加入菜单</view><button class="sheet-close" aria-label="关闭" bindtap="closeSheet"><image class="sheet-close__icon" src="/assets/icons/recipes/close.png" mode="aspectFit" /></button></view>
+  <view class="row"><view class="sheet-title">加入菜单</view></view>
   <view class="sheet-section"><text class="field-label">选择日期</text><picker mode="date" value="{{menuDate}}" bindchange="changeMenuDate"><view class="picker-field"><text>{{menuDate}}</text><view class="subtle picker-field__action">更改<image class="picker-field__icon" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></view></view></picker></view>
   <view class="sheet-section"><text class="field-label">选择餐次</text><view class="meal-picker"><view wx:for="{{mealTypes}}" wx:key="value" class="meal-choice {{mealType===item.value?'meal-choice--active':''}}" data-value="{{item.value}}" bindtap="selectMeal">{{item.label}}</view></view></view>
   <view class="sheet-section"><text class="field-label">备注</text><input class="input" value="{{note}}" maxlength="80" placeholder="例如：少盐、不要香菜（选填）" bindinput="changeNote" /></view>

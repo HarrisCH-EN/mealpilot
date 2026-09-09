@@ -1,0 +1,78 @@
+page {
+  --restriction-text: #171717;
+  --restriction-muted: #979797;
+  --restriction-soft: #fff1f4;
+  --restriction-accent: #f14d70;
+  --restriction-divider: #eeeeee;
+}
+
+.restrictions-page { min-height: 100vh; box-sizing: border-box; padding-right: 36rpx; padding-bottom: calc(96rpx + env(safe-area-inset-bottom)); padding-left: 36rpx; background: #ffffff; color: var(--restriction-text); }
+.restrictions-nav { position: fixed; right: 0; left: 0; z-index: 40; display: flex; align-items: center; justify-content: space-between; box-sizing: border-box; border-bottom: 1rpx solid #f1f1f1; background: rgba(255, 255, 255, .96); }
+.restrictions-nav__slot { display: flex; width: 186rpx; min-width: 186rpx; flex: 0 0 186rpx; align-items: center; }
+.restrictions-nav__slot:last-child { justify-content: flex-end; }
+.restrictions-nav__button { display: flex; width: 72rpx; height: 72rpx; align-items: center; justify-content: center; margin: 0; padding: 0; border: 0; background: transparent; }
+.restrictions-nav__button::after { border: 0; }
+.restrictions-nav__icon { display: block; width: 36rpx; height: 36rpx; }
+.restrictions-nav__title { flex: 1; overflow: hidden; color: #111111; font-size: 36rpx; font-weight: 700; line-height: 1.3; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.restrictions-subtitle { margin: 24rpx 28rpx 68rpx; color: var(--restriction-muted); font-size: 27rpx; line-height: 1.55; }
+.restrictions-content { animation: restrictions-enter 220ms ease-out both; }
+.restrictions-section-head { display: flex; min-height: 68rpx; align-items: center; justify-content: space-between; gap: 16rpx; }
+.restrictions-section-head--restriction { margin-top: 70rpx; }
+.restrictions-section-title { color: #111111; font-size: 38rpx; font-weight: 700; line-height: 1.35; }
+.restrictions-count { display: inline-flex; min-width: 52rpx; height: 52rpx; align-items: center; justify-content: center; margin-left: 10rpx; padding: 0 10rpx; box-sizing: border-box; border-radius: 999rpx; background: var(--restriction-soft); color: var(--restriction-accent); font-size: 29rpx; font-weight: 700; vertical-align: 4rpx; }
+.restrictions-section-note { flex: 0 0 auto; color: var(--restriction-muted); font-size: 23rpx; line-height: 1.4; text-align: right; }
+.restrictions-member-card, .restrictions-card { border: 1rpx solid #ededed; border-radius: 30rpx; background: #ffffff; }
+.restrictions-member-card { margin-top: 20rpx; padding: 12rpx 30rpx; }
+.restrictions-member-row { display: flex; min-height: 112rpx; align-items: center; gap: 18rpx; border-bottom: 1rpx solid var(--restriction-divider); }
+.restrictions-member-row:last-child { border-bottom: 0; }
+.restrictions-member-row--active { margin-right: -10rpx; margin-left: -10rpx; padding-right: 10rpx; padding-left: 10rpx; border-radius: 18rpx; background: #fff9fa; }
+.restrictions-member-avatar { display: flex; width: 64rpx; height: 64rpx; flex: 0 0 64rpx; align-items: center; justify-content: center; border-radius: 50%; background: var(--restriction-soft); color: var(--restriction-accent); font-size: 28rpx; font-weight: 700; }
+.restrictions-member-copy { min-width: 0; flex: 1; }
+.restrictions-member-name { overflow: hidden; color: #333333; font-size: 29rpx; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.restrictions-member-role { margin-top: 6rpx; color: var(--restriction-muted); font-size: 23rpx; line-height: 1.4; }
+.restrictions-member-selected { flex: 0 0 auto; padding: 10rpx 18rpx; border-radius: 999rpx; background: var(--restriction-soft); color: var(--restriction-accent); font-size: 23rpx; }
+.restrictions-create { display: inline-flex; width: auto !important; min-width: 0; max-width: 100%; flex: 0 0 auto; align-items: center; justify-content: center; margin: 0 0 0 auto; padding: 13rpx 16rpx; border: 0; border-radius: 999rpx; background: var(--restriction-soft); color: var(--restriction-accent); font-size: 26rpx; font-weight: 600; line-height: 1.35; white-space: nowrap; }
+.restrictions-create::after, .restrictions-empty__button::after, .restrictions-retry::after { border: 0; }
+.restrictions-card { margin-top: 20rpx; padding: 28rpx 30rpx 12rpx; }
+.restrictions-card__helper { color: var(--restriction-muted); font-size: 24rpx; line-height: 1.55; }
+.restrictions-inline-error { margin-top: 18rpx; color: #d1435b; font-size: 24rpx; line-height: 1.5; }
+.restrictions-list { margin-top: 20rpx; }
+.restrictions-row { display: flex; min-height: 104rpx; align-items: center; justify-content: space-between; gap: 20rpx; border-bottom: 1rpx solid var(--restriction-divider); }
+.restrictions-row:last-child { border-bottom: 0; }
+.restrictions-chip { max-width: 70%; overflow: hidden; padding: 15rpx 30rpx; border-radius: 999rpx; background: var(--restriction-soft); color: var(--restriction-accent); font-size: 30rpx; font-weight: 600; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+.restrictions-remove { display: flex; width: 64rpx !important; min-width: 64rpx; max-width: 64rpx; height: 64rpx !important; flex: 0 0 64rpx; align-items: center; justify-content: center; margin: 0 0 0 auto; padding: 0 !important; box-sizing: border-box; border: 0; border-radius: 50% !important; background: var(--restriction-soft); color: var(--restriction-accent); font-size: 38rpx; line-height: 1; }
+.restrictions-remove::after { border: 0; }
+.restrictions-empty { padding: 56rpx 18rpx 36rpx; text-align: center; }
+.restrictions-empty__title { color: #333333; font-size: 29rpx; font-weight: 600; }
+.restrictions-empty__copy { margin-top: 12rpx; color: var(--restriction-muted); font-size: 24rpx; line-height: 1.5; }
+.restrictions-empty__button { margin: 24rpx auto 0; padding: 12rpx 22rpx; border-radius: 999rpx; background: var(--restriction-soft); color: var(--restriction-accent); font-size: 25rpx; line-height: 1.4; }
+.restrictions-about { display: flex; gap: 22rpx; margin-top: 64rpx; padding: 30rpx; border-radius: 28rpx; background: #fafbfc; }
+.restrictions-about__icon { display: flex; width: 44rpx; height: 44rpx; flex: 0 0 44rpx; align-items: center; justify-content: center; border: 3rpx solid #8f949a; border-radius: 50%; color: #8f949a; font-size: 28rpx; font-weight: 600; }
+.restrictions-about__copy { min-width: 0; }
+.restrictions-about__title { color: #333333; font-size: 29rpx; font-weight: 600; }
+.restrictions-about__text { margin-top: 14rpx; color: var(--restriction-muted); font-size: 24rpx; line-height: 1.6; }
+.restrictions-loading { padding-top: 12rpx; }
+.restrictions-skeleton { border-radius: 28rpx; background: #f6f6f6; }
+.restrictions-skeleton--intro { width: 82%; height: 54rpx; margin: 44rpx 0 72rpx 28rpx; }
+.restrictions-skeleton--card { height: 300rpx; margin-top: 22rpx; }
+.restrictions-error-state { padding: 180rpx 36rpx; text-align: center; }
+.restrictions-error-state__title { color: #333333; font-size: 31rpx; font-weight: 600; }
+.restrictions-error-state__copy { margin-top: 14rpx; color: var(--restriction-muted); font-size: 24rpx; line-height: 1.5; }
+.restrictions-retry { margin: 28rpx auto 0; padding: 12rpx 28rpx; border-radius: 999rpx; background: var(--restriction-soft); color: var(--restriction-accent); font-size: 25rpx; }
+.restriction-picker { box-sizing: border-box; max-height: 78vh; padding-bottom: calc(24rpx + env(safe-area-inset-bottom)); }
+.restriction-picker__header { display: flex; align-items: center; justify-content: space-between; }
+.sheet-close { width: 54rpx; height: 54rpx; margin: 0; padding: 0; border: 0; background: transparent; color: #777777; font-size: 38rpx; line-height: 54rpx; }
+.restriction-search { margin: 22rpx 0 14rpx; }
+.restriction-picker__list { max-height: 54vh; }
+.ingredient-option { display: block; width: 100%; padding: 22rpx 4rpx; border-bottom: 1rpx solid #f0f0f0; background: transparent; color: #333333; font-size: 28rpx; text-align: left; }
+.restriction-picker__empty { padding: 80rpx 0; color: #999999; font-size: 25rpx; text-align: center; }
+
+@keyframes restrictions-enter { from { opacity: 0; transform: translateY(8rpx); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 350px) {
+  .restrictions-page { padding-right: 28rpx; padding-left: 28rpx; }
+  .restrictions-subtitle { margin-right: 18rpx; margin-left: 18rpx; font-size: 25rpx; }
+  .restrictions-section-title { font-size: 35rpx; }
+  .restrictions-create { padding-right: 18rpx; padding-left: 18rpx; font-size: 24rpx; }
+  .restrictions-section-note { font-size: 20rpx; }
+}

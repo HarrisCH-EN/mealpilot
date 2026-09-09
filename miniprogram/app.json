@@ -6,6 +6,8 @@
     "pages/settings/index",
     "pages/recipe-detail/index",
     "pages/recipe-form/index",
+    "pages/tag-management/index",
+    "pages/restrictions/index",
     "pages/about/index"
   ],
   "window": {

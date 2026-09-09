@@ -139,6 +139,16 @@ function buildCalendarMonth(value, todayValue = toLocalISODate(new Date()), menu
   })
 }
 
+function mergeMenuDateKeys(existingKeys = [], from = '', to = '', rows = []) {
+  const keep = new Set((existingKeys || []).map((value) => String(value).slice(0, 10)).filter((value) => value < from || value > to))
+  ;(rows || []).forEach((row) => {
+    const date = String(row.menuDate || row.date || '').slice(0, 10)
+    const hasMenu = row.hasMenu === true || Number(row.itemCount || 0) > 0
+    if (date && hasMenu) keep.add(date)
+  })
+  return Array.from(keep).sort()
+}
+
 function mealRole(index, activeIndex) {
   const offset = (index - activeIndex + 3) % 3
   return offset === 0 ? 'active' : offset === 1 ? 'next' : 'prev'
@@ -160,6 +170,20 @@ function buildMealCards(meals, activeIndex) {
   })
 }
 
+function getPreferredMealIndex(meals, fallbackIndex = 0) {
+  const safeFallback = Number.isInteger(Number(fallbackIndex)) ? Number(fallbackIndex) : 0
+  let preferredIndex = safeFallback
+  let largestCount = 0
+  ;(meals || []).forEach((meal, index) => {
+    const count = Array.isArray(meal.items) ? meal.items.length : 0
+    if (count > largestCount) {
+      largestCount = count
+      preferredIndex = index
+    }
+  })
+  return largestCount > 0 ? preferredIndex : safeFallback
+}
+
 function nextMealIndex(index) {
   return (Number(index) + 1) % 3
 }
@@ -179,7 +203,9 @@ module.exports = {
   buildDateItems,
   buildTimelineItems,
   buildCalendarMonth,
+  mergeMenuDateKeys,
   buildMealCards,
+  getPreferredMealIndex,
   getDateRailMetrics,
   getDateRailState,
   getDateScrollLeft,

@@ -1,0 +1,44 @@
+<style>
+  .choice-grid { display:grid; grid-template-columns:repeat(3,minmax(220px,1fr)); gap:20px; }
+  .phone { width:250px; margin:auto; padding:10px; border-radius:28px; background:#151515; box-shadow:0 18px 35px rgba(20,20,20,.16); }
+  .screen { min-height:500px; border-radius:20px; overflow:hidden; background:#fff; color:#171717; font-family:ui-sans-serif,system-ui,sans-serif; }
+  .nav { height:38px; display:flex; align-items:center; justify-content:space-between; padding:0 12px; font-size:10px; font-weight:700; }
+  .save { padding:5px 10px; border-radius:999px; background:#ff385c; color:#fff; font-size:9px; }
+  .hero { height:154px; margin:0 10px 10px; border-radius:18px; background:linear-gradient(145deg,#e8c164,#f7eee0 42%,#ef8f4d 43%,#b9cf84 70%,#d4e1b4); position:relative; }
+  .hero:after { content:'更换图片'; position:absolute; right:8px; bottom:8px; padding:5px 8px; border-radius:999px; background:rgba(17,17,17,.75); color:#fff; font-size:8px; }
+  .card { margin:0 10px 9px; padding:12px; border-radius:16px; background:#fafafa; }
+  .label { color:#a2a2a2; font-size:8px; }
+  .title { margin:3px 0 8px; font-size:15px; font-weight:700; }
+  .desc { margin:3px 0 9px; color:#444; font-size:9px; }
+  .grid { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .cell { padding:8px; border:1px solid #eee; border-radius:11px; background:#fff; }
+  .value { margin-top:3px; font-size:11px; font-weight:700; }
+  .head { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; font-size:12px; font-weight:700; }
+  .add { color:#ff385c; font-size:9px; }
+  .row { display:flex; align-items:center; gap:7px; padding:8px 0; border-top:1px solid #eee; }
+  .drag { color:#aaa; font-size:11px; }
+  .row-main { flex:1; } .row-name { font-size:10px; font-weight:700; } .row-note { margin-top:2px; color:#aaa; font-size:8px; }
+  .amount { color:#555; font-size:9px; }
+  .step { padding:8px; border-radius:11px; background:#fff; } .step-top { display:flex; gap:6px; align-items:center; }
+  .badge { display:grid; place-items:center; width:21px; height:21px; border-radius:50%; background:#fff0f3; color:#ff385c; font-size:8px; font-weight:700; }
+  .step-copy { margin-top:6px; color:#444; font-size:9px; line-height:1.45; }
+  .caption { margin-top:10px; font-size:12px; color:#555; text-align:center; }
+  @media (max-width: 850px) { .choice-grid { grid-template-columns:1fr; } }
+</style>
+
+<h2>同一方案 C：选择编辑密度</h2>
+<p class="subtitle">三种都保持大图置顶、纯白背景、白色编辑卡与 PNG 图标，只调整信息密度和卡片呼吸感。</p>
+<div class="choice-grid">
+  <div class="card" data-choice="c-balanced" onclick="toggleSelect(this)">
+    <div class="phone"><div class="screen"><div class="nav"><span>‹</span><span>编辑菜品</span><span class="save">保存</span></div><div class="hero"></div><div class="card"><div class="label">菜名</div><div class="title">海带豆腐汤</div><div class="label">一句介绍</div><div class="desc">清爽顺口，适合日常餐桌。</div><div class="grid"><div class="cell"><div class="label">分类</div><div class="value">汤　›</div></div><div class="cell"><div class="label">难度</div><div class="value">简单　›</div></div><div class="cell"><div class="label">时间</div><div class="value">25 分钟</div></div><div class="cell"><div class="label">份量</div><div class="value">3 人</div></div></div></div><div class="card"><div class="head"><span>食材 <span class="label">2</span></span><span class="add">＋ 添加</span></div><div class="row"><span class="drag">≡</span><div class="row-main"><div class="row-name">海带</div><div class="row-note">泡发切段</div></div><span class="amount">120 g</span><span>⌫</span></div><div class="row"><span class="drag">≡</span><div class="row-main"><div class="row-name">豆腐</div><div class="row-note">切块</div></div><span class="amount">250 g</span><span>⌫</span></div></div></div></div>
+    <div class="caption"><strong>平衡型</strong><br>编辑信息一屏一组，适合日常使用</div>
+  </div>
+  <div class="card" data-choice="c-airy" onclick="toggleSelect(this)">
+    <div class="phone"><div class="screen"><div class="nav"><span>‹</span><span>编辑菜品</span><span class="save">保存</span></div><div class="hero"></div><div class="card"><div class="label">菜名</div><div class="title">海带豆腐汤</div><div class="label">一句介绍</div><div class="desc">清爽顺口，适合日常餐桌。</div><div class="grid"><div class="cell"><div class="label">分类</div><div class="value">汤　›</div></div><div class="cell"><div class="label">难度</div><div class="value">简单　›</div></div><div class="cell"><div class="label">时间</div><div class="value">25 分钟</div></div><div class="cell"><div class="label">份量</div><div class="value">3 人</div></div></div></div><div class="card"><div class="head"><span>食材 <span class="label">2</span></span><span class="add">＋ 添加</span></div><div class="row"><span class="drag">≡</span><div class="row-main"><div class="row-name">海带</div><div class="row-note">泡发切段</div></div><span class="amount">120 g</span><span>⌫</span></div></div><div class="card"><div class="head"><span>制作步骤</span><span class="add">＋ 添加</span></div><div class="step"><div class="step-top"><span class="badge">01</span><span class="row-name">第一步</span></div><div class="step-copy">海带泡发，与豆腐煮开；小火煮透后调味。</div></div></div></div></div>
+    <div class="caption"><strong>留白型</strong><br>卡片更松，阅读感更强但页面更长</div>
+  </div>
+  <div class="card" data-choice="c-dense" onclick="toggleSelect(this)">
+    <div class="phone"><div class="screen"><div class="nav"><span>‹</span><span>编辑菜品</span><span class="save">保存</span></div><div class="hero"></div><div class="card"><div class="label">菜名</div><div class="title">海带豆腐汤</div><div class="desc">清爽顺口，适合日常餐桌。</div><div class="grid"><div class="cell"><div class="label">分类</div><div class="value">汤</div></div><div class="cell"><div class="label">难度</div><div class="value">简单</div></div><div class="cell"><div class="label">时间</div><div class="value">25 分钟</div></div><div class="cell"><div class="label">份量</div><div class="value">3 人</div></div></div></div><div class="card"><div class="head"><span>食材 <span class="label">2</span></span><span class="add">＋ 添加</span></div><div class="row"><span class="drag">≡</span><div class="row-main"><div class="row-name">海带</div><div class="row-note">泡发切段</div></div><span class="amount">120 g</span><span>⌫</span></div><div class="row"><span class="drag">≡</span><div class="row-main"><div class="row-name">豆腐</div><div class="row-note">切块</div></div><span class="amount">250 g</span><span>⌫</span></div></div><div class="card"><div class="head"><span>制作步骤</span><span class="add">＋ 添加</span></div><div class="step"><div class="step-top"><span class="badge">01</span><span class="row-name">步骤内容</span></div><div class="step-copy">海带泡发，与豆腐煮开；小火煮透后调味。</div></div></div></div></div>
+    <div class="caption"><strong>紧凑型</strong><br>更快扫读，适合熟练用户连续录入</div>
+  </div>
+</div>

@@ -1,0 +1,42 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+
+const root = path.join(__dirname, '..')
+const read = (...segments) => fs.readFileSync(path.join(root, ...segments), 'utf8')
+
+test('tag management page exposes custom CRUD and system read-only sections', () => {
+  const template = read('pages', 'tag-management', 'index.wxml')
+  const script = read('pages', 'tag-management', 'index.js')
+  assert.match(template, /自定义标签/)
+  assert.match(template, /系统标签/)
+  assert.match(template, /bindtap="createTag"/)
+  assert.match(template, /bindtap="renameTag"/)
+  assert.match(template, /bindtap="deleteTag"/)
+  assert.match(script, /request\('\/tags', 'POST'/)
+  assert.match(script, /request\(`\/tags\/\$\{tagId\}`, 'PUT'/)
+  assert.match(script, /request\(`\/tags\/\$\{tagId\}`, 'DELETE'/)
+  assert.match(script, /无法恢复/)
+})
+
+test('tag management header follows the recipe form navigation layout', () => {
+  const template = read('pages', 'tag-management', 'index.wxml')
+  const styles = read('pages', 'tag-management', 'index.wxss')
+  const script = read('pages', 'tag-management', 'index.js')
+  const pageConfig = JSON.parse(read('pages', 'tag-management', 'index.json'))
+  assert.match(template, /tag-management-nav__slot/)
+  assert.match(template, /tag-management-nav__title/)
+  assert.match(template, /assets\/icons\/recipes\/back\.png/)
+  assert.match(styles, /width: 186rpx/)
+  assert.match(styles, /position: fixed/)
+  assert.equal(pageConfig.navigationStyle, 'custom')
+  assert.match(script, /statusBarHeight/)
+  assert.match(script, /contentStyle/) 
+})
+
+test('tag management page keeps the system tag area action-free', () => {
+  const template = read('pages', 'tag-management', 'index.wxml')
+  const systemSection = template.slice(template.indexOf('tag-management-card--system'))
+  assert.doesNotMatch(systemSection, /renameTag|deleteTag|修改|删除/)
+})

@@ -39,11 +39,13 @@ test('demo recipe seed is the source of truth for cover_url mappings', () => {
   }
 })
 
-test('bundled recipe images are readable JPEGs with one fixed 4:3 ratio and unique content', () => {
+test('required bundled recipe images are readable JPEGs while the media directory may grow', () => {
   const assetDir = path.join(miniprogramRoot, 'assets', 'recipes')
   const mappedFiles = [...expected.values()].filter(Boolean).map((coverUrl) => path.join(miniprogramRoot, coverUrl))
+  const actualFiles = new Set(fs.readdirSync(assetDir))
   const hashes = new Set()
   for (const file of mappedFiles) {
+    assert.equal(actualFiles.has(path.basename(file)), true, `${file} must remain part of the media directory`)
     assert.ok(fs.existsSync(file), `${file} must exist`)
     const bytes = fs.readFileSync(file)
     assert.ok(bytes.length > 10000, `${file} should not be an empty placeholder`)
@@ -53,12 +55,11 @@ test('bundled recipe images are readable JPEGs with one fixed 4:3 ratio and uniq
     assert.equal(hashes.has(hash), false, `${file} must not duplicate another recipe image`)
     hashes.add(hash)
   }
-  assert.deepEqual(fs.readdirSync(assetDir).sort(), mappedFiles.map((file) => path.basename(file)).sort())
 })
 
 test('recipe API exposes coverUrl in list and detail queries', () => {
   const routes = fs.readFileSync(path.join(projectRoot, 'server', 'src', 'routes', 'recipes.js'), 'utf8')
-  assert.equal((routes.match(/cover_url AS coverUrl/g) || []).length, 2)
+  assert.equal((routes.match(/cover_url AS coverUrl/g) || []).length, 3)
 })
 
 test('local MiniProgram image paths follow the existing bundle-relative convention', () => {

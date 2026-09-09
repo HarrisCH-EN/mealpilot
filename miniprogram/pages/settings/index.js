@@ -1,10 +1,11 @@
-const { request, devLogin } = require('../../utils/api')
+const { request, ensureAuthenticated, devLogin } = require('../../utils/api')
+const { allowDevLogin } = require('../../config')
 const app = getApp()
 
 const TEMP_CACHE_KEYS = new Set(['recipeImageCache', 'menuPreviewCache', 'settingsCache'])
 
 function getDisplayName(user) {
-  return String((user && user.display_name) || '演示用户').trim() || '演示用户'
+  return String((user && user.display_name) || '微信用户').trim() || '微信用户'
 }
 
 function getNavigationLayout() {
@@ -27,16 +28,18 @@ Page({
   data: {
     navStyle: '',
     user: {},
-    userInitial: '演',
+    userInitial: '微',
     membership: null,
     family: null,
     familyMemberCount: 0,
     insight: null,
+    insightExpanded: false,
     membersExpanded: false,
     loading: false,
     insightLoading: false,
     error: '',
-    cacheLabel: ''
+    cacheLabel: '',
+    allowDevLogin
   },
 
   onLoad() {
@@ -48,9 +51,9 @@ Page({
   },
 
   async refresh() {
-    this.setData({ loading: true, error: '', family: null, familyMemberCount: 0, insight: null, membersExpanded: false, cacheLabel: '' })
+    this.setData({ loading: true, error: '', family: null, familyMemberCount: 0, insight: null, insightExpanded: false, membersExpanded: false, cacheLabel: '' })
     try {
-      const data = await request('/auth/me')
+      const data = await ensureAuthenticated()
       const user = data.user || app.globalData.user || {}
       const displayName = getDisplayName(user)
       this.setData({
@@ -83,16 +86,27 @@ Page({
 
   handleUserTap() {
     if (this.data.user && this.data.user.display_name) {
-      wx.showToast({ title: '本地演示账户', icon: 'none' })
+      wx.showToast({ title: this.data.allowDevLogin ? '本地开发身份' : '微信登录用户', icon: 'none' })
       return
     }
-    this.login()
+    this.retryLogin()
+  },
+
+  async retryLogin() {
+    if (this.data.loading) return
+    this.setData({ loading: true, error: '' })
+    try {
+      await ensureAuthenticated({ force: true })
+      await this.refresh()
+    } catch (error) {
+      this.setData({ loading: false, error: error.message || '登录失败，请重试' })
+    }
   },
 
   async login() {
     try {
       await devLogin()
-      wx.showToast({ title: '演示登录成功', icon: 'success' })
+      wx.showToast({ title: '本地开发登录成功', icon: 'success' })
       this.refresh()
     } catch (error) {
       wx.showToast({ title: error.message || '登录失败', icon: 'none' })
@@ -175,9 +189,13 @@ Page({
 
   async insights() {
     if (this.data.insightLoading || !this.data.membership) return
+    if (this.data.insight) {
+      this.setData({ insightExpanded: !this.data.insightExpanded })
+      return
+    }
     this.setData({ insightLoading: true })
     try {
-      this.setData({ insight: await request('/insights') })
+      this.setData({ insight: await request('/insights'), insightExpanded: true })
     } catch (error) {
       wx.showToast({ title: error.message || '洞察加载失败', icon: 'none' })
     } finally {
@@ -185,8 +203,20 @@ Page({
     }
   },
 
-  showUnavailable() {
-    wx.showToast({ title: '功能即将开放', icon: 'none' })
+  goRestrictions() {
+    if (!this.data.membership) {
+      wx.showToast({ title: '请先创建或加入家庭', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url: '/pages/restrictions/index' })
+  },
+
+  goTagManagement() {
+    if (!this.data.membership) {
+      wx.showToast({ title: '请先创建或加入家庭', icon: 'none' })
+      return
+    }
+    wx.navigateTo({ url: '/pages/tag-management/index' })
   },
 
   goAbout() {

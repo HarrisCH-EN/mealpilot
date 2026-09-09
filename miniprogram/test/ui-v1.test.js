@@ -6,7 +6,10 @@ const path = require('node:path')
 const {
   buildMenuItemPayload,
   buildRecipePath,
+  difficultyStars,
   difficultyLabel,
+  getCurrentMealType,
+  getGreeting,
   normalizeMeals,
   normalizeFavoriteRecipeIds,
   parseRecipeSteps,
@@ -17,6 +20,23 @@ const {
   toLocalISODate
 } = require('../utils/ui')
 
+test('time helpers map local hour to the approved greeting and meal windows', () => {
+  assert.equal(getGreeting(4), '晚上好，')
+  assert.equal(getGreeting(5), '早上好，')
+  assert.equal(getGreeting(8), '早上好，')
+  assert.equal(getGreeting(9), '上午好，')
+  assert.equal(getGreeting(11), '上午好，')
+  assert.equal(getGreeting(12), '下午好，')
+  assert.equal(getGreeting(17), '下午好，')
+  assert.equal(getGreeting(18), '晚上好，')
+  assert.equal(getCurrentMealType(4), 'breakfast')
+  assert.equal(getCurrentMealType(9), 'breakfast')
+  assert.equal(getCurrentMealType(10), 'lunch')
+  assert.equal(getCurrentMealType(14), 'lunch')
+  assert.equal(getCurrentMealType(15), 'dinner')
+  assert.equal(getCurrentMealType(20), 'dinner')
+  assert.equal(getCurrentMealType(21), 'breakfast')
+})
 test('menu payload preserves selected date, meal and note', () => {
   assert.deepEqual(buildMenuItemPayload(7, '2026-09-05', 'lunch', ' 少盐 '), {
     recipeId: 7,
@@ -29,6 +49,13 @@ test('menu payload preserves selected date, meal and note', () => {
 test('recipe query only includes active filters', () => {
   assert.equal(buildRecipePath('', '全部'), '/recipes')
   assert.equal(buildRecipePath('番茄 鸡蛋', '荤菜'), '/recipes?keyword=%E7%95%AA%E8%8C%84%20%E9%B8%A1%E8%9B%8B&category=%E8%8D%A4%E8%8F%9C')
+})
+
+test('difficulty stars share the recipe catalog three-star mapping', () => {
+  assert.deepEqual(difficultyStars(1), [true, false, false])
+  assert.deepEqual(difficultyStars(2), [true, true, false])
+  assert.deepEqual(difficultyStars(3), [true, true, true])
+  assert.deepEqual(difficultyStars('bad'), [false, false, false])
 })
 
 test('date helpers use local calendar dates and shift safely', () => {
@@ -49,6 +76,7 @@ test('menu carousel view model keeps three meal cards ordered and swipe-safe', (
   const {
     buildDateItems,
     buildMealCards,
+    getPreferredMealIndex,
     nextMealIndex,
     previousMealIndex,
     isHorizontalSwipe
@@ -70,6 +98,8 @@ test('menu carousel view model keeps three meal cards ordered and swipe-safe', (
     ['lunch', 'active'],
     ['dinner', 'next']
   ])
+  assert.equal(getPreferredMealIndex(normalizeMeals([{ mealType: 'breakfast', items: [] }, { mealType: 'lunch', items: [{ id: 1 }] }, { mealType: 'dinner', items: [{ id: 2 }, { id: 3 }] }]), 0), 2)
+  assert.equal(getPreferredMealIndex(normalizeMeals([{ mealType: 'breakfast', items: [] }, { mealType: 'lunch', items: [] }, { mealType: 'dinner', items: [] }]), 1), 1)
 })
 
 test('menu date rail keeps fixed context and reveals only when explicitly requested', () => {
@@ -121,6 +151,18 @@ test('menu date timeline stays fixed while selection changes', () => {
   assert.equal(again[0].value, first[0].value)
   assert.equal(again.at(-1).value, first.at(-1).value)
   assert.equal(Object.prototype.hasOwnProperty.call(first[0], 'isSelected'), false)
+})
+
+test('menu markers replace the loaded month instead of keeping stale dates', () => {
+  const { mergeMenuDateKeys } = require('../pages/menu/view-model')
+  assert.deepEqual(mergeMenuDateKeys(
+    ['2026-08-31', '2026-09-03', '2026-10-01'],
+    '2026-09-01',
+    '2026-09-30',
+    [{ menuDate: '2026-09-06', hasMenu: true }, { menuDate: '2026-09-03', hasMenu: false }]
+  ), ['2026-08-31', '2026-09-06', '2026-10-01'])
+  const css = fs.readFileSync(path.join(__dirname, '..', 'pages', 'menu', 'index.wxss'), 'utf8')
+  assert.match(css, /\.menu-date--selected \.menu-date__marker/)
 })
 
 test('ingredient serialization drops incomplete rows and converts numbers', () => {
@@ -175,7 +217,7 @@ test('app config keeps four stable tabs with the Airbnb Rausch active state', ()
 test('sitemap has a valid allow rule for DevTools preview', () => {
   const root = path.join(__dirname, '..')
   const sitemap = JSON.parse(fs.readFileSync(path.join(root, 'sitemap.json'), 'utf8'))
-  assert.equal(sitemap.desc, '家宴计划')
+  assert.equal(sitemap.desc, '饭有谱')
   assert.deepEqual(sitemap.rules, [{ action: 'allow', page: '*' }])
 })
 
@@ -220,7 +262,7 @@ test('recipe catalog uses compact two-column cards with stable actions', () => {
 test('round icon controls keep fixed square touch areas instead of stretching into pills', () => {
   const root = path.join(__dirname, '..', 'pages')
   const circleControls = [
-    [path.join(root, 'recommend', 'index.wxss'), 'stepper__button', '64'],
+    [path.join(root, 'recommend', 'index.wxss'), 'recommend-stepper__button', '68'],
     [path.join(root, 'menu', 'index.wxss'), 'menu-add', '72'],
     [path.join(root, 'recipes', 'index.wxss'), 'add-recipe-button', '72'],
   ]
@@ -235,7 +277,7 @@ test('icon buttons lock their flex basis and maximum width to remain circular', 
   const targets = [
     [path.join(__dirname, '..', 'app.wxss'), 'search-orb', '64'],
     [path.join(__dirname, '..', 'app.wxss'), 'sheet-close', '64'],
-    [path.join(__dirname, '..', 'pages', 'recommend', 'index.wxss'), 'stepper__button', '64'],
+    [path.join(__dirname, '..', 'pages', 'recommend', 'index.wxss'), 'recommend-stepper__button', '68'],
     [path.join(__dirname, '..', 'pages', 'menu', 'index.wxss'), 'menu-add', '72'],
     [path.join(__dirname, '..', 'pages', 'recipes', 'index.wxss'), 'add-recipe-button', '72'],
   ]
@@ -271,65 +313,76 @@ test('tab pages share the compact page header and recipe search stays subordinat
   assert.match(recipesCss, /\.recipe-card__menu\s*\{[^}]*width:\s*40rpx;[^}]*height:\s*40rpx;[^}]*font-size:\s*0;/s)
 })
 
-test('recommendation screen is a progressive two-click decision flow', () => {
+test('recommend home exposes the canonical setup flow', () => {
+  const root = path.join(__dirname, '..', 'pages', 'recommend')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
+  assert.match(template, /今晚吃什么/)
+  assert.match(template, /今晚几个人吃饭/)
+  assert.match(template, /大概有多少准备时间/)
+  assert.match(template, /想吃几道/)
+  assert.match(template, /今晚想吃什么/)
+  assert.match(template, /帮我搭一桌/)
+  assert.match(css, /\.recommend-setup\s*\{/)
+  assert.match(css, /env\(safe-area-inset-bottom\)/)
+  assert.match(css, /env\(safe-area-inset-bottom\)/)
+})
+
+test('recommend home restores the editorial CTA while moving the unchanged setup form into a sheet', () => {
+  const root = path.join(__dirname, '..', 'pages', 'recommend')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
+  const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
+  assert.match(template, /decision-cta[^>]*bindtap="generate"/)
+  assert.match(template, /context-summary[^>]*bindtap="togglePreferences"/)
+  assert.match(template, /preference-sheet[^>]*bindtouchstart="handlePreferenceSheetTouchStart"/)
+  assert.match(template, /recommend-time-ruler__scroll[^>]*bindscroll="handlePrepScroll"/)
+  assert.match(template, /每格 5 分钟/)
+  assert.doesNotMatch(template, /preference-sheet__close/)
+  assert.match(template, /togglePreferenceTag/)
+  assert.match(template, /wx:for="\{\{tagOptions\}\}"/)
+  assert.doesNotMatch(template, /toggleSeasonal/)
+  assert.match(script, /preferenceOpen:\s*false/)
+  assert.match(script, /PREP_DISPLAY_STEP = 5/)
+  assert.match(script, /handlePreferenceSheetTouchEnd\(event\)/)
+  assert.match(css, /\.decision-cta--circle\s*\{/)
+  assert.match(css, /\.recommend-stepper__button\s*\{[^}]*width:\s*56rpx/s)
+  assert.match(css, /\.recommend-time-ruler__tick--major \.recommend-time-ruler__mark \{[^}]*background:\s*#ff385c/s)
+  assert.match(css, /\.preference-sheet__body \.recommend-cta \{[^}]*background:\s*#ff385c/s)
+  assert.match(css, /@keyframes recommend-ripple-expand/)
+})
+
+test('recommendation screen follows the canonical setup, candidate, and apply flow', () => {
   const root = path.join(__dirname, '..', 'pages', 'recommend')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
-  assert.match(script, /screen:\s*'initial'/)
-  assert.match(script, /screen:\s*'loading'/)
-  assert.match(script, /screen:\s*'result'/)
-  assert.match(script, /screen:\s*'confirmed'/)
-  assert.match(script, /screen:\s*'error'/)
-  assert.match(script, /applying/)
-  assert.match(script, /applied/)
-  assert.match(script, /if \(this\.data\.loading/)
+  assert.match(script, /screen:\s*'setup'/)
   assert.match(script, /request\('\/recommendations', 'POST'/)
-  assert.match(script, /request\('\/recipes'\)/)
-  assert.match(script, /attachRecipeDetails/)
-  assert.match(script, /difficultyLabel/)
-  assert.match(script, /request\('\/menus\/items', 'POST'/)
-  assert.match(script, /const regenerating = this\.data\.screen === 'result'/)
-  assert.match(script, /this\.data\.loading \|\| this\.data\.applying \|\| this\.data\.regenerating/)
-  assert.match(script, /this\.data\.applied/)
-  assert.match(script, /chooseManually\(\)/)
-  assert.match(script, /wx\.switchTab\(\{ url: '\/pages\/recipes\/index' \}\)/)
-  assert.match(script, /async retry\(\)\s*\{\s*if \(await this\.ensureLogin\(\)\) this\.generate\(\)/s)
-  assert.match(template, /帮我选/)
-  assert.match(template, /就吃这些/)
+  assert.match(script, /maxPrepMinutes/)
+  assert.match(script, /structure/)
+  assert.match(script, /preferences/)
+  assert.match(script, /request\(\`\/recommendations\/\$\{this\.data\.runId\}\/candidates\/\$\{this\.data\.rank \+ 1\}\`/)
+  assert.match(script, /candidateId: this\.data\.candidateId/)
+  assert.doesNotMatch(script, /Math\.random/)
+  assert.doesNotMatch(script, /recipeIds/)
+  assert.match(template, /今晚几个人吃饭/)
+  assert.match(template, /大概有多少准备时间/)
+  assert.match(template, /想吃几道/)
+  assert.match(template, /今晚想吃什么/)
+  assert.match(template, /这些选择只影响本次推荐/)
+  assert.match(template, /帮我搭一桌/)
   assert.match(template, /换一组/)
-  assert.match(template, /bindtap="generate"/)
-  assert.match(template, /bindtap="apply"/)
-  assert.match(template, /今晚安排好了/)
-  assert.match(template, /result-decision-dock/)
-  assert.match(template, /decision-secondary-actions/)
-  assert.match(template, /decision-back/)
-  assert.match(template, /decision-manual/)
-  assert.match(template, /bindtap="chooseManually"/)
-  assert.match(template, /confirmed-return/)
-  assert.doesNotMatch(template, /result-back|state-navigation/)
-  assert.match(template, /item\.initial/)
-  assert.match(template, /bindtap="backToInitial"/)
-  assert.match(template, /bindtap="backToResult"/)
-  assert.match(template, /result-dish__thumb/)
-  assert.match(template, /result-dish__description/)
-  assert.match(template, /confirmed-recipe-button/)
-  assert.match(template, /bindtap="togglePreferences"/)
-  assert.match(template, /preference-sheet/)
-  assert.doesNotMatch(template, /recommend-search|search-surface|recommend-hero|seasonal-section|dish-fallback|均衡优先|健康优先|快手优先/)
-  assert.match(css, /\.preference-sheet\s*\{[^}]*position:\s*fixed;[^}]*bottom:\s*0;/s)
-  assert.match(css, /\.decision-cta--circle\s*\{[^}]*width:\s*208rpx\s*!important;[^}]*height:\s*208rpx\s*!important;[^}]*min-width:\s*208rpx\s*!important;[^}]*min-height:\s*208rpx\s*!important;[^}]*flex-shrink:\s*0;[^}]*border-radius:\s*50%/s)
-  assert.match(css, /\.decision-secondary-action__icon\s*\{[^}]*width:\s*72rpx;[^}]*height:\s*72rpx;[^}]*border-radius:\s*50%/s)
-  assert.match(css, /\.result-dish__thumb\s*\{[^}]*width:\s*140rpx;[^}]*height:\s*140rpx;[^}]*flex-shrink:\s*0;/s)
-  assert.match(css, /\.confirmed-dish__thumb\s*\{[^}]*width:\s*100rpx;[^}]*height:\s*100rpx;/s)
-  assert.match(css, /\.result-refresh\s*\{[^}]*flex:\s*38;/s)
-  assert.match(css, /\.result-confirm\s*\{[^}]*flex:\s*62;/s)
-  assert.match(css, /\.result-actions\s*\{[^}]*display:\s*flex;/s)
-  assert.match(css, /\.result-decision-dock\s*\{[^}]*border-top:\s*1rpx solid #f0f0f0;/s)
-  assert.doesNotMatch(css, /\.result-decision-dock\s*\{[^}]*position:\s*fixed/s)
-  assert.match(css, /\.result-dish__thumb--empty\s*\{[^}]*background:\s*#f1f1ef/s)
-  assert.match(css, /@keyframes recommend-enter/)
-  assert.match(css, /transform:\s*translateY\(16rpx\)/)
+  assert.match(template, /就吃这套/)
+  assert.match(template, /重新设置/)
+  assert.match(template, /candidateId/)
+  assert.match(template, /currentCandidate\.items/)
+  assert.match(template, /推荐/)
+  assert.match(css, /\.recommend-candidate__warning\s*\{/)
+  assert.match(css, /\.recommend-cta\s*,/)
+  assert.match(css, /env\(safe-area-inset-bottom\)/)
+  assert.doesNotMatch(template, /清淡一点|快一点|就吃这些/)
+  assert.doesNotMatch(script, /maxCookMinutes|mode/)
 })
 
 test('menu screen uses a data-driven date strip and three-card meal deck without changing menu actions', () => {
@@ -350,12 +403,17 @@ test('menu screen uses a data-driven date strip and three-card meal deck without
   assert.match(script, /handleDateScroll/)
   assert.doesNotMatch(script, /DATE_CENTER_VISUAL_OFFSET_RPX|centerSelectedDate/)
   const selectDateHandler = script.match(/selectDate\(event\) \{[\s\S]*?\n  \},\n\n  handleDateScroll/)?.[0] || ''
-  assert.doesNotMatch(selectDateHandler, /dateScrollLeft|getDateScrollLeft|scrollMode/)
+  assert.match(selectDateHandler, /preferMealWithItems/)
   const loadHandler = script.match(/async load\(\) \{[\s\S]*?\n  \},\n\n  measureDeck/)?.[0] || ''
   assert.doesNotMatch(loadHandler, /dateScrollLeft|buildTimelineItems|getDateScrollLeft/)
   assert.match(script, /setSelectedDate\(this\.data\.today, \{ scrollMode: 'center' \}\)/)
   assert.doesNotMatch(script, /select\(`#\$\{dateScrollId\(this\.data\.date\)\}`\)/)
   assert.match(script, /returnToday/)
+  assert.match(script, /pendingFocusedMealIndex/)
+  assert.match(script, /shouldUseCurrentMealDefault/)
+  assert.match(script, /this\.data\.date === this\.data\.today/)
+  assert.match(script, /getCurrentMealType\(new Date\(\)\.getHours\(\)\)/)
+  assert.match(script, /returnToday\(\)[\s\S]*shouldUseCurrentMealDefault = true/)
   assert.match(script, /toggleCalendar/)
   assert.match(script, /handleImageError/)
   assert.match(script, /wx\.showModal/)
@@ -366,6 +424,7 @@ test('menu screen uses a data-driven date strip and three-card meal deck without
   assert.match(template, /scroll-with-animation="true"/)
   assert.doesNotMatch(template, /dateScrollWithAnimation/)
   assert.match(template, /bindscroll="handleDateScroll"/)
+  assert.match(css, /\.menu-calendar-panel__header > text\s*\{[^}]*white-space:\s*nowrap;/s)
   assert.match(template, /date-context-row/)
   assert.match(template, /date-context-sidebar/)
   assert.match(template, /date-context-sidebar__month/)
@@ -389,6 +448,12 @@ test('menu screen uses a data-driven date strip and three-card meal deck without
   assert.match(template, /bindtouchend="handleCardTouchEnd"/)
   assert.match(template, /meal-indicator/)
   assert.match(template, /menu-dish__photo/)
+  assert.match(template, /menu-dish__description/)
+  assert.match(template, /menu-dish__time/)
+  assert.match(template, /menu-dish__stars/)
+  assert.match(template, /star-active\.png/)
+  assert.match(template, /star-inactive\.png/)
+  assert.doesNotMatch(template, /difficultyText|item\.category|简单|适中|进阶|困难/)
   assert.match(template, /src="\{\{item\.coverUrl\}\}" mode="aspectFill"[^>]*binderror="handleImageError"/)
   assert.match(template, /wx:else class="meal-note__empty"/)
   assert.ok(template.includes("meal-note__empty-add {{card.role === 'active' && !deckAnimating ? 'meal-note__empty-add--visible' : ''}}"))
@@ -414,7 +479,11 @@ test('menu screen uses a data-driven date strip and three-card meal deck without
   assert.match(css, /\.meal-note__dishes\s*\{[^}]*flex:\s*1;[^}]*min-height:\s*0;/s)
   assert.match(css, /\.menu-dish\s*\{[^}]*width:\s*100%;[^}]*box-sizing:\s*border-box;/s)
   assert.match(css, /\.menu-dish__copy\s*\{[^}]*min-width:\s*0;[^}]*flex:\s*1;/s)
-  assert.match(css, /\.menu-dish__remove\s*\{[^}]*flex:\s*0 0 48rpx;/s)
+  assert.match(css, /\.menu-dish__title\s*\{[^}]*font-size:\s*30rpx;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s)
+  assert.match(css, /\.menu-dish__description\s*\{[^}]*font-size:\s*24rpx;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s)
+  assert.match(css, /\.menu-dish__star\s*\{[^}]*width:\s*20rpx;[^}]*height:\s*20rpx;/s)
+  assert.match(css, /\.menu-dish__star--active\s*\{[^}]*filter:\s*brightness\(0\) opacity\(\.87\);/s)
+  assert.match(css, /\.menu-dish__remove\s*\{[^}]*flex:\s*0 0 72rpx;/s)
   assert.match(css, /\.menu-calendar-toggle__glyph\s*\{[^}]*width:\s*24rpx;[^}]*height:\s*14rpx;/s)
   assert.match(template, /<image class="menu-calendar-toggle__glyph" src="\/assets\/icons\/menu\/chevron\.png"[^>]*mode="aspectFit"/)
   const viewModel = fs.readFileSync(path.join(root, 'view-model.js'), 'utf8')
@@ -438,6 +507,7 @@ test('recipe catalog implements the image list and add-to-menu flow', () => {
   assert.match(template, /recipe-list/)
   assert.match(template, /catchtap="openAdd"/)
   assert.match(template, /bottom-sheet/)
+  assert.doesNotMatch(template, /sheet-close/)
   assert.match(script, /buildMenuItemPayload/)
   assert.match(script, /wx\.navigateTo\(\{ url: `\/pages\/recipe-detail\/index\?id=/)
   assert.match(script, /request\('\/menus\/items', 'POST'/)
@@ -461,6 +531,7 @@ test('recipe catalog applies the scoped cloud theme and persists local favorites
   assert.match(template, /recipe-card__menu-icon/)
   assert.doesNotMatch(template, /recipe-card__menu[^>]*>\s*[＋+]?\s*加入菜单/)
   assert.match(template, /binderror="handleImageError"/)
+  assert.match(css, /\.recipe-card__star--active\s*\{[^}]*filter:\s*brightness\(0\) opacity\(\.87\);/s)
   assert.match(script, /RECIPE_FAVORITES_STORAGE_KEY/)
   assert.match(script, /wx\.getStorageSync\(RECIPE_FAVORITES_STORAGE_KEY\)/)
   assert.match(script, /wx\.setStorageSync\(RECIPE_FAVORITES_STORAGE_KEY/)
@@ -482,8 +553,7 @@ test('recipe images use aspectFill and degrade to the neutral fallback on load e
   assert.match(listTemplate, /src="\{\{item\.coverUrl\}\}" mode="aspectFill"[^>]*binderror="handleImageError"/)
   assert.match(listTemplate, /wx:else class="recipe-card__photo recipe-card__photo--placeholder"/)
   assert.match(listScript, /handleImageError\(event\)/)
-  assert.match(recommendTemplate, /result-dish__thumb[^>]*src="\{\{item\.coverUrl\}\}" mode="aspectFill"[^>]*binderror="handleImageError"/)
-  assert.match(recommendTemplate, /confirmed-dish__thumb[^>]*src="\{\{item\.coverUrl\}\}" mode="aspectFill"[^>]*binderror="handleImageError"/)
+  assert.match(recommendTemplate, /recommend-dish__cover[^>]*src="\{\{item\.coverUrl\}\}" mode="aspectFill"[^>]*binderror="handleImageError"/)
   assert.match(recommendScript, /handleImageError\(event\)/)
   assert.match(menuTemplate, /src="\{\{item\.coverUrl\}\}" mode="aspectFill"[^>]*binderror="handleImageError"/)
   assert.match(menuTemplate, /menu-dish__photo menu-dish__photo--fallback/)
@@ -527,6 +597,7 @@ test('recipe detail uses custom safe-area navigation and a three-layer ceramic p
   assert.match(template, /detail-meta__item/)
   assert.match(template, /ingredient-card/)
   assert.match(template, /steps-card/)
+  assert.doesNotMatch(template, /sheet-close/)
   assert.match(css, /\.plate-shell\s*\{[^}]*border-radius:\s*50%;[^}]*box-shadow:/s)
   assert.match(css, /\.plate-rim\s*\{[^}]*border-radius:\s*50%;/s)
   assert.doesNotMatch(template, /detail-meta__accent/)
@@ -588,7 +659,7 @@ test('recipe detail positions the complete custom nav below the native capsule',
   }
 })
 
-test('recipe detail scheme A actions keep edit in the footer and share as pending', () => {
+test('recipe detail scheme A actions keep edit in the footer and omit unavailable sharing', () => {
   const root = path.join(__dirname, '..', 'pages', 'recipe-detail')
   const miniprogramRoot = path.join(__dirname, '..')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
@@ -597,9 +668,8 @@ test('recipe detail scheme A actions keep edit in the footer and share as pendin
   assert.match(template, /detail-footer__edit[^>]*bindtap="edit"/)
   assert.match(template, /assets\/icons\/recipes\/edit\.png/)
   assert.doesNotMatch(script, /itemList:\s*\['编辑菜谱'/)
-  assert.match(script, /itemList:\s*\['分享菜品（待开发）',\s*'删除菜品'\]/)
-  assert.match(script, /shareRecipe\(\)/)
-  assert.match(script, /分享功能待开发/)
+  assert.match(script, /itemList:\s*\['删除菜品'\]/)
+  assert.doesNotMatch(script, /shareRecipe\(\)|分享功能待开发|分享菜品（待开发）/)
   assert.ok(fs.existsSync(path.join(miniprogramRoot, 'assets', 'icons', 'recipes', 'edit.png')))
   assert.ok(fs.existsSync(path.join(miniprogramRoot, 'assets', 'icons', 'recipes', 'share.png')))
 })
@@ -636,7 +706,7 @@ test('recipe detail persists local favorite state and exposes real edit/delete a
   assert.match(script, /\/pages\/recipe-form\/index\?id=/)
 })
 
-test('recipe editor is a scoped modular form with one real cover preview and one save action', () => {
+test('recipe form scheme C uses a safe custom nav, immersive hero and unified editor cards', () => {
   const root = path.join(__dirname, '..', 'pages', 'recipe-form')
   const config = JSON.parse(fs.readFileSync(path.join(root, 'index.json'), 'utf8'))
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
@@ -645,19 +715,42 @@ test('recipe editor is a scoped modular form with one real cover preview and one
   assert.equal(config.navigationStyle, 'custom')
   assert.match(css, /@import\s+["']\.\.\/\.\.\/styles\/recipe-theme\.wxss["'];/)
   assert.match(template, /class="form-page recipe-cloud-page"/)
-  assert.match(template, /form-cover/)
+  assert.match(template, /class="form-nav" style="\{\{navStyle\}\}"/)
+  assert.match(template, /class="form-hero__image" src="\{\{coverUrl\}\}"[^>]*mode="aspectFill"[^>]*binderror="handleCoverError"/)
+  assert.match(template, /class="form-hero__placeholder"/)
   assert.match(template, /src="\{\{coverUrl\}\}"[^>]*binderror="handleCoverError"/)
-  assert.match(template, /目前支持单张封面/)
-  assert.doesNotMatch(template, /chooseMedia|chooseImage|上传图片|添加图片|多图/)
+  assert.match(template, /class="form-card basic-info-card"/)
+  assert.match(template, /class="meta-grid"/)
+  assert.match(template, /class="form-card ingredient-card"/)
+  assert.match(template, /class="form-card steps-card"/)
+  assert.match(template, /class="form-hero__change-image" bindtap="chooseCoverImage"/)
+  assert.match(template, /class="form-hero__change-image-icon" src="\/assets\/icons\/common\/photo\.png"/)
+  assert.doesNotMatch(template, /form-cover|editor-section__header|editor-bottom-note|目前支持单张封面|当前单封面/)
+  assert.doesNotMatch(template, /<icon\b/)
   assert.equal((template.match(/bindtap="save"/g) || []).length, 1)
-  assert.match(css, /\.form-nav__save\s*\{[^}]*width:\s*112rpx;[^}]*flex:\s*0 0 112rpx;[^}]*max-width:\s*112rpx;/s)
+  assert.match(css, /--page-padding:\s*32rpx/)
+  assert.match(css, /aspect-ratio:\s*4\s*\/\s*3/)
+  assert.match(css, /\.form-hero\s*\{[^}]*border-radius:\s*36rpx/s)
+  assert.match(template, /class="form-nav__slot form-nav__left-slot"/)
+  assert.match(template, /class="form-nav__slot form-nav__actions"/)
+  assert.match(css, /\.form-nav__slot\s*\{[^}]*width:\s*186rpx;[^}]*flex:\s*0 0 186rpx;/s)
+  assert.match(css, /\.form-nav__button\s*\{[^}]*width:\s*88rpx;[^}]*height:\s*88rpx;[^}]*border-radius:\s*0;/s)
+  assert.match(css, /\.form-nav__title\s*\{[^}]*left:\s*50%;[^}]*font-size:\s*32rpx;/s)
+  assert.match(css, /\.meta-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2/s)
+  assert.match(css, /\.meta-cell__unit\s*\{[^}]*font-size:\s*29rpx;[^}]*font-weight:\s*600/s)
+  assert.match(css, /\.ingredient-card,\s*\.steps-card\s*\{[^}]*padding:\s*0;[^}]*background:\s*transparent/s)
+  assert.match(css, /\.ingredient-list\s*\{[^}]*border-radius:\s*28rpx;[^}]*background:\s*#fafafa/s)
+  assert.match(css, /\.step-card\s*\{[^}]*background:\s*#fafafa/s)
   assert.match(template, /<scroll-view[^>]*class="form-main"[^>]*scroll-y/)
-  assert.match(template, /basic-info-card/)
   assert.match(css, /env\(safe-area-inset-bottom\)/)
   assert.match(script, /wx\.getWindowInfo/)
+  assert.match(script, /wx\.getMenuButtonBoundingClientRect/)
+  assert.match(script, /capsule\.bottom/)
+  assert.match(script, /chooseCoverImage\(\)/)
+  assert.match(script, /wx\.chooseMedia|wx\.chooseImage/)
 })
 
-test('recipe editor uses an ingredient bottom sheet and structured reorderable step blocks', () => {
+test('recipe editor uses unified numbered rows with opt-in step editing', () => {
   const root = path.join(__dirname, '..', 'pages', 'recipe-form')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
@@ -668,7 +761,12 @@ test('recipe editor uses an ingredient bottom sheet and structured reorderable s
   assert.match(template, /wx:for="\{\{stepItems\}\}" wx:key="key"/)
   assert.match(template, /bindtap="addStep"/)
   assert.match(template, /catchtap="removeStep"/)
-  assert.match(template, /catchtap="moveStep"/)
+  assert.match(template, /bindtap="beginStepEdit"/)
+  assert.match(template, /bindtap="finishStepEdit"/)
+  assert.match(template, /editingStepIndex/)
+  assert.match(template, /editor-list-row__index/)
+  assert.match(template, /添加<\/button>/)
+  assert.doesNotMatch(template, /drag\.png|chevron-up\.png|chevron-down\.png|catchtap="moveStep"/)
   assert.match(script, /parseRecipeSteps/)
   assert.match(script, /serializeRecipeSteps/)
   assert.match(script, /openIngredientSheet\(\)/)
@@ -677,15 +775,48 @@ test('recipe editor uses an ingredient bottom sheet and structured reorderable s
   assert.match(script, /some\(\(item, index\)/)
   assert.match(script, /updateStep\(event\)/)
   assert.match(script, /addStep\(\)/)
+  assert.match(script, /beginStepEdit\(event\)/)
+  assert.match(script, /finishStepEdit\(event\)/)
   assert.match(script, /removeStep\(event\)/)
   assert.match(script, /moveStep\(event\)/)
+})
+
+test('recipe form keeps real png icon assets and no fake media controls', () => {
+  const root = path.join(__dirname, '..', 'pages', 'recipe-form')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  const iconRefs = [...template.matchAll(/src="(\/assets\/icons\/[^"']+\.png)"/g)].map((match) => match[1])
+  assert.ok(iconRefs.length >= 8)
+  for (const iconRef of iconRefs) assert.ok(fs.existsSync(path.join(__dirname, '..', iconRef.slice(1))), iconRef)
+  assert.doesNotMatch(template, /更换图片|图片数量|3\/6|6张/)
+})
+
+test('recipe form exposes dirty-state protection without changing the save contract', () => {
+  const root = path.join(__dirname, '..', 'pages', 'recipe-form')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
+  assert.match(script, /isDirty/)
+  assert.match(script, /snapshot|serializeFormState/)
+  assert.match(script, /修改尚未保存/)
+  assert.match(script, /wx\.showModal/)
+  assert.match(template, /bindtap="back"/)
+  assert.match(script, /steps:\s*serializeRecipeSteps\(this\.data\.stepItems\)/)
+  assert.match(script, /ingredients:\s*serializeIngredients\(form\.ingredients\)/)
+})
+
+test('recipe form protects ingredient deletion with a confirmation step', () => {
+  const root = path.join(__dirname, '..', 'pages', 'recipe-form')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
+  assert.match(template, /bindtap="removeIngredientFromSheet"/)
+  assert.match(script, /confirmRemoveIngredient/)
+  assert.match(script, /confirmText:\s*'删除'/)
 })
 
 test('settings keeps real family actions in consumer-style profile sections', () => {
   const root = path.join(__dirname, '..', 'pages', 'settings')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
-  assert.match(script, /request\('\/auth\/me'\)/)
+  assert.match(script, /ensureAuthenticated\(\)/)
   assert.match(script, /request\('\/families\/current'\)/)
   assert.match(script, /request\('\/insights'\)/)
   assert.match(template, /settings-profile/)
@@ -694,7 +825,8 @@ test('settings keeps real family actions in consumer-style profile sections', ()
   assert.match(template, /bindtap="createFamily"/)
   assert.match(template, /bindtap="joinFamily"/)
   assert.match(template, /bindtap="copyCode"/)
-  assert.match(template, /即将开放/)
+  assert.doesNotMatch(template, /即将开放|bindtap="showUnavailable"/)
+  assert.match(template, /微信登录|本地开发/)
 })
 
 test('settings and about pages use scoped tokens, real actions and custom about navigation', () => {
@@ -729,12 +861,20 @@ test('settings and about pages use scoped tokens, real actions and custom about 
   assert.equal(settingsConfig.navigationStyle, 'custom')
   assert.match(settingsTemplate, /style="\{\{navStyle\}\}"/)
   assert.equal(aboutConfig.navigationStyle, 'custom')
+  assert.match(settingsCss, /--settings-bg: #ffffff/)
+  assert.match(settingsTemplate, /settings-dashboard/)
   assert.match(aboutTemplate, /bindtap="goBack"/)
+  assert.match(aboutTemplate, /class="about-nav" style="\{\{navStyle\}\}"/)
+  assert.match(aboutTemplate, /src="\/assets\/brand\/logo\.png"/)
+  assert.match(aboutTemplate, />饭有谱</)
   assert.match(aboutTemplate, /about-group/)
-  assert.match(aboutCss, /--about-accent: #ff4f79/)
+  assert.match(aboutCss, /--about-bg: #ffffff/)
+  assert.doesNotMatch(aboutCss, /linear-gradient|radial-gradient/)
   assert.match(aboutCss, /env\(safe-area-inset-bottom\)/)
   assert.match(aboutScript, /getAccountInfoSync/)
   assert.match(aboutScript, /getWindowInfo/)
+  assert.match(aboutScript, /getMenuButtonBoundingClientRect/)
+  assert.match(aboutScript, /menuButtonBottom/)
   assert.ok(appConfig.pages.includes('pages/about/index'))
 })
 
@@ -753,4 +893,133 @@ test('every visible WXML event is backed by a page handler', () => {
     }
     assert.doesNotMatch(template, /\{\{[^}]*\.(?:slice|map|filter|indexOf|reduce|padStart)\(/)
   }
+})
+
+test('menu context is consumed once by its matching action', () => {
+  const { createMenuContextStore } = require('../utils/menu-context')
+  const state = {}
+  const context = createMenuContextStore(state)
+
+  context.set({ action: 'add', menuDate: '2026-09-08', mealType: 'lunch' })
+  assert.equal(context.consume('focus'), null)
+  assert.deepEqual(context.consume('add'), {
+    action: 'add', menuDate: '2026-09-08', mealType: 'lunch', menuItemId: 0
+  })
+  assert.equal(context.consume('add'), null)
+})
+
+test('menu-originated add and detail flows preserve the selected meal context', () => {
+  const menuScript = fs.readFileSync(path.join(__dirname, '..', 'pages', 'menu', 'index.js'), 'utf8')
+  const menuTemplate = fs.readFileSync(path.join(__dirname, '..', 'pages', 'menu', 'index.wxml'), 'utf8')
+  const recipesScript = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipes', 'index.js'), 'utf8')
+  const detailScript = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipe-detail', 'index.js'), 'utf8')
+  const detailTemplate = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipe-detail', 'index.wxml'), 'utf8')
+
+  assert.match(menuScript, /getMenuContextStore/)
+  assert.match(menuScript, /action: 'add'/)
+  assert.match(menuScript, /menuItemId/)
+  assert.match(menuTemplate, /data-meal-type="\{\{card\.mealType\}\}"/)
+  assert.match(recipesScript, /consume\('add'\)/)
+  assert.match(detailScript, /const menuDate = String\(options\.menuDate/)
+  assert.match(detailScript, /viewMenu\(\)/)
+  assert.match(detailTemplate, /已加入\{\{menuContextLabel\}\}/)
+  assert.match(detailTemplate, /查看菜单/)
+})
+
+test('active meal keeps an add action after dishes have been added', () => {
+  const root = path.join(__dirname, '..', 'pages', 'menu')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
+  assert.match(template, /wx:for="\{\{card\.items\}\}"[\s\S]*meal-note__append-add/)
+  assert.match(template, /wx:if="\{\{card\.role === 'active'\}\}" class="meal-note__append-add" data-meal-type="\{\{card\.mealType\}\}" bindtap="goRecipes"/)
+  assert.match(css, /\.meal-note__append-add\s*\{[^}]*margin:\s*10rpx auto 0;/s)
+})
+
+test('menu date navigation keeps titles, calendar markers and rail in sync', () => {
+  const root = path.join(__dirname, '..', 'pages', 'menu')
+  const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  assert.match(script, /menuTitle/)
+  assert.match(script, /menus\/dates/)
+  assert.match(script, /dateItems/)
+  assert.match(script, /calendarMonth/)
+  assert.match(template, /\{\{menuTitle\}\}/)
+  assert.match(template, /\{\{menuSubtitle\}\}/)
+})
+
+test('menu removal is guarded while the request is in flight', () => {
+  const root = path.join(__dirname, '..', 'pages', 'menu')
+  const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  assert.match(script, /removingItemId/)
+  assert.match(template, /removingItemId/)
+  assert.match(template, /disabled=/)
+})
+
+test('recipe details expose current-day menu status and add confirmation action', () => {
+  const detailRoot = path.join(__dirname, '..', 'pages', 'recipe-detail')
+  const detailScript = fs.readFileSync(path.join(detailRoot, 'index.js'), 'utf8')
+  const detailTemplate = fs.readFileSync(path.join(detailRoot, 'index.wxml'), 'utf8')
+  const recipesRoot = path.join(__dirname, '..', 'pages', 'recipes')
+  const recipesScript = fs.readFileSync(path.join(recipesRoot, 'index.js'), 'utf8')
+  assert.match(detailScript, /request\(`?\/menus\?date=/)
+  assert.match(detailScript, /已加入/)
+  assert.match(detailTemplate, /查看菜单/)
+  assert.match(recipesScript, /已加入菜单/)
+  assert.match(recipesScript, /查看菜单/)
+})
+
+test('settings renders fetched recent-meal insight', () => {
+  const template = fs.readFileSync(path.join(__dirname, '..', 'pages', 'settings', 'index.wxml'), 'utf8')
+  assert.match(template, /wx:if="\{\{insight && insightExpanded\}\}"/)
+  assert.match(template, /insight-card|insight-summary/)
+})
+
+test('settings insight row toggles the fetched list open and closed', () => {
+  const root = path.join(__dirname, '..', 'pages', 'settings')
+  const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  assert.match(script, /insightExpanded:\s*false/)
+  assert.match(script, /if \(this\.data\.insight\) \{[\s\S]*?this\.setData\(\{ insightExpanded: !this\.data\.insightExpanded \}\)/)
+  assert.match(template, /wx:if="\{\{insight && insightExpanded\}\}"[^>]*class="settings-insight-card insight-card"/)
+})
+
+test('recommendation feedback is actionable and placeholder mode is not a fake control', () => {
+  const root = path.join(__dirname, '..', 'pages', 'recommend')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
+  assert.match(template, /recommend-error__text[^>]*>\{\{error \|\|/)
+  assert.doesNotMatch(template, /mode-chip--placeholder/)
+  assert.match(script, /error:/)
+})
+
+test('recipe management actions explain edit permissions', () => {
+  const root = path.join(__dirname, '..', 'pages', 'recipe-detail')
+  const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  assert.match(script, /canEdit/)
+  assert.match(template, /canEdit/)
+  assert.match(template, /仅菜谱创建者或家庭管理员可编辑/)
+})
+
+test('recipe form rejects empty ingredients and steps', () => {
+  const script = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipe-form', 'index.js'), 'utf8')
+  assert.match(script, /payload\.ingredients\.length/)
+  assert.match(script, /payload\.steps\.length|payload\.steps\.trim\(\)/)
+})
+
+test('recipe catalog keeps favorites as the first local category with a clear empty state', () => {
+  const { filterRecipesByCategory } = require('../utils/ui')
+  const recipes = [
+    { id: 1, title: '番茄炒蛋', category: '荤菜' },
+    { id: 2, title: '清炒菜心', category: '素菜' }
+  ]
+  assert.deepEqual(filterRecipesByCategory(recipes, '收藏', [2]), [recipes[1]])
+  assert.deepEqual(filterRecipesByCategory(recipes, '收藏', []), [])
+
+  const root = path.join(__dirname, '..', 'pages', 'recipes')
+  const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
+  const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
+  assert.match(script, /categories:\s*\['收藏'/)
+  assert.match(template, /空空如也~/)
 })

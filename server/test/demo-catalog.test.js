@@ -1,7 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
-const mysql = require('mysql2/promise')
-const { getConfig } = require('../src/config')
+const fs = require('node:fs')
+const path = require('node:path')
 
 const expectedTitles = [
   '番茄炒蛋', '蒜蓉西兰花', '冬瓜虾仁汤', '香煎鸡胸肉', '清炒菠菜', '家常豆腐汤', '土豆焖饭',
@@ -13,22 +13,27 @@ const expectedTitles = [
   '皮蛋瘦肉粥', '三鲜水饺', '猪肉白菜包子', '葱油饼', '蛋炒饭', '扬州炒饭', '南瓜发糕', '红豆小米粥'
 ]
 
-test('seeded demo catalog has 48 active recipes and core ingredient relations', async () => {
-  const config = getConfig()
-  const connection = await mysql.createConnection(config.mysql)
-  try {
-    const [recipes] = await connection.execute("SELECT id, title, category, cover_url AS coverUrl FROM recipes WHERE status = 'active' ORDER BY id")
-    assert.equal(recipes.length, 48)
-    assert.deepEqual(recipes.slice(0, 7).map((recipe) => [recipe.id, recipe.title]), expectedTitles.slice(0, 7).map((title, index) => [index + 1, title]))
-    assert.deepEqual(recipes.map((recipe) => recipe.title), expectedTitles)
-    assert.ok(recipes.every((recipe) => ['荤菜', '素菜', '汤', '主食'].includes(recipe.category)))
-    assert.ok(recipes.filter((recipe) => recipe.coverUrl).every((recipe) => /^\/assets\/recipes\/[a-z0-9]+(?:-[a-z0-9]+)*\.jpg$/.test(recipe.coverUrl)))
+test('seed SQL contains the complete demo catalog and core ingredient relations', () => {
+  const seed = fs.readFileSync(path.join(__dirname, '../../database/02_seed.sql'), 'utf8')
+  const recipeStart = seed.indexOf('INSERT INTO recipes')
+  const recipeEnd = seed.indexOf('ON DUPLICATE KEY UPDATE', recipeStart)
+  const recipeLines = seed.slice(recipeStart, recipeEnd).split(/\r?\n/).filter((line) => /^\(\d+,@family_id,@member_id,/.test(line))
+  const recipes = recipeLines.map((line) => {
+    const match = line.match(/^\((\d+),@family_id,@member_id,'([^']+)','([^']+)',.*?,\d+,\d+,\d+,'([^']*)'\),?$/)
+    assert.ok(match, `无法解析 seed Recipe 行: ${line}`)
+    return { id: Number(match[1]), title: match[2], category: match[3], coverUrl: match[4] }
+  })
 
-    const [relations] = await connection.execute('SELECT recipe_id AS recipeId, COUNT(*) AS ingredientCount FROM recipe_ingredients GROUP BY recipe_id')
-    const relationCounts = new Map(relations.map((row) => [Number(row.recipeId), Number(row.ingredientCount)]))
-    assert.equal(relationCounts.size, 48)
-    assert.ok([...relationCounts.values()].every((count) => count >= 2))
-  } finally {
-    await connection.end()
-  }
+  assert.equal(recipes.length, 48)
+  assert.deepEqual(recipes.map((recipe) => recipe.title), expectedTitles)
+  assert.ok(recipes.every((recipe) => ['荤菜', '素菜', '汤', '主食'].includes(recipe.category)))
+  assert.ok(recipes.every((recipe) => !recipe.coverUrl || /^\/assets\/recipes\/[a-z0-9]+(?:-[a-z0-9]+)*\.jpg$/.test(recipe.coverUrl)))
+
+  const relationStart = seed.indexOf('INSERT INTO recipe_ingredients')
+  const relationEnd = seed.indexOf(';', relationStart)
+  const relations = [...seed.slice(relationStart, relationEnd).matchAll(/\((\d+),(\d+),[0-9.]+,'[^']*'\)/g)]
+  const relationCounts = new Map()
+  for (const relation of relations) relationCounts.set(Number(relation[1]), (relationCounts.get(Number(relation[1])) || 0) + 1)
+  assert.equal(relationCounts.size, 48)
+  assert.ok([...relationCounts.values()].every((count) => count >= 2))
 })

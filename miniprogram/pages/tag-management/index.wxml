@@ -1,0 +1,63 @@
+<view class="page tag-management-page" style="{{contentStyle}}">
+  <view class="tag-management-nav" style="{{navStyle}}">
+    <view class="tag-management-nav__slot">
+      <button class="tag-management-nav__button" bindtap="back" aria-label="返回"><image class="tag-management-nav__icon" src="/assets/icons/recipes/back.png" mode="aspectFit" /></button>
+    </view>
+    <view class="tag-management-nav__title">标签管理</view>
+    <view class="tag-management-nav__slot"></view>
+  </view>
+
+
+  <view wx:if="{{loading}}" class="tag-management-loading">
+    <view class="tag-management-skeleton tag-management-skeleton--intro"></view>
+    <view class="tag-management-skeleton tag-management-skeleton--card"></view>
+    <view class="tag-management-skeleton tag-management-skeleton--card"></view>
+  </view>
+
+  <view wx:elif="{{error}}" class="tag-management-error">
+    <view class="tag-management-error__title">标签加载失败</view>
+    <view class="tag-management-error__copy">{{error}}</view>
+    <button class="tag-management-retry" bindtap="retry">重试</button>
+  </view>
+
+  <view wx:else class="tag-management-content">
+    <view class="tag-management-section-head">
+      <view class="tag-management-section-title">自定义 <text class="tag-management-count">{{customTags.length}}</text></view>
+      <button class="tag-management-create" loading="{{creating}}" disabled="{{creating || editingTagId || deletingTagId}}" bindtap="createTag">＋ 新建标签</button>
+    </view>
+
+    <view class="tag-management-card tag-management-card--custom">
+      <view wx:if="{{customTags.length}}" class="tag-management-list">
+        <view wx:for="{{customTags}}" wx:key="id" class="tag-management-row">
+          <view class="tag-management-chip">{{item.name}}</view>
+          <view class="tag-management-actions">
+            <view class="tag-management-action" data-tag-id="{{item.id}}" bindtap="renameTag" aria-label="修改标签"><image src="/assets/icons/recipes/edit.png" mode="aspectFit" /></view>
+            <view class="tag-management-action tag-management-action--delete" data-tag-id="{{item.id}}" bindtap="deleteTag" aria-label="删除标签"><image src="/assets/icons/recipes/remove.png" mode="aspectFit" /></view>
+          </view>
+        </view>
+      </view>
+      <view wx:else class="tag-management-empty">
+        <view class="tag-management-empty__title">还没有自定义标签</view>
+        <view class="tag-management-empty__copy">创建一个标签，为菜品标记最有代表性的特点。</view>
+      </view>
+    </view>
+
+    <view class="tag-management-section-head tag-management-section-head--system">
+      <view class="tag-management-section-title">默认 <text class="tag-management-count">{{systemTags.length}}</text></view>
+      <view class="tag-management-readonly">默认标签不可修改或删除</view>
+    </view>
+    <view class="tag-management-card tag-management-card--system">
+      <view class="tag-management-system-list">
+        <view wx:for="{{systemTags}}" wx:key="id" class="tag-management-system-chip">{{item.name}}</view>
+      </view>
+    </view>
+
+    <view class="tag-management-about">
+      <view class="tag-management-about__icon">i</view>
+      <view class="tag-management-about__copy">
+        <view class="tag-management-about__title">关于标签</view>
+        <view class="tag-management-about__text">自定义标签用于标记菜品的特殊特点，并可作为智能推荐的偏好依据。系统标签由应用预设。</view>
+      </view>
+    </view>
+  </view>
+</view>

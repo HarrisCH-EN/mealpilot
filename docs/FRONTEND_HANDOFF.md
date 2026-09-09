@@ -1,96 +1,203 @@
-# 前端 UI 改造交接说明
+# Frontend Engineering Handoff
 
-## 项目边界
+本文描述当前真实的小程序前端 contract，面向新开发者、维护者和课程演示。前端位于 E:\Database_Design\miniprogram，使用原生 WXML、WXSS、JavaScript，不使用云开发或 H5 框架。
 
-- 项目根目录：`E:\Database_Design`
-- 只允许在本项目中开发；**不要读取、复制或参考** `E:\Mini_Program\What_To_Eat` 的任何代码、数据或设计。
-- 当前目标是微信小程序的 UI/交互升级；后端与数据库继续保留在本机。
-- 技术栈：原生微信小程序（WXML、WXSS、JavaScript），不要引入云开发，也不要替换为 Web/H5 框架。
+## 1. 运行与认证
 
-## 当前如何运行
+先启动 Backend：
 
-1. 保持后端启动：在 `E:\Database_Design\server` 运行 `npm run dev`。
-2. 在微信开发者工具导入 `E:\Database_Design`，点击“编译”。
-3. 本地调试允许访问 `http://127.0.0.1:3000`；在开发者工具“详情 → 本地设置”启用“不校验合法域名”。
+~~~powershell
+cd E:\Database_Design\server
+npm run dev
+~~~
 
-## 当前小程序结构
+小程序 API base 集中在 miniprogram/config.js：
 
-小程序目录：`E:\Database_Design\miniprogram`
+- development：http://127.0.0.1:3000/api
+- production：HTTPS placeholder，部署前替换
 
-四个 Tab 页：
+正式认证链路：
 
-| 页面 | 文件夹 | 现有业务 |
+~~~text
+wx.login → code → POST /api/auth/wechat-login
+→ Backend code2Session → openid → JWT → /api/auth/me
+~~~
+
+utils/api.js 负责：
+
+- Bearer Token 注入。
+- Token 读写。
+- wx.login。
+- 正式微信登录。
+- 401 单次重新认证。
+- 重新认证失败后的 Session 清理。
+- 封面相对 URL 转绝对访问地址。
+
+DEV_AUTH_ENABLED=true 时，Settings 可提供明确的本地开发登录入口。它不是正式用户入口，也不会在微信登录失败后静默 fallback。
+
+## 2. 页面结构
+
+四个 Tab：
+
+| Tab | 页面 | 真实能力 |
 | --- | --- | --- |
-| 推荐 | `pages/recommend` | 选人数/模式、生成推荐、重新生成、应用到菜单 |
-| 菜单 | `pages/menus` | 按日期查看、手动加菜、删除菜品 |
-| 菜谱 | `pages/recipes` | 搜索、分类筛选、新增、查看、删除 |
-| 设置 | `pages/settings` | 本地登录、创建/加入家庭、复制邀请码、成员和基础洞察 |
+| 推荐 | pages/recommend | 生成推荐、家庭限制与偏好状态、理由、Apply |
+| 菜单 | pages/menu | 日期/餐次菜单、手动加菜、删除 MenuItem、Feedback |
+| 菜谱 | pages/recipes | 搜索、分类、列表、加入菜单 |
+| 设置 | pages/settings | 身份、Family、邀请码、Preference、Restriction、Insights、About |
 
-全局文件：
+非 Tab 页面：
 
-- `app.json`：页面和 Tab 配置；保留四个 Tab 的业务含义。
-- `app.wxss`：现有全局样式，可整体重做。
-- `utils/api.js`：请求封装与本地 API 地址。除非同步修改后端，勿改接口路径或请求字段。
+- pages/recipe-detail：菜谱详情、封面、编辑、加入菜单。
+- pages/recipe-form：新增/编辑菜谱、食材、步骤、封面上传。
+- pages/restrictions：active Member 的 Ingredient restrictions。
+- pages/preferences：active Member 的 category preferences。
+- pages/about：项目说明。
 
-## UI 改造目标
+## 3. Session 与 no-Family 状态
 
-- 风格：简洁、清爽、适合“家庭智能配餐”；不需要复杂插画或图片资源。
-- 优先提升信息层级、留白、卡片、表单、空状态、加载状态、错误反馈和删除确认。
-- 保持原生组件与轻量代码；手机端优先，避免依赖难以配置的第三方 UI 库。
-- 所有可见按钮必须保留真实行为、导航或明确提示；不能为了界面效果放置无响应按钮。
-- 推荐页不能取代手动点餐：推荐仅辅助，菜单页必须继续支持手动加菜/删菜。
+页面进入时应调用 ensureAuthenticated() 或发起会触发同一认证机制的 API 请求。已有有效 Token 不重复 wx.login；401 只允许一次重新认证。
 
-## 全局图标资源规范
+正式新用户登录成功后 membership 可以为 null。这是合法业务状态，页面应显示：
 
-- 所有 UI icon 必须统一使用 PNG 资源插入；禁止使用 emoji、文字字符、ASCII 符号、CSS 绘制图标或 inline SVG 代替 icon。
-- PNG icon 统一放在 `E:\Database_Design\miniprogram\assets\icons\`，按功能模块放入对应子目录，例如 `recipes/`、`menu/`、`settings/`。
-- WXML 统一使用原生 `<image>` 引用 `/assets/icons/<module>/<name>.png`，并使用 `mode="aspectFit"` 保持图标比例。
-- 新增 icon 必须先补充真实 PNG 文件，再接入页面；禁止使用截图裁片、临时占位图或可见文字伪造 icon。
+~~~text
+你还没有加入家庭
+创建家庭 / 加入家庭
+~~~
 
-## 已可调用的 API
+不要把没有 Family 当成登录失败，也不要自动创建 Family。
 
-基础地址：`http://127.0.0.1:3000/api`。除 `POST /auth/dev-login` 外，均需要 Bearer Token；`utils/api.js` 已自动处理。
+## 4. Family
 
-| 方法 | 路径 | 用途 |
-| --- | --- | --- |
-| POST | `/auth/dev-login` | 本地演示登录 |
-| GET | `/auth/me` | 当前用户和家庭归属 |
-| POST | `/families` | 创建家庭，字段 `name` |
-| POST | `/families/join` | 加入家庭，字段 `inviteCode` |
-| GET | `/families/current` | 家庭及成员列表 |
-| GET | `/recipes` | 菜谱列表，支持 `keyword`、`category` |
-| GET | `/recipes/:id` | 菜谱和食材明细 |
-| POST | `/recipes` | 新建菜谱 |
-| PUT | `/recipes/:id` | 更新菜谱 |
-| DELETE | `/recipes/:id` | 软删除菜谱 |
-| GET | `/ingredients` | 食材列表 |
-| GET | `/menus?date=YYYY-MM-DD` | 当日菜单 |
-| POST | `/menus/items` | 加菜：`menuDate`、`mealType`、`recipeId`、可选 `note` |
-| DELETE | `/menus/items/:id` | 删除菜单菜品 |
-| POST | `/recommendations` | 生成推荐：`menuDate`、`mealType`、`peopleCount`、`maxCookMinutes`、`mode` |
-| GET | `/insights` | 基础洞察 |
+当前前端使用：
 
-## 已知业务限制（UI 必须如实呈现）
+- POST /api/families：创建家庭。
+- POST /api/families/join：邀请码加入。
+- GET /api/families/current：家庭与 active Members。
 
-- 当前是本地“演示登录”，不是正式微信授权登录。
-- 推荐支持 `balanced`、`healthy`、`quick` 三个模式；页面文案可改为“均衡优先 / 健康优先 / 快手优先”。
-- 菜谱食材明细 API 已有，但现有界面尚未做完整的食材行编辑；可在 UI 改造时补足表单交互，调用既有菜谱 POST/PUT 接口的 `ingredients` 数组。
-- 偏好、忌口、反馈等数据库表已经存在，但对应后端接口尚未实现；不要制作看似可保存、实际无法保存的交互入口。可以在设置页显示“即将开放”并说明原因，或隐藏入口。
-- “应用推荐”当前通过逐道调用 `/menus/items` 写入菜单；请保留成功/失败反馈和防重复点击。
+当前规则：单 active Family、跨 Family 资源 404、同 Family 权限不足 403。多 Family、切换、Owner transfer、Owner leave、Family delete 均 Deferred。
 
-## 推荐的改造顺序
+## 5. Recipe 与 Cover
 
-1. 重做 `app.wxss` 的色彩、字号、间距、按钮和卡片基础规范。
-2. 先完成推荐、菜单两个高频页，再处理菜谱和设置页。
-3. 为每页统一补齐 loading、空数据、网络错误、成功提示、删除二次确认。
-4. 在微信开发者工具逐页点击验证：登录 → 推荐 → 应用 → 菜单查看/删菜 → 菜谱查询/新增/删除 → 设置页。
+Recipe APIs：
 
-## 给新聊天的任务提示词
+~~~text
+GET/POST /api/recipes
+GET/PUT/DELETE /api/recipes/:id
+GET /api/ingredients
+POST /api/uploads/recipe-cover
+~~~
 
-```text
-请只在 E:\Database_Design 中进行微信小程序前端 UI 改造。不要读取、复制或参考 E:\Mini_Program\What_To_Eat 的任何内容。
+创建/编辑流程：
 
-项目是“家庭智能配餐系统”，前端位于 E:\Database_Design\miniprogram，技术栈是原生 WXML/WXSS/JavaScript；后端 Express 与 MySQL 已可在本机运行。请先阅读 E:\Database_Design\docs\FRONTEND_HANDOFF.md 和现有 miniprogram 代码，再设计并实施简洁清爽的手机端 UI。
+1. wx.chooseMedia 或 wx.chooseImage 获取临时路径。
+2. 先上传封面。
+3. 使用返回的 coverUrl 提交 Recipe POST/PUT。
+4. 列表、详情和编辑页读取持久化 coverUrl。
 
-保留四个 Tab：推荐、菜单、菜谱、设置。所有可见按钮必须连接真实功能、跳转或明确提示；推荐只能辅助，不能取代菜单页的手动加菜/删菜。不要引入云开发或大体量第三方 UI 框架。完成后请在微信开发者工具中逐页验证已有功能不回退。
-```
+支持 JPG、PNG、WebP，上传上限 5 MB。数据库保存相对 URL，不保存二进制。旧封面保留和 orphan cleanup 属于 Deferred 策略。
+
+Recipe 使用 soft delete；历史 MenuItem 仍可动态读取同 Family 的 deleted Recipe。
+
+## 6. Menu
+
+~~~text
+GET /api/menus?date=YYYY-MM-DD
+GET /api/menus/dates
+POST /api/menus/items
+DELETE /api/menus/items/:id
+~~~
+
+Menu slot 为 family + date + meal_type。同一菜谱重复加入应显示已存在，不覆盖原 note。删除 MenuItem 不删除 Menu 或 Recipe，空 Menu 保留。
+
+菜单页保留 breakfast、lunch、dinner 三个餐次，并保持日期和餐次 context。整张 Menu 删除和 completed 流程没有前端入口。
+
+## 7. Recommendation
+
+~~~text
+POST /api/recommendations
+GET /api/recommendations/:id/candidates/:rank
+POST /api/recommendations/:id/apply
+GET /api/families/current/restrictions
+GET /api/families/current/preferences
+~~~
+
+当前 Frontend 使用 canonical 请求：`menuDate`、`mealType`、`peopleCount`、`maxPrepMinutes`、`structure` 和可选 `preferences`。Frontend 不提交家庭 Preference 作为推荐来源；Backend 从数据库读取 active Members，并将未设置的 category preference 按中性值 3 聚合。旧客户端仍可使用 `maxCookMinutes + mode` 兼容路径，但新请求不能混用两套参数。
+
+推荐逻辑：
+
+~~~text
+Restriction hard filter → structure/category capacity → preference/diversity/nutrition/season/novelty score → persisted candidates
+~~~
+
+`maxPrepMinutes` 是 preferred preparation target：候选可以在必要时超时，但必须返回 `estimatedPrepMinutes`、`withinTimeLimit` 和超时提示。推荐结果包含最多 3 个服务端持久化 Candidate；页面用 `GET .../candidates/:rank` 切换候选，并用 `{ candidateId }` Apply。推荐理由必须显示 Backend 返回的真实 reason，不自行替换成 AI 或营销文案。Apply 遇到 stale/cross-Family Recipe 时整体失败，不做 partial success；重复 Apply 保持幂等。
+
+## 8. Restriction
+
+~~~text
+GET /api/family-members/:memberId/restrictions
+POST /api/family-members/:memberId/restrictions
+DELETE /api/family-members/:memberId/restrictions/:ingredientId
+~~~
+
+Owner 可以维护本 Family 所有 active Members；普通 Member 只能维护自己；left Member 不可编辑。Restriction 是 active Member 的家庭级硬约束，任一命中即可排除 Recipe。
+
+## 9. Preference
+
+~~~text
+GET /api/family-members/:memberId/preferences
+PUT /api/family-members/:memberId/preferences/:category
+DELETE /api/family-members/:memberId/preferences/:category
+~~~
+
+类别为 荤菜、素菜、汤、主食，分数为 1–5。UI 使用“不喜欢 / 一般 / 喜欢”等语义，不直接暴露数据库术语。未设置按中性值 3；Preference 参与推荐软排序，不直接过滤 Recipe。
+
+## 10. Feedback 与 Insights
+
+Feedback APIs：
+
+~~~text
+GET/PUT/DELETE /api/menu-items/:menuItemId/feedback
+~~~
+
+Feedback owner 是当前 active Member，不信任 Frontend 传入的 memberId。重复评分更新原记录。comment 可选，最多 200 字符。
+
+Insights：
+
+~~~text
+GET /api/insights
+~~~
+
+设置页和菜单反馈入口读取真实 aggregate，不生成本地假统计。
+
+## 11. 状态与错误处理
+
+页面应区分 Loading、Empty、Error、Content，并为保存、删除、Apply 防止重复点击。
+
+- 401：未登录或登录过期，交给统一 re-auth。
+- 403：无 active Family 或同 Family 权限不足。
+- 404：资源不存在或属于其他 Family。
+- 409：业务冲突。
+- 500/503：显示可恢复的通用错误，不展示 SQL、stack 或 secret。
+
+## 12. 不要误实现的范围
+
+以下能力没有前端 contract：
+
+- 多 Family / Family switch。
+- Owner transfer / leave / Family delete。
+- Menu completed。
+- Refresh Token、logout revoke、多设备 Session。
+- 用户资料完善、头像上传、UnionID。
+- AI、协同过滤、Feedback 学习。
+- 云对象存储、CDN、orphan cleanup。
+
+## 13. 前端测试
+
+~~~powershell
+npm test --prefix miniprogram
+~~~
+
+当前基线为 94 passed。测试使用 Node built-in runner，覆盖纯函数、页面 contract、API contract 和关键文案，不替代微信开发者工具真实 E2E。
+
+所有可见 WXML 事件必须对应真实 handler；新增按钮必须连接真实 API、导航或明确的不可用状态，不能创建假成功交互。

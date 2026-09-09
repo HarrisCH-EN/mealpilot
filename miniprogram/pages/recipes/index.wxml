@@ -4,15 +4,22 @@
       <view class="recipes-title">菜谱</view>
       <view class="recipes-subtitle">从家里的拿手菜开始点餐。</view>
     </view>
-    <button class="page-header__action add-recipe-button" aria-label="新增菜谱" bindtap="addRecipe"><image class="add-recipe-button__icon" src="/assets/icons/recipes/add-white.png" mode="aspectFit" /></button>
+    <button wx:if="{{!noFamily}}" class="page-header__action add-recipe-button" aria-label="新增菜谱" bindtap="addRecipe"><image class="add-recipe-button__icon" src="/assets/icons/recipes/add-white.png" mode="aspectFit" /></button>
   </view>
 
-  <view class="recipe-search">
+  <view wx:if="{{noFamily}}" class="state-panel family-empty-state">
+    <view class="empty-illustration"><image class="empty-search-icon" src="/assets/icons/settings/family.png" mode="aspectFit"></image></view>
+    <view class="state-panel__title">还没有加入家庭</view>
+    <view>先创建家庭或加入已有家庭，才能管理家庭菜谱。</view>
+    <button class="button button--primary button--small state-action" bindtap="goFamilySetup">去设置创建或加入</button>
+  </view>
+
+  <view wx:if="{{!noFamily}}" class="recipe-search">
     <image class="recipe-search__icon" src="/assets/icons/recipes/search-pink.png" mode="aspectFit"></image>
     <input class="recipe-search__input" value="{{keyword}}" placeholder="搜索菜名" placeholder-class="recipe-search__placeholder" confirm-type="search" bindinput="changeKeyword" bindconfirm="submitSearch" />
   </view>
 
-  <view class="catalog-body">
+  <view wx:if="{{!noFamily}}" class="catalog-body">
     <scroll-view scroll-y class="category-rail" enhanced show-scrollbar="{{false}}">
       <view wx:for="{{categories}}" wx:key="*this" class="category-item {{category===item?'category-item--active':''}}" data-category="{{item}}" bindtap="filter">
         <view class="category-item__indicator"></view>
@@ -37,7 +44,13 @@
           <button class="button button--secondary button--small state-action" bindtap="load">重试</button>
         </view>
 
-        <view wx:if="{{!loading && !error && !recipes.length}}" class="state-panel compact-state">
+        <view wx:if="{{!loading && !error && !recipes.length && category === '收藏'}}" class="state-panel compact-state">
+          <view class="empty-illustration"><image class="empty-search-icon" src="/assets/icons/recipes/heart-outline.png" mode="aspectFit"></image></view>
+          <view class="state-panel__title">空空如也~</view>
+          <view>收藏喜欢的菜品后，会在这里集中显示。</view>
+        </view>
+
+        <view wx:if="{{!loading && !error && !recipes.length && category !== '收藏'}}" class="state-panel compact-state">
           <view class="empty-illustration"><image class="empty-search-icon" src="/assets/icons/recipes/search-pink.png" mode="aspectFit"></image></view>
           <view class="state-panel__title">这里还没有菜</view>
           <view>换个分类，或添加一道家里的拿手菜。</view>
@@ -53,11 +66,16 @@
               </view>
             </view>
             <view class="recipe-card__body">
-              <view class="recipe-card__title">{{item.title}}</view>
+              <view class="recipe-card__title-row">
+                <text class="recipe-card__title">{{item.title}}</text>
+                <view wx:if="{{item.displayTags.length}}" class="recipe-card__badges">
+                  <text wx:for="{{item.displayTags}}" wx:key="id" class="recipe-card__badge">{{item.name}}</text>
+                </view>
+              </view>
               <view class="recipe-card__meta">
                 <text class="recipe-card__duration">{{item.cookMinutes}}分钟</text>
                 <view class="recipe-card__stars" aria-label="{{item.difficultyText}}">
-                  <image wx:for="{{item.difficultyStars}}" wx:for-item="starActive" wx:for-index="starIndex" wx:key="starIndex" class="recipe-card__star" src="{{starActive ? '/assets/icons/recipes/star-active.png' : '/assets/icons/recipes/star-inactive.png'}}" mode="aspectFit" />
+                  <image wx:for="{{item.difficultyStars}}" wx:for-item="starActive" wx:for-index="starIndex" wx:key="starIndex" class="recipe-card__star {{starActive ? 'recipe-card__star--active' : ''}}" src="{{starActive ? '/assets/icons/recipes/star-active.png' : '/assets/icons/recipes/star-inactive.png'}}" mode="aspectFit" />
                 </view>
                 <button class="recipe-card__menu" data-id="{{item.id}}" aria-label="加入菜单" catchtap="openAdd"><image class="recipe-card__menu-icon" src="/assets/icons/recipes/add-pink.png" mode="aspectFit" /></button>
               </view>
@@ -77,7 +95,6 @@
       <view class="sheet-title">加入菜单</view>
       <view class="subtle">{{selectedRecipe.title}} · {{selectedRecipe.cookMinutes}} 分钟</view>
     </view>
-    <button class="sheet-close" aria-label="关闭" bindtap="closeSheet"><image class="sheet-close__icon" src="/assets/icons/recipes/close.png" mode="aspectFit" /></button>
   </view>
   <view class="sheet-section">
     <text class="field-label">选择日期</text>

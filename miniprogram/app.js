@@ -1,5 +1,26 @@
 App({
-  globalData: { token: '', user: null, membership: null },
+  globalData: {
+    token: '',
+    user: null,
+    membership: null,
+    authReady: false,
+    authenticating: false,
+    authError: null
+  },
   onLaunch() { this.globalData.token = wx.getStorageSync('token') || '' },
-  setSession(data) { this.globalData.token = data.token || ''; this.globalData.user = data.user || null; this.globalData.membership = data.membership || null; wx.setStorageSync('token', this.globalData.token) }
+  setAuthState(patch = {}) { Object.assign(this.globalData, patch) },
+  setSession(data = {}) {
+    if (Object.prototype.hasOwnProperty.call(data, 'token')) {
+      this.globalData.token = data.token || ''
+      wx.setStorageSync('token', this.globalData.token)
+    }
+    if (Object.prototype.hasOwnProperty.call(data, 'user')) this.globalData.user = data.user || null
+    if (Object.prototype.hasOwnProperty.call(data, 'membership')) this.globalData.membership = data.membership || null
+  },
+  clearSession() {
+    this.globalData.token = ''
+    this.globalData.user = null
+    this.globalData.membership = null
+    wx.removeStorageSync('token')
+  }
 })

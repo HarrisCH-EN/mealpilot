@@ -125,6 +125,8 @@ Expected: no text difficulty labels, category fallback, or spaced `分钟` remai
 
 **Files:**
 - Modify: `miniprogram/pages/menu/index.wxss`
+- Modify: `miniprogram/pages/recipes/index.wxml`
+- Modify: `miniprogram/pages/recipes/index.wxss`
 
 - [ ] **Step 1: Preserve the existing outer meal-deck rules**
 
@@ -144,11 +146,12 @@ Apply these concrete rules:
 .menu-dish__time { flex: 0 0 auto; white-space: nowrap; }
 .menu-dish__stars { display: flex; align-items: center; gap: 2rpx; }
 .menu-dish__star { display: block; width: 20rpx; height: 20rpx; flex: 0 0 20rpx; }
+.menu-dish__star--active { filter: brightness(0) opacity(.87); }
 .menu-dish__remove { width: 72rpx; max-width: 72rpx; height: 72rpx; min-width: 72rpx; min-height: 72rpx; flex: 0 0 72rpx; color: #bbb; }
 .menu-dish__remove image { width: 32rpx; height: 32rpx; opacity: .72; }
 ```
 
-Keep `aspectFill` in WXML and retain existing pointer-event rules for the inactive neighboring cards.
+Keep `aspectFill` in WXML and retain existing pointer-event rules for the inactive neighboring cards. Add the same `recipe-card__star--active` class and `filter: brightness(0) opacity(.87)` rule to the recipes overview star image so the two pages remain visually identical even though the existing active PNG source is pink.
 
 - [ ] **Step 3: Check layout-sensitive declarations**
 

@@ -1,14 +1,23 @@
 const express = require('express')
 const cors = require('cors')
+const path = require('node:path')
 const { authenticate, requireFamily } = require('./middleware/authenticate')
 const authFamily = require('./routes/auth-family')
 const recipes = require('./routes/recipes')
 const menus = require('./routes/menus')
+const restrictions = require('./routes/restrictions')
+const preferences = require('./routes/preferences')
+const uploads = require('./routes/uploads')
+const feedback = require('./routes/feedback')
+const tags = require('./routes/tags')
+const { HttpError } = require('./http')
+const { createWechatAuthService } = require('./services/wechat-auth-service')
 
-function createApp({ database, jwtSecret = 'local-development-secret-change-me', devAuthEnabled = true }) {
+function createApp({ database, jwtSecret = 'local-development-secret-change-me', devAuthEnabled = true, wechatAppId = '', wechatAppSecret = '', wechatAuthService, uploadRoot = path.join(__dirname, '../uploads'), maxUploadBytes }) {
   const app = express()
   app.use(cors())
   app.use(express.json({ limit: '1mb' }))
+  app.use('/uploads', express.static(uploadRoot))
 
   app.get('/api/health', async (_request, response) => {
     response.json({ ok: true, data: { service: 'smart-meal-api' } })
@@ -17,14 +26,25 @@ function createApp({ database, jwtSecret = 'local-development-secret-change-me',
   if (database) {
     const auth = authenticate({ database, jwtSecret })
     const family = requireFamily(database)
-    app.use('/api', authFamily.router({ database, jwtSecret, devAuthEnabled, auth, family }))
+    const wechat = wechatAuthService || createWechatAuthService({ appId: wechatAppId, appSecret: wechatAppSecret })
+    app.use('/api', authFamily.router({ database, jwtSecret, devAuthEnabled, wechatAuthService: wechat, auth, family }))
     app.use('/api', recipes.router({ database, auth, family }))
     app.use('/api', menus.router({ database, auth, family }))
+    app.use('/api', restrictions.router({ database, auth, family }))
+    app.use('/api', preferences.router({ database, auth, family }))
+    app.use('/api', feedback.router({ database, auth, family }))
+    app.use('/api', tags.router({ database, auth, family }))
+    app.use('/api', uploads.router({ uploadRoot, maxBytes: maxUploadBytes, auth, family }))
   }
 
   app.use((error, _request, response, _next) => {
-    const status = error.status || 500
-    response.status(status).json({ ok: false, message: error.message || '服务器发生错误' })
+    if (error && error.type === 'entity.parse.failed') {
+      return response.status(400).json({ ok: false, message: '请求 JSON 格式不正确' })
+    }
+    if (error instanceof HttpError) {
+      return response.status(error.status).json({ ok: false, message: error.message })
+    }
+    response.status(500).json({ ok: false, message: '服务器发生错误' })
   })
 
   return app

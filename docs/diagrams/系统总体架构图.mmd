@@ -1,0 +1,136 @@
+%%{init: {
+  "theme": "base",
+  "flowchart": {
+    "curve": "linear",
+    "nodeSpacing": 16,
+    "rankSpacing": 24,
+    "htmlLabels": false
+  },
+  "themeVariables": {
+    "background": "#ffffff",
+    "primaryColor": "#ffffff",
+    "primaryTextColor": "#000000",
+    "primaryBorderColor": "#000000",
+    "lineColor": "#000000",
+    "secondaryColor": "#ffffff",
+    "tertiaryColor": "#ffffff",
+    "fontFamily": "Microsoft YaHei"
+  }
+}}%%
+
+flowchart TB
+
+    %% =========================
+    %% 用户与微信运行环境
+    %% =========================
+
+    USER["用户"]
+
+    WX["微信客户端 / 小程序运行环境"]
+
+
+    %% =========================
+    %% 客户端层
+    %% =========================
+
+    subgraph CLIENT["客户端层：微信小程序"]
+        direction LR
+
+        PAGE["页面与交互<br/>WXML / WXSS / JavaScript"]
+
+        API["统一 API 请求模块"]
+
+        AUTHC["登录态与 JWT 管理"]
+
+        PAGE --- API
+        API --- AUTHC
+    end
+
+
+    %% =========================
+    %% 服务端层
+    %% =========================
+
+    subgraph SERVER["服务端层：Node.js + Express"]
+        direction TB
+
+        APP["Express App / HTTP 接口"]
+
+        AUTH["认证中间件<br/>JWT 校验 / 当前用户识别"]
+
+        ROUTES["业务路由层<br/>Auth / Family / Recipe / Menu<br/>Preference / Restriction / Feedback"]
+
+        SERVICES["业务服务层<br/>菜单服务 / 推荐服务 / 微信认证服务"]
+
+        TX["事务与数据库访问<br/>mysql2 / promise"]
+
+        APP --> AUTH
+        AUTH --> ROUTES
+        ROUTES --> SERVICES
+        SERVICES --> TX
+    end
+
+
+    %% =========================
+    %% 数据与文件层
+    %% =========================
+
+    subgraph DATA["数据与持久化层"]
+        direction LR
+
+        DB["MySQL 8.0+<br/>业务数据、约束、索引、事务"]
+
+        UPLOAD["Uploads 文件目录<br/>菜谱封面图片"]
+
+        CONFIG["环境配置<br/>DB / JWT / WeChat / Upload Path"]
+    end
+
+
+    %% =========================
+    %% 外部微信服务
+    %% =========================
+
+    WECHAT["微信开放能力<br/>code2Session"]
+
+
+    %% =========================
+    %% 主调用链
+    %% =========================
+
+    USER --> WX
+    WX --> PAGE
+
+    API -->|"HTTPS / REST API"| APP
+
+    TX --> DB
+
+    ROUTES --> UPLOAD
+
+    CONFIG --> APP
+    CONFIG --> TX
+
+    AUTHC -->|"wx.login code"| API
+
+    SERVICES -->|"code2Session 请求"| WECHAT
+    WECHAT -->|"openid"| SERVICES
+
+
+    %% =========================
+    %% 样式
+    %% =========================
+
+    classDef layerNode fill:#ffffff,stroke:#000000,stroke-width:1px,color:#000000;
+    classDef externalNode fill:#ffffff,stroke:#000000,stroke-width:1.2px,color:#000000;
+    classDef userNode fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000;
+
+    class USER userNode;
+
+    class WX,PAGE,API,AUTHC,APP,AUTH,ROUTES,SERVICES,TX,DB,UPLOAD,CONFIG layerNode;
+
+    class WECHAT externalNode;
+
+    style CLIENT fill:#ffffff,stroke:#000000,stroke-width:1px
+    style SERVER fill:#ffffff,stroke:#000000,stroke-width:1px
+    style DATA fill:#ffffff,stroke:#000000,stroke-width:1px
+
+    linkStyle default stroke:#000000,stroke-width:1px;

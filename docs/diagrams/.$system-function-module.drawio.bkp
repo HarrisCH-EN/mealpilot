@@ -1,0 +1,504 @@
+<mxfile host="Electron">
+  <diagram id="x8-VZSaMTaJrTEX4thx9" name="第 1 页">
+    <mxGraphModel dx="1549" dy="1520" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <UserObject label="" mermaidData="{&#xa;  &quot;data&quot;: &quot;%%{init: {\n  \&quot;theme\&quot;: \&quot;base\&quot;,\n  \&quot;flowchart\&quot;: {\n    \&quot;curve\&quot;: \&quot;linear\&quot;,\n    \&quot;nodeSpacing\&quot;: 7,\n    \&quot;rankSpacing\&quot;: 24,\n    \&quot;htmlLabels\&quot;: false\n  },\n  \&quot;themeVariables\&quot;: {\n    \&quot;background\&quot;: \&quot;#ffffff\&quot;,\n    \&quot;primaryColor\&quot;: \&quot;#ffffff\&quot;,\n    \&quot;primaryTextColor\&quot;: \&quot;#000000\&quot;,\n    \&quot;primaryBorderColor\&quot;: \&quot;#000000\&quot;,\n    \&quot;lineColor\&quot;: \&quot;#000000\&quot;,\n    \&quot;secondaryColor\&quot;: \&quot;#ffffff\&quot;,\n    \&quot;tertiaryColor\&quot;: \&quot;#ffffff\&quot;,\n    \&quot;fontFamily\&quot;: \&quot;Microsoft YaHei\&quot;\n  }\n}}%%\n\nflowchart LR\n\n    SYS[\&quot;基于微信小程序的&lt;br/&gt;家庭膳食管理与菜谱推荐系统\&quot;]\n\n    %% 1. 身份与家庭管理\n    FAM[\&quot;身份与家庭管理\&quot;]\n    FAM1[\&quot;用户登录\&quot;]\n    FAM2[\&quot;创建家庭\&quot;]\n    FAM3[\&quot;邀请码加入家庭\&quot;]\n    FAM4[\&quot;家庭信息与成员查看\&quot;]\n\n    SYS --- FAM\n    FAM --- FAM1\n    FAM --- FAM2\n    FAM --- FAM3\n    FAM --- FAM4\n\n    %% 2. 菜谱与食材管理\n    REC[\&quot;菜谱与食材管理\&quot;]\n    REC1[\&quot;菜谱查询\&quot;]\n    REC2[\&quot;菜谱新增\&quot;]\n    REC3[\&quot;菜谱编辑\&quot;]\n    REC4[\&quot;菜谱软删除\&quot;]\n    REC5[\&quot;食材明细管理\&quot;]\n    REC6[\&quot;菜谱封面管理\&quot;]\n\n    SYS --- REC\n    REC --- REC1\n    REC --- REC2\n    REC --- REC3\n    REC --- REC4\n    REC --- REC5\n    REC --- REC6\n\n    %% 3. 菜单管理\n    MENU[\&quot;菜单管理\&quot;]\n    MENU1[\&quot;日期与餐次选择\&quot;]\n    MENU2[\&quot;添加菜谱\&quot;]\n    MENU3[\&quot;删除菜单项\&quot;]\n    MENU4[\&quot;菜单备注\&quot;]\n    MENU5[\&quot;历史菜单查看\&quot;]\n\n    SYS --- MENU\n    MENU --- MENU1\n    MENU --- MENU2\n    MENU --- MENU3\n    MENU --- MENU4\n    MENU --- MENU5\n\n    %% 4. 饮食限制与偏好管理\n    PREF[\&quot;饮食限制与偏好管理\&quot;]\n    PREF1[\&quot;成员饮食限制\&quot;]\n    PREF2[\&quot;成员口味偏好\&quot;]\n    PREF3[\&quot;家庭限制与偏好汇总\&quot;]\n\n    SYS --- PREF\n    PREF --- PREF1\n    PREF --- PREF2\n    PREF --- PREF3\n\n    %% 5. 菜谱推荐管理\n    RECOM[\&quot;菜谱推荐管理\&quot;]\n    RECOM1[\&quot;推荐条件设置\&quot;]\n    RECOM2[\&quot;饮食限制过滤\&quot;]\n    RECOM3[\&quot;偏好与多因素评分\&quot;]\n    RECOM4[\&quot;推荐结果与推荐理由\&quot;]\n    RECOM5[\&quot;推荐结果应用到菜单\&quot;]\n\n    SYS --- RECOM\n    RECOM --- RECOM1\n    RECOM --- RECOM2\n    RECOM --- RECOM3\n    RECOM --- RECOM4\n    RECOM --- RECOM5\n\n    %% 6. 用餐反馈与统计\n    FEED[\&quot;用餐反馈与统计\&quot;]\n    FEED1[\&quot;星级评分\&quot;]\n    FEED2[\&quot;文字评价\&quot;]\n    FEED3[\&quot;菜单数量统计\&quot;]\n    FEED4[\&quot;菜单项数量统计\&quot;]\n    FEED5[\&quot;平均评分统计\&quot;]\n    FEED6[\&quot;热门菜谱统计\&quot;]\n\n    SYS --- FEED\n    FEED --- FEED1\n    FEED --- FEED2\n    FEED --- FEED3\n    FEED --- FEED4\n    FEED --- FEED5\n    FEED --- FEED6\n\n    %% 黑白样式\n    classDef systemNode fill:#ffffff,stroke:#000000,stroke-width:2px,color:#000000,font-weight:bold;\n    classDef moduleNode fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000,font-weight:bold;\n    classDef functionNode fill:#ffffff,stroke:#000000,stroke-width:1px,color:#000000;\n\n    class SYS systemNode;\n    class FAM,REC,MENU,PREF,RECOM,FEED moduleNode;\n\n    class FAM1,FAM2,FAM3,FAM4 functionNode;\n    class REC1,REC2,REC3,REC4,REC5,REC6 functionNode;\n    class MENU1,MENU2,MENU3,MENU4,MENU5 functionNode;\n    class PREF1,PREF2,PREF3 functionNode;\n    class RECOM1,RECOM2,RECOM3,RECOM4,RECOM5 functionNode;\n    class FEED1,FEED2,FEED3,FEED4,FEED5,FEED6 functionNode;\n\n    linkStyle default stroke:#000000,stroke-width:1px;&quot;,&#xa;  &quot;config&quot;: null&#xa;}" id="73">
+          <mxCell connectable="0" parent="1" style="group;transparentBounds=1;editIcon=1;lockedGroup=0;groupPadding=10;rounded=1;" vertex="1">
+            <mxGeometry as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="基于微信小程序的&#xa;家庭膳食管理与菜谱推荐系统" mermaidId="n:SYS" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;" mermaidBaseValue="基于微信小程序的&#xa;家庭膳食管理与菜谱推荐系统" id="2">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=2;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;rounded=1;" vertex="1">
+            <mxGeometry height="73" width="268" x="10" y="1457" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="身份与家庭管理" mermaidId="n:FAM" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;" mermaidBaseValue="身份与家庭管理" id="3">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="172" x="344" y="166" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="用户登录" mermaidId="n:FAM1" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="用户登录" id="4">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="124" x="622" y="10" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="创建家庭" mermaidId="n:FAM2" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="创建家庭" id="5">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="124" x="622" y="114" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="邀请码加入家庭" mermaidId="n:FAM3" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="邀请码加入家庭" id="6">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="172" x="598" y="218" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="家庭信息与成员查看" mermaidId="n:FAM4" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="家庭信息与成员查看" id="7">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="204" x="582" y="322" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="菜谱与食材管理" mermaidId="n:REC" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;" mermaidBaseValue="菜谱与食材管理" id="8">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="172" x="344" y="686" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="菜谱查询" mermaidId="n:REC1" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="菜谱查询" id="9">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="124" x="622" y="426" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="菜谱新增" mermaidId="n:REC2" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="菜谱新增" id="10">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="124" x="622" y="530" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="菜谱编辑" mermaidId="n:REC3" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="菜谱编辑" id="11">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="124" x="622" y="634" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="菜谱软删除" mermaidId="n:REC4" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="菜谱软删除" id="12">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="140" x="614" y="738" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="食材明细管理" mermaidId="n:REC5" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="食材明细管理" id="13">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="156" x="606" y="842" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="菜谱封面管理" mermaidId="n:REC6" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="菜谱封面管理" id="14">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="156" x="606" y="946" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="菜单管理" mermaidId="n:MENU" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;" mermaidBaseValue="菜单管理" id="15">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="124" x="368" y="1258" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="日期与餐次选择" mermaidId="n:MENU1" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="日期与餐次选择" id="16">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="172" x="598" y="1050" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="添加菜谱" mermaidId="n:MENU2" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="添加菜谱" id="17">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="124" x="622" y="1154" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="删除菜单项" mermaidId="n:MENU3" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="删除菜单项" id="18">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="140" x="614" y="1258" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="菜单备注" mermaidId="n:MENU4" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="菜单备注" id="19">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="124" x="622" y="1362" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="历史菜单查看" mermaidId="n:MENU5" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="历史菜单查看" id="20">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="156" x="606" y="1466" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="饮食限制与偏好管理" mermaidId="n:PREF" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;" mermaidBaseValue="饮食限制与偏好管理" id="21">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="204" x="328" y="1674" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="成员饮食限制" mermaidId="n:PREF1" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="成员饮食限制" id="22">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="156" x="606" y="1570" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="成员口味偏好" mermaidId="n:PREF2" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="成员口味偏好" id="23">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="156" x="606" y="1674" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="家庭限制与偏好汇总" mermaidId="n:PREF3" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="家庭限制与偏好汇总" id="24">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="204" x="582" y="1778" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="菜谱推荐管理" mermaidId="n:RECOM" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;" mermaidBaseValue="菜谱推荐管理" id="25">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="156" x="352" y="2090" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="推荐条件设置" mermaidId="n:RECOM1" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="推荐条件设置" id="26">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="156" x="606" y="1882" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="饮食限制过滤" mermaidId="n:RECOM2" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="饮食限制过滤" id="27">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="156" x="606" y="1986" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="偏好与多因素评分" mermaidId="n:RECOM3" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="偏好与多因素评分" id="28">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="188" x="590" y="2090" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="推荐结果与推荐理由" mermaidId="n:RECOM4" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="推荐结果与推荐理由" id="29">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="204" x="582" y="2194" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="推荐结果应用到菜单" mermaidId="n:RECOM5" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="推荐结果应用到菜单" id="30">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="204" x="582" y="2298" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="用餐反馈与统计" mermaidId="n:FEED" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;" mermaidBaseValue="用餐反馈与统计" id="31">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;fontStyle=1;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="172" x="344" y="2662" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="星级评分" mermaidId="n:FEED1" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="星级评分" id="32">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="124" x="622" y="2402" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="文字评价" mermaidId="n:FEED2" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="文字评价" id="33">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="124" x="622" y="2506" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="菜单数量统计" mermaidId="n:FEED3" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="菜单数量统计" id="34">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="156" x="606" y="2610" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="菜单项数量统计" mermaidId="n:FEED4" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="菜单项数量统计" id="35">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="172" x="598" y="2714" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="平均评分统计" mermaidId="n:FEED5" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="平均评分统计" id="36">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="156" x="606" y="2818" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="热门菜谱统计" mermaidId="n:FEED6" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="热门菜谱统计" id="37">
+          <mxCell parent="73" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;rounded=1;" vertex="1">
+            <mxGeometry height="54" width="156" x="606" y="2922" as="geometry" />
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:SYS-&gt;FAM#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.51;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="38">
+          <mxCell edge="1" parent="73" source="2" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.51;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="3">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="147" y="193" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:FAM-&gt;FAM1#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="39">
+          <mxCell edge="1" parent="73" source="3" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="4">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="452" y="37" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:FAM-&gt;FAM2#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="40">
+          <mxCell edge="1" parent="73" source="3" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="5">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="495" y="141" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:FAM-&gt;FAM3#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="41">
+          <mxCell edge="1" parent="73" source="3" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="6">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="495" y="245" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:FAM-&gt;FAM4#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="42">
+          <mxCell edge="1" parent="73" source="3" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="7">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="452" y="349" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:SYS-&gt;REC#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.53;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="43">
+          <mxCell edge="1" parent="73" source="2" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.53;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="8">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="152" y="713" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:REC-&gt;REC1#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.58;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="44">
+          <mxCell edge="1" parent="73" source="8" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.58;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="9">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="444" y="453" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:REC-&gt;REC2#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="45">
+          <mxCell edge="1" parent="73" source="8" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="10">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="452" y="557" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:REC-&gt;REC3#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="46">
+          <mxCell edge="1" parent="73" source="8" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="11">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="495" y="661" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:REC-&gt;REC4#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="47">
+          <mxCell edge="1" parent="73" source="8" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="12">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="495" y="765" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:REC-&gt;REC5#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="48">
+          <mxCell edge="1" parent="73" source="8" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="13">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="452" y="869" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:REC-&gt;REC6#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.58;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="49">
+          <mxCell edge="1" parent="73" source="8" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.58;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="14">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="444" y="973" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:SYS-&gt;MENU#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.6;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="50">
+          <mxCell edge="1" parent="73" source="2" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.6;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="15">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="171" y="1285" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:MENU-&gt;MENU1#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="51">
+          <mxCell edge="1" parent="73" source="15" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="16">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="446" y="1077" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:MENU-&gt;MENU2#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.77;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="52">
+          <mxCell edge="1" parent="73" source="15" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.77;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="17">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="463" y="1181" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:MENU-&gt;MENU3#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" mermaidBaseValue="" id="53">
+          <mxCell edge="1" parent="73" source="15" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="18">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:MENU-&gt;MENU4#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.77;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="54">
+          <mxCell edge="1" parent="73" source="15" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.77;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="19">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="463" y="1389" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:MENU-&gt;MENU5#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="55">
+          <mxCell edge="1" parent="73" source="15" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="20">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="446" y="1493" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:SYS-&gt;PREF#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.6;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="56">
+          <mxCell edge="1" parent="73" source="2" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.6;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="21">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="171" y="1701" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:PREF-&gt;PREF1#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.66;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="57">
+          <mxCell edge="1" parent="73" source="21" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.66;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="22">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="463" y="1597" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:PREF-&gt;PREF2#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" mermaidBaseValue="" id="58">
+          <mxCell edge="1" parent="73" source="21" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="23">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:PREF-&gt;PREF3#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.66;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="59">
+          <mxCell edge="1" parent="73" source="21" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.66;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="24">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="463" y="1805" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:SYS-&gt;RECOM#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.53;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="60">
+          <mxCell edge="1" parent="73" source="2" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.53;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="25">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="152" y="2117" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:RECOM-&gt;RECOM1#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.6;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="61">
+          <mxCell edge="1" parent="73" source="25" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.6;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="26">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="446" y="1909" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:RECOM-&gt;RECOM2#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.71;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="62">
+          <mxCell edge="1" parent="73" source="25" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.71;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="27">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="463" y="2013" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:RECOM-&gt;RECOM3#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" mermaidBaseValue="" id="63">
+          <mxCell edge="1" parent="73" source="25" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=1;exitY=0.5;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="28">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points" />
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:RECOM-&gt;RECOM4#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.71;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="64">
+          <mxCell edge="1" parent="73" source="25" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.71;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="29">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="463" y="2221" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:RECOM-&gt;RECOM5#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.6;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="65">
+          <mxCell edge="1" parent="73" source="25" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.6;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="30">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="446" y="2325" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:SYS-&gt;FEED#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.52;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="66">
+          <mxCell edge="1" parent="73" source="2" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.52;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="31">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="149" y="2689" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:FEED-&gt;FEED1#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.58;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="67">
+          <mxCell edge="1" parent="73" source="31" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.58;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="32">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="444" y="2429" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:FEED-&gt;FEED2#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="68">
+          <mxCell edge="1" parent="73" source="31" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="33">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="452" y="2533" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:FEED-&gt;FEED3#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=0;entryX=0;entryY=0.5;" mermaidBaseValue="" id="69">
+          <mxCell edge="1" parent="73" source="31" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=0;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="34">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="495" y="2637" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:FEED-&gt;FEED4#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="70">
+          <mxCell edge="1" parent="73" source="31" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.88;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="35">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="495" y="2741" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:FEED-&gt;FEED5#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="71">
+          <mxCell edge="1" parent="73" source="31" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.63;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="36">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="452" y="2845" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+        <UserObject label="" mermaidId="e:FEED-&gt;FEED6#0" mermaidBaseStyle="curved=1;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.58;exitY=1;entryX=0;entryY=0.5;" mermaidBaseValue="" id="72">
+          <mxCell edge="1" parent="73" source="31" style="curved=0;startArrow=none;endArrow=none;strokeColor=default;strokeWidth=1;exitX=0.58;exitY=1;entryX=0;entryY=0.5;rounded=1;edgeStyle=orthogonalEdgeStyle;" target="37">
+            <mxGeometry relative="1" as="geometry">
+              <Array as="points">
+                <mxPoint x="444" y="2949" />
+              </Array>
+            </mxGeometry>
+          </mxCell>
+        </UserObject>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

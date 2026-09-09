@@ -1,616 +1,351 @@
 # 饭有谱——家庭智能配餐系统
 
-这是一个面向家庭场景的数据库课程设计项目。系统通过微信小程序管理家庭成员、菜谱、食材、每日菜单、智能推荐和餐桌数据洞察；开发期使用本机 Express API 与 MySQL 8，正式发布时再将后端和数据库迁移到云服务器。
+饭有谱是一个基于微信小程序、Express REST API 和 MySQL 的家庭菜谱与菜单系统。系统围绕家庭数据边界，提供菜谱、菜单、规则推荐、成员忌口、口味偏好、用餐反馈和基础洞察。
 
-本文既是项目运行说明，也是后续前端 UI 升级的业务与接口交接文档。任何继续开发本项目的 AI 或开发者，都应先完整阅读本文，再修改页面、按钮或接口调用。
+推荐是规则和可解释评分模型，不是 AI、机器学习或协同过滤系统。
 
-## 1. 必须遵守的项目边界
+## 1. 当前功能
 
-- 唯一项目目录：`E:\Database_Design`。
-- 禁止读取、复制或参考旧项目 `E:\Mini_Program\What_To_Eat` 的代码、数据、页面和设计。
-- 小程序使用原生 WXML、WXSS、JavaScript，不使用云开发，不改造成 H5 或其他前端框架。
-- 开发期数据保存在本机 MySQL，接口地址为 `http://127.0.0.1:3000/api`。
-- 推荐功能是辅助工具，不能替代菜单页的人工点餐；用户始终可以手动加菜、删菜和调整菜单。
-- 当前前端 v1 来源任务：`codex://threads/01a06b21-684c-7961-babc-cd44932fa41a`。
-- 当前工作区里的前端 v1 文件是后续设计升级的基础。它们包含尚未提交的修改，禁止使用 `git reset --hard`、`git checkout --` 或其他命令丢弃这些文件。
+- 正式微信登录：wx.login、Backend code2Session、OpenID 映射、JWT 会话。
+- 本地开发登录：受 DEV_AUTH_ENABLED 控制，仅用于开发和自动化测试。
+- Family：创建家庭、邀请码加入、成员与 Owner 展示、单 active Family。
+- Recipe：列表、详情、新增、编辑、软删除、食材明细、步骤和封面。
+- Recipe Cover：本地上传 JPG、PNG、WebP，数据库保存相对 URL。
+- Menu：按日期和餐次查看、手动加菜、备注、幂等添加、删除 MenuItem。
+- Restriction：成员级忌口维护，并作为家庭推荐硬过滤。
+- Preference：成员级类别偏好持久化，并参与家庭软排序。
+- Recommendation：规则生成、评分、理由、家庭限制过滤、推荐应用和幂等 Apply。
+- Feedback：当前 active Member 对 MenuItem 评分和可选文字反馈。
+- Insights：菜单数量、菜品数量、热门菜谱和平均评分。
 
-### 1.1 全局图标资源规范
+## 2. 架构
 
-- 本项目所有 UI icon 统一使用 PNG 资源插入；禁止使用 emoji、文字字符、ASCII 符号、CSS 绘制图标或 inline SVG 代替 icon。
-- icon 资源必须集中放置在 `E:\Database_Design\miniprogram\assets\icons\` 下，并按模块建立子目录，例如 `recipes/`、`menu/`、`settings/`。
-- WXML 中统一通过原生 `<image src="/assets/icons/<module>/<name>.png" mode="aspectFit" />` 引用；新增 icon 先生成或导入 PNG，再接入页面。
-- 不得把截图裁片、临时占位图或不可追溯的图标文件混入资源目录；缺失 icon 时应补充真实 PNG 资源，不得用可见文字伪造视觉效果。
-
-## 2. 当前版本状态说明
-
-本文使用以下状态：
-
-| 标记 | 含义 |
-| --- | --- |
-| ✅ 已接通 | 数据库、后端接口和前端交互已经连通 |
-| 🟡 基础版 | 已经可以演示，但数据处理、校验或统计仍需增强 |
-| ⏳ 待接入 | 数据表或需求已确定，后端接口尚未完成 |
-| 🎨 UI 占位 | 前端需要提前设计入口或按钮，允许暂不调用真实接口 |
-
-暂未开发的功能也要进入前端设计。占位按钮允许暂时没有业务结果，但必须满足以下至少一项：
-
-1. 点击后提示“该功能待后端接入”；
-2. 在按钮旁显示“即将开放”或“待接入”；
-3. 在事件处理函数中写清未来准备调用的 API，不伪造保存成功结果。
-
-推荐优先使用第 1 种方式，避免用户误以为按钮失效。占位按钮的样式应与可用按钮有明显但克制的状态差异。
-
-## 3. 系统架构
-
-```text
-微信开发者工具 / 微信小程序
-          │ wx.request + Bearer Token
-          ▼
-Express API：http://127.0.0.1:3000/api
-          │ mysql2 连接池 + SQL
-          ▼
+~~~text
+微信小程序
+    │ wx.login / wx.request / Bearer JWT
+    ▼
+Express REST API
+    │ mysql2 connection pool / transaction / SQL
+    ▼
 MySQL 8：smart_meal
-```
+~~~
 
-开发阶段：
+正式登录链路：
 
-- 微信开发者工具运行 `miniprogram/`。
-- Node.js 运行 `server/`。
-- MySQL 8 在本机保存所有业务数据。
-- Navicat 用于建库、查看表、检查数据和执行 SQL。
+~~~text
+wx.login → code → /api/auth/wechat-login → WeChat code2Session
+→ openid → users → JWT → /api/auth/me → Family business APIs
+~~~
 
-正式上线阶段：
+## 3. 技术栈
 
-- 小程序前端仍发布到微信平台。
-- Express 部署到可提供 HTTPS 的云服务器。
-- MySQL 迁移到云数据库或云服务器上的 MySQL。
-- 将 `miniprogram/utils/api.js` 的 `BASE_URL` 改为备案并加入微信合法域名的 HTTPS API 地址。
+- Frontend：原生微信小程序，WXML、WXSS、JavaScript。
+- Backend：Node.js、Express 5、mysql2/promise、jsonwebtoken、dotenv。
+- Database：MySQL 8.0+、InnoDB、utf8mb4。
+- Authentication：微信 OpenID + JWT；不保存或返回 session_key。
+- Testing：Node.js built-in test runner；Direct、Real MySQL Integration、Frontend 三层测试。
 
-## 4. 项目目录
+## 4. 项目结构
 
-```text
-E:\Database_Design
-├─ miniprogram/                 微信小程序前端
-│  ├─ assets/tab/               四组空心/实心 Tab 图标
-│  ├─ pages/recommend/          智能推荐
-│  ├─ pages/menu/               每日菜单
-│  ├─ pages/recipes/            菜谱目录
-│  ├─ pages/recipe-detail/      菜谱详情
-│  ├─ pages/recipe-form/        新增/编辑菜谱
-│  ├─ test/                     前端契约测试
-│  ├─ utils/api.js              API 请求与演示登录
-│  └─ utils/ui.js               日期、菜单和表单纯函数
-├─ server/                      Express API
-│  ├─ src/routes/               认证家庭、菜谱、菜单与推荐路由
-│  ├─ src/services/             推荐算法
-│  ├─ src/middleware/           JWT 与家庭成员校验
-│  ├─ src/scripts/              数据库初始化、样例数据导入
-│  └─ test/                     后端测试
-├─ database/                    MySQL SQL 文件
-│  ├─ 00_create_user.sql        创建数据库和项目专用账号
-│  ├─ 01_schema.sql             建表、索引、约束
-│  ├─ 02_seed.sql               演示用户、家庭、食材和菜谱
-│  └─ 03_queries.sql            课程展示用统计查询
-├─ docs/                        任务书、交接、设计规格和课程报告材料
-├─ UIexample/                   当前 UI 设计参考截图
-└─ 启动后端.bat                Windows 双击启动器
-```
+~~~text
+database/
+├─ 00_create_user.sql
+├─ 01_schema.sql
+├─ 02_seed.sql
+├─ 03_queries.sql
+├─ 04_recommendation_refactor_r1.sql
+├─ 05_recommendation_run_nullable_legacy.sql
+├─ 06_recipe_tag_metadata_backfill.sql
+└─ 07_remove_cuisine_tags.sql
+server/
+├─ src/routes/
+├─ src/services/
+├─ src/middleware/
+├─ src/scripts/
+├─ test/
+└─ test/integration/
+miniprogram/
+├─ pages/
+├─ utils/
+├─ config.js
+├─ test/
+└─ scripts/run-tests.js
+docs/
+├─ FRONTEND_HANDOFF.md
+└─ superpowers/
+启动后端.bat
+~~~
 
-## 5. 第一次运行
+## 5. 环境要求
 
-### 5.1 环境要求
+- Windows 10/11 或等价开发环境。
+- Node.js 18 或更高版本；当前验证版本为 Node.js 24.14.0。
+- MySQL 8.0 或更高版本；当前验证版本为 MySQL 8.0.45。
+- npm。
+- 微信开发者工具。
 
-- Windows 10/11
-- Node.js 18 以上；当前开发环境为 Node.js 24
-- npm
-- MySQL 8
-- Navicat
-- 微信开发者工具
+项目使用 Node.js 18+ 已提供的 fetch、AbortController、URL、node:test 和 node --watch 能力。
 
-### 5.2 初始化数据库
+## 6. 环境变量
 
-1. 在 Navicat 中使用安装 MySQL 时设置的 root 密码连接本机 MySQL。
-2. 打开并执行 `database/00_create_user.sql`。
-3. 复制 `server/.env.example` 为 `server/.env`。
-4. 确认项目账号配置一致。默认项目账号不是 root：
+复制 server/.env.example 为 server/.env。真实 .env 不应提交到 Git。
 
-```env
-MYSQL_HOST=127.0.0.1
-MYSQL_PORT=3306
-MYSQL_USER=smart_meal_app
-MYSQL_PASSWORD=smart_meal_local_2026
-MYSQL_DATABASE=smart_meal
-```
+| 变量 | 用途 | 分类 |
+| --- | --- | --- |
+| PORT | Backend 监听端口，默认 3000 | 可选 |
+| MYSQL_HOST | MySQL 地址 | 本地 Backend 必需 |
+| MYSQL_PORT | MySQL 端口 | 本地 Backend 必需 |
+| MYSQL_USER | 项目数据库用户 | 本地 Backend 必需 |
+| MYSQL_PASSWORD | 数据库密码 | 本地 Backend 必需 |
+| MYSQL_DATABASE | 业务数据库，通常为 smart_meal | 本地 Backend 必需 |
+| JWT_SECRET | JWT 签名密钥 | 必须配置为稳定随机值 |
+| DEV_AUTH_ENABLED | 是否启用 /api/auth/dev-login | 开发可为 true，生产建议 false |
+| WECHAT_APP_ID | 微信小程序 AppID | 正式微信登录必需 |
+| WECHAT_APP_SECRET | 微信小程序 AppSecret | 仅 Backend，正式微信登录必需 |
+| RECIPE_UPLOAD_ROOT | 菜谱封面上传目录 | 可选 |
+| MYSQL_TEST_DATABASE | Real MySQL Integration 测试库 | 仅 Integration |
+| PHASE_1C_ALLOW_DB_WRITES | 显式允许测试库写入，必须为 1 | 仅 Integration |
 
-5. 在 PowerShell 中执行：
+WECHAT_APP_SECRET 不得写入小程序、API response、日志或测试快照。
 
-```powershell
+## 7. 数据库初始化
+
+业务数据库为 smart_meal。首次初始化时使用具有建库和授权权限的 MySQL 管理账号执行：
+
+~~~powershell
+mysql -u root -p < database/00_create_user.sql
+~~~
+
+然后配置 server/.env，执行：
+
+~~~powershell
 cd E:\Database_Design\server
 npm install
 npm run db:init
 npm run db:seed
-```
+~~~
 
-种子脚本提供 1 个演示家庭、12 种食材和 7 道菜谱。实际使用小程序新增的数据会继续写入同一个数据库。
+真实脚本含义：
 
-### 5.3 启动后端
+- db:init：读取项目 database/01_schema.sql 创建数据库和表；当前新建 Schema 已包含 canonical Recommendation 结构。
+- db:seed：读取项目 database/02_seed.sql 写入本地演示数据。
+- 03_queries.sql：课程展示和统计用 SQL，不是启动必需步骤。
+- 04、05、06、07：针对已经存在的旧数据库执行的增量升级，顺序为先 04、05、06，再 07；06 用于按 seed 映射 insert-only 补齐现有 Recipe 的口味、饮食和烹饪方法标签，07 用于清理已废弃的菜系标签并收窄标签类型。它们不替代新环境的 01_schema.sql，也不应跳过数据库基础表初始化。
 
-直接双击根目录的 `启动后端.bat`。看到以下内容后保持窗口开启：
+当前 `01_schema.sql` 定义 17 张表；seed 包含 48 道 Recipe、食材和完整的 recipe_ingredients 关系，供本地演示和开发使用。
 
-```text
-smart-meal API listening on http://127.0.0.1:3000
-```
+## 8. Backend 启动
 
-也可以手动启动：
-
-```powershell
+~~~powershell
 cd E:\Database_Design\server
+npm install
+Copy-Item .env.example .env
+# 编辑 .env 后：
+npm run db:init
+npm run db:seed
 npm run dev
-```
+~~~
 
-### 5.4 打开微信小程序
+也可以双击根目录 启动后端.bat。健康检查：
 
-1. 在微信开发者工具导入 `E:\Database_Design`。
-2. 在“详情 → 本地设置”中启用“不校验合法域名、TLS 版本以及 HTTPS 证书”。
-3. 点击“编译”。
-4. 开发期优先使用模拟器；手机无法直接访问电脑上的 `127.0.0.1`。
+~~~text
+GET http://127.0.0.1:3000/api/health
+~~~
 
-## 6. 后端结构与请求规则
+## 9. 微信小程序设置
 
-### 6.1 技术栈
+小程序目录为 miniprogram/。在微信开发者工具中导入项目根目录并编译。
 
-- Express 5：HTTP API。
-- mysql2/promise：MySQL 连接池和事务。
-- jsonwebtoken：7 天有效期的 JWT。
-- dotenv：读取 `server/.env`。
-- cors：开发期跨域支持。
-- Node.js Test Runner：接口、算法、Schema 和启动器测试。
+miniprogram/config.js 集中管理：
 
-### 6.2 统一响应
+- development API：http://127.0.0.1:3000/api
+- production API：HTTPS placeholder，需要部署前替换
+- allowDevLogin：开发环境可用，生产环境关闭
 
-成功响应：
+开发者工具本地调试可以开启“不校验合法域名、TLS 版本以及 HTTPS 证书”。真机不能访问电脑的 127.0.0.1；正式环境必须使用 HTTPS Backend，并在微信后台配置 request 合法域名。
 
-```json
-{
-  "ok": true,
-  "data": {}
-}
-```
+## 10. Authentication
+
+### 正式微信登录
+
+~~~text
+wx.login
+→ code
+→ POST /api/auth/wechat-login
+→ Backend 调用 code2Session
+→ openid
+→ users.openid
+→ JWT
+→ GET /api/auth/me
+~~~
+
+Frontend 不提交 openid、unionid、session_key 或 user_id。新用户自动创建 User，但不会自动创建 Family；登录后可以创建或加入家庭。
+
+### Development Login
+
+~~~text
+DEV_AUTH_ENABLED=true
+→ POST /api/auth/dev-login
+~~~
+
+仅用于本地开发、自动化测试和没有微信运行环境的调试。正式产品入口应使用微信登录。
+
+## 11. 核心 API
+
+基础地址为 API_BASE/api。除健康检查和登录接口外，业务接口需要 Bearer JWT。
+
+| 模块 | API |
+| --- | --- |
+| Auth | POST /auth/wechat-login、POST /auth/dev-login、GET /auth/me |
+| Family | POST /families、POST /families/join、GET /families/current |
+| Recipe | GET/POST /recipes、GET/PUT/DELETE /recipes/:id |
+| Ingredient | GET /ingredients |
+| Menu | GET /menus、GET /menus/dates、POST /menus/items、DELETE /menus/items/:id |
+| Recommendation | POST /recommendations、GET /recommendations/:id/candidates/:rank、POST /recommendations/:id/apply |
+| Restriction | GET/POST /family-members/:memberId/restrictions、DELETE .../:ingredientId |
+| Preference | GET /family-members/:memberId/preferences、PUT/DELETE .../:category |
+| Feedback | GET/PUT/DELETE /menu-items/:menuItemId/feedback |
+| Insights | GET /insights |
+| Upload | POST /uploads/recipe-cover |
+
+统一响应：
+
+~~~json
+{ "ok": true, "data": {} }
+~~~
 
 失败响应：
 
-```json
-{
-  "ok": false,
-  "message": "可直接展示给用户的错误原因"
-}
-```
+~~~json
+{ "ok": false, "message": "可展示的错误信息" }
+~~~
 
-除健康检查和演示登录以外，接口都需要：
+跨 Family 资源统一返回 404；无 active Family 通常返回 403；业务冲突返回 409。
 
-```http
-Authorization: Bearer <token>
-```
+## 12. 核心业务规则
 
-`miniprogram/utils/api.js` 已自动保存并携带 Token。HTTP 401 表示未登录或登录过期，HTTP 403 通常表示尚未加入家庭或没有权限，HTTP 422 表示推荐条件下无法组成菜单。
+- 一个 User 同一时间最多拥有一个 active Family membership。
+- Family 是 Recipe、Menu、RecommendationRun、Member 等家庭业务数据的隔离边界。
+- Owner 不能直接 leave；Owner transfer、Family delete 暂不实现。
+- Recipe 使用 soft delete；历史 MenuItem 使用 Dynamic Reference，仍可展示同 Family 的 deleted Recipe。
+- 新 Menu 的粒度是 family_id + menu_date + meal_type，同一槽位只能有一个 Menu。
+- 同一 Menu 中同一 Recipe 只能有一个 MenuItem；空 Menu 保留。
+- Restriction 是 active Member 的硬过滤；命中任一限制的 Recipe 不进入推荐候选。
+- Preference 是 active Member 的类别软偏好；未设置按中性值 3，家庭按 active Member 平均值聚合。
+- Recommendation Apply 对 stale 或跨 Family Recipe 整体失败并回滚。
+- Feedback 由当前 active Member 维护，重复评分更新原关系。
 
-### 6.3 当前配置注意事项
+## 13. Recommendation Model
 
-`server/src/config.js` 已读取 `JWT_SECRET` 和 `DEV_AUTH_ENABLED`，但当前 `server/src/server.js` 只把数据库连接传给应用，运行时仍会使用 `createApp` 的本地默认 JWT 密钥和默认演示登录开关。这个问题不影响本机演示，但后端上线前必须修复。前端 UI AI 不要擅自修改这部分后端代码。
+~~~text
+canonical request: maxPrepMinutes + structure + preferences
+        ↓
+active-member restrictions
+        ↓
+hard category/ingredient filter
+        ↓
+family and session preference soft score
+        ↓
+ingredient/method diversity + nutrition + season + novelty
+        ↓
+persisted candidates with score/reason snapshots
+~~~
 
-## 7. 当前 API 清单
+新推荐结果会持久化为 `recommendation_runs`、`recommendation_candidates` 和 `recommendation_candidate_items`。客户端通过候选 `candidateId` 读取或 Apply；Apply 会重新校验当前家庭、成员、Recipe 状态、限制和菜单结构，并使用事务和幂等规则写入 Menu。旧的 `maxCookMinutes + mode` 请求和历史 `recommendation_items` 仍保留兼容读取与 Apply 路径。
 
-API 基础地址：`http://127.0.0.1:3000/api`。
+## 14. Recipe Cover Upload
 
-### 7.1 服务状态
+~~~text
+POST /api/uploads/recipe-cover
+~~~
 
-#### `GET /health` ✅
+支持 JPG、JPEG、PNG、WebP，大小上限 5 MB。文件保存在本地 upload directory，服务端生成安全文件名；数据库只保存 /uploads/recipes/<filename> 相对 URL。
 
-不需要登录，用于检查 Express 是否启动。
+上传失败时 Recipe 不会假装保存成功。孤儿图片清理、云对象存储和 CDN 属于 Deferred。
 
-```json
-{
-  "ok": true,
-  "data": { "service": "smart-meal-api" }
-}
-```
+## 15. 测试系统
 
-### 7.2 认证与会话
+### Backend Direct
 
-#### `POST /auth/dev-login` ✅
-
-开发期演示登录。当前前端固定使用 `demo-owner`。
-
-```json
-{
-  "openid": "demo-owner",
-  "displayName": "演示用户"
-}
-```
-
-返回 Token、用户和当前家庭成员身份。
-
-#### `GET /auth/me` ✅
-
-返回当前用户与其第一个有效家庭成员身份。没有加入家庭时 `membership` 为 `null`。
-
-#### 正式微信登录 ⏳ 🎨
-
-计划由小程序调用 `wx.login`，再由后端使用 code 换取 OpenID 并创建会话。当前没有对应 API；前端可以设计“微信登录”主按钮，但必须标为待接入，同时保留开发期演示登录入口。
-
-### 7.3 家庭与成员
-
-#### `POST /families` ✅
-
-创建家庭并让当前用户成为所有者。
-
-```json
-{ "name": "周末饭桌" }
-```
-
-#### `POST /families/join` ✅
-
-使用 6 位邀请码加入家庭。
-
-```json
-{ "inviteCode": "MEAL26" }
-```
-
-#### `GET /families/current` ✅
-
-返回家庭、当前成员角色、邀请码和所有有效成员。
-
-#### 家庭管理扩展 ⏳ 🎨
-
-数据库已有成员状态与角色字段，但以下 API 尚未实现：退出家庭、移除成员、修改成员昵称、转让家庭所有权和解散家庭。
-
-前端应提前提供“成员管理”入口，并设计这些按钮与确认弹窗；点击占位按钮时提示“待家庭管理接口接入”。危险操作必须采用红色弱强调样式并二次确认。
-
-### 7.4 菜谱
-
-#### `GET /recipes` ✅
-
-查询当前家庭的有效菜谱。`keyword` 当前只搜索菜名；`category` 支持 `荤菜`、`素菜`、`汤`、`主食`。因此当前搜索框文案应写“搜索菜名”。如果显示“搜索菜名或食材”，需先扩展后端联表搜索。
-
-#### `GET /recipes/:id` ✅
-
-返回菜谱基本信息和食材明细，包括菜名、分类、介绍、步骤、耗时、难度、份量、封面地址、作者与食材克数。
-
-#### `POST /recipes` ✅
-
-新建菜谱。完整请求示例：
-
-```json
-{
-  "title": "香菇蒸鸡",
-  "category": "荤菜",
-  "description": "清淡家常菜",
-  "steps": "鸡肉腌制\n加入香菇\n蒸熟",
-  "cookMinutes": 30,
-  "difficulty": 2,
-  "servings": 3,
-  "ingredients": [
-    { "ingredientId": 1, "amountGrams": 300, "note": "切块" }
-  ]
-}
-```
-
-#### `PUT /recipes/:id` ✅
-
-修改菜谱及完整食材列表。普通成员只能修改自己创建的菜谱；家庭所有者可以管理本家庭全部菜谱。
-
-#### `DELETE /recipes/:id` ✅
-
-软删除菜谱，将状态改为 `deleted`，不会直接删除历史数据。普通成员只能删除自己创建的菜谱；所有者可删除家庭菜谱。
-
-当前注意事项：
-
-- 分类创建接口明确限制为四类；数据库难度允许 1–5，当前前端只提供 1–3。
-- 食材列表保存时尚未使用完整事务；重复选择同一种食材可能触发数据库唯一约束。
-- 演示种子菜谱目前没有配套 `recipe_ingredients` 数据，详情页必须支持“暂无食材明细”状态。
-
-### 7.5 食材与时令
-
-#### `GET /ingredients` ✅
-
-返回全局食材列表及每 100 克热量、蛋白质、脂肪和碳水数据，用于菜谱表单选择食材。
-
-#### 食材管理 ⏳ 🎨
-
-数据库已经支持食材营养和时令月份，但新增/编辑/删除食材、设置时令、查询引用关系和删除前检查的 API 尚未实现。
-
-前端可在设置页加入“食材库管理”入口，并设计“新增食材”“编辑营养”“设置时令”“删除食材”按钮作为占位。
-
-### 7.6 手动菜单
-
-#### `GET /menus?date=YYYY-MM-DD` ✅
-
-返回指定日期已经存在的早餐、午餐和晚餐菜单及菜品。后端不会自动返回空餐次，当前前端通过 `normalizeMeals` 补齐三餐空状态。
-
-#### `POST /menus/items` ✅
-
-选择某天、某餐次并加入菜谱。
-
-```json
-{
-  "menuDate": "2026-09-05",
-  "mealType": "dinner",
-  "recipeId": 7,
-  "note": "少盐"
-}
-```
-
-同一家庭、日期、餐次只会有一份菜单；同一菜谱不能在同一餐次重复出现。重复加入同一道菜时，当前后端更新备注而不是创建第二条记录。
-
-#### `DELETE /menus/items/:id` ✅
-
-从菜单移除一道菜，不删除菜谱；删除前会校验该菜单属于当前家庭。
-
-#### 菜单编辑扩展 ⏳ 🎨
-
-修改菜单项备注、替换菜品、清空餐次、删除整日菜单、标记完成、日期区间历史和菜单评价 API 尚未实现。
-
-前端菜单页应提前设计“编辑备注”“换一道”“评价”“更多”入口；“更多”菜单中可放“清空本餐”和“标记完成”。尚未接通时统一显示待接入提示。
-
-### 7.7 智能推荐
-
-#### `POST /recommendations` 🟡
-
-```json
-{
-  "menuDate": "2026-09-05",
-  "mealType": "dinner",
-  "peopleCount": 4,
-  "maxCookMinutes": 90,
-  "mode": "balanced"
-}
-```
-
-| 值 | 前端名称 | 偏好 | 营养 | 时令 | 耗时 |
-| --- | --- | ---: | ---: | ---: | ---: |
-| `balanced` | 均衡优先 | 30% | 30% | 20% | 20% |
-| `healthy` | 健康优先 | 25% | 40% | 20% | 15% |
-| `quick` | 快手优先 | 30% | 15% | 20% | 35% |
-
-人数决定菜量：1–2 人为 1 荤 + 1 素 + 1 汤；3–4 人为 1 荤 + 2 素 + 1 汤；5–12 人为 2 荤 + 2 素 + 1 汤。
-
-当前已实现家庭菜谱筛选、家庭忌口排除、模式权重评分、推荐理由、总耗时校验和菜谱不足提示。
-
-当前仍是基础版：
-
-- 未按用户选择的参与成员计算；
-- 偏好数据未真正进入评分，默认偏好分为 70；
-- 时令表未真正参与计算，候选暂时视为当季；
-- 营养评分使用简化值，未按食材克数汇总；
-- 先选最高分菜再检查总耗时，不是完整组合优化；
-- 结果未写入 `recommendation_runs` 和 `recommendation_items`。
-
-#### 应用推荐 🟡
-
-当前前端逐道调用 `POST /menus/items` 将推荐加入晚餐菜单，可以完成演示；尚未实现原子化采纳 API，也没有记录推荐批次、采纳结果和 `source=recommendation`。
-
-前端后续应设计日期、餐次、参与成员、人数、耗时、模式、生成、重新生成、应用菜单、单菜“换一道”“查看理由”“查看菜谱”和取消选择。未接通的控件允许占位。
-
-### 7.8 数据洞察与反馈
-
-#### `GET /insights` 🟡
-
-当前返回菜谱使用次数排行 `popular`、菜单数 `menuCount`、菜单菜品数 `itemCount` 和平均评分 `averageRating`。设置页目前只展示三个 summary 数字，尚未展示 `popular`。
-
-#### 完整洞察与反馈 ⏳ 🎨
-
-数据库已有 `menu_feedback` 表，但暂无评价 API。计划中的洞察包括成员偏好命中率、菜谱热度、食材热度、菜单复用率、营养汇总、耗时趋势、推荐采纳率和评分明细。
-
-前端需要设计“餐桌洞察”详情页或弹层，并提前提供“菜谱热度”“食材热度”“营养趋势”“耗时趋势”“推荐采纳”“评分反馈”等入口。暂无数据时展示真实空状态，不生成假统计。
-
-### 7.9 成员偏好与忌口 ⏳ 🎨
-
-数据库已有 `member_category_preferences` 与 `member_ingredient_restrictions`，但尚缺维护 API。
-
-前端仍应设计“编辑口味偏好”、四类菜品 1–5 级选择器、“添加忌口/过敏”、食材选择、原因输入、删除限制、成员切换和保存按钮。保存尚未接通时应显示“待偏好接口接入”。
-
-## 8. 数据库设计
-
-数据库名为 `smart_meal`，字符集为 `utf8mb4`，存储引擎为 InnoDB。
-
-| 表 | 作用 | 当前使用情况 |
-| --- | --- | --- |
-| `users` | 微信用户/OpenID、昵称、头像 | ✅ 演示登录使用 |
-| `families` | 家庭、邀请码、所有者 | ✅ 已使用 |
-| `family_members` | 用户与家庭的成员关系、角色、状态 | ✅ 已使用 |
-| `ingredients` | 食材与每 100 克营养值 | ✅ 查询使用 |
-| `ingredient_seasons` | 食材适宜月份 | ⏳ 已建表，算法未接入 |
-| `recipes` | 家庭菜谱基本信息 | ✅ 已使用 |
-| `recipe_ingredients` | 菜谱—食材多对多关系及克数 | ✅ 表单支持，种子数据未填充 |
-| `member_category_preferences` | 成员类别偏好 | ⏳ 已建表，暂无 API |
-| `member_ingredient_restrictions` | 成员忌口和过敏食材 | 🟡 推荐读取，暂无维护 API |
-| `recommendation_runs` | 每次推荐的参数、总分、耗时 | ⏳ 已建表，暂无写入逻辑 |
-| `recommendation_items` | 推荐批次中的菜谱、分数与理由 | ⏳ 已建表，暂无写入逻辑 |
-| `menus` | 家庭某天某餐次的菜单 | ✅ 已使用 |
-| `menu_items` | 菜单中的菜谱、来源与备注 | ✅ 已使用 |
-| `menu_feedback` | 成员对菜单菜品的评分与评价 | ⏳ 已建表，暂无 API |
-
-数据库通过主键与唯一键实现实体完整性，通过外键和删除策略实现参照完整性，通过 ENUM、CHECK、唯一组合和业务权限实现用户定义完整性。重要约束包括 OpenID 唯一、邀请码唯一、同一菜单槽位唯一、菜单菜谱不重复、食材用量大于 0、月份 1–12、评分 1–5、人数和耗时范围合法。
-
-## 9. 前端页面、分区与按钮总表
-
-后续 UI AI 必须保留四个原生 Tab：推荐、菜单、菜谱、设置。详情页和表单页通过普通导航进入，不加入 TabBar。
-
-### 9.1 推荐 Tab
-
-分区：页面标题与日期、推荐摘要、模式切换、条件设置、状态反馈、推荐结果、推荐操作。
-
-| 控件 | 状态 | 行为/目标接口 |
-| --- | --- | --- |
-| 均衡/健康/快手模式 | ✅ | 设置 `mode` |
-| 人数减号/加号 | ✅ | 1–12 人 |
-| 最大耗时滑块 | ✅ | 30–180 分钟 |
-| 生成、重试、重新生成 | ✅ | `POST /recommendations` |
-| 加入晚餐菜单 | 🟡 | 逐道 `POST /menus/items` |
-| 选择日期/餐次/参与成员 | 🎨 | 等待推荐接口扩展 |
-| 换一道/取消单菜 | 🎨 | 等待推荐替换或应用接口 |
-| 查看理由 | 🎨 | 可先展示已有 `score.reason` |
-| 查看菜谱 | 🎨 | 可直接导航已有详情页 |
-
-### 9.2 菜单 Tab
-
-分区：标题与加菜、日期切换、当日摘要、早餐/午餐/晚餐、加载/错误/空状态。
-
-| 控件 | 状态 | 行为/目标接口 |
-| --- | --- | --- |
-| ＋加菜/空餐次加菜 | ✅ | 切换到菜谱 Tab |
-| 前一天/后一天 | ✅ | 改日期后 `GET /menus` |
-| 移除 | ✅ | 二次确认后 `DELETE /menus/items/:id` |
-| 查看详情 | 🎨 | 导航已有菜谱详情页 |
-| 编辑备注/换一道/评价 | 🎨 | 等待对应 API |
-| 标记完成/清空本餐 | 🎨 | 等待菜单 API，危险操作二次确认 |
-| 历史菜单/日历 | 🎨 | 等待日期区间接口 |
-
-### 9.3 菜谱 Tab
-
-分区：标题与新增、搜索、左侧分类、右侧卡片、加入菜单底部弹层、各类状态。
-
-| 控件 | 状态 | 行为/目标接口 |
-| --- | --- | --- |
-| 顶部 ＋ | ✅ | 打开新增菜谱页 |
-| 搜索/键盘搜索 | ✅ | `GET /recipes?keyword=` |
-| 分类导航 | ✅ | 按四类重新查询 |
-| 菜谱卡片 | ✅ | 打开详情页 |
-| 删除 | ✅ | 二次确认后 `DELETE /recipes/:id` |
-| 卡片 ＋ | ✅ | 打开加入菜单弹层 |
-| 日期、餐次、备注、确认加入 | ✅ | `POST /menus/items` |
-| 食材搜索 | 🎨 | 等待联表搜索扩展 |
-
-### 9.4 菜谱详情页
-
-分区：封面/占位图、标题、元数据、食材、步骤、加入菜单弹层。
-
-| 控件 | 状态 | 行为/目标接口 |
-| --- | --- | --- |
-| 返回、加载重试 | ✅ | 页面导航/重新查询 |
-| 编辑 | ✅ | 打开编辑表单 |
-| 加入某一天的菜单 | ✅ | 日期/餐次/备注后加入 |
-
-### 9.5 新增/编辑菜谱页
-
-字段包括菜名、介绍、分类、难度、耗时、份量、食材行和制作步骤。
-
-| 控件 | 状态 | 行为/目标接口 |
-| --- | --- | --- |
-| 返回 | ✅ | 返回上一页 |
-| 分类、难度、耗时、份量输入 | ✅ | 更新表单 |
-| 添加/更换/删除食材 | ✅ | 编辑食材数组 |
-| 创建菜谱/保存修改 | ✅ | `POST/PUT /recipes` |
-
-### 9.6 设置 Tab
-
-分区：账户、家庭、成员、餐桌洞察、待开放功能。
-
-| 控件 | 状态 | 行为/目标接口 |
-| --- | --- | --- |
-| 演示登录/重新登录 | ✅ | `POST /auth/dev-login` |
-| 创建家庭/邀请码加入 | ✅ | 家庭 API |
-| 复制邀请码 | ✅ | 系统剪贴板 |
-| 查看/刷新洞察 | ✅ | `GET /insights` |
-| 微信正式登录 | 🎨 | 等待微信登录 API |
-| 成员管理、改昵称、移除成员 | 🎨 | 等待成员 API |
-| 退出/解散/转让家庭 | 🎨 | 等待家庭管理 API |
-| 编辑偏好、管理忌口 | 🎨 | 等待偏好/忌口 API |
-| 食材库管理 | 🎨 | 等待食材 CRUD API |
-| 完整餐桌洞察 | 🎨 | 等待扩展洞察 API |
-
-## 10. 当前前端 v1 视觉基线
-
-后续 UI 升级必须以任务 `codex://threads/01a06b21-684c-7961-babc-cd44932fa41a` 及当前磁盘文件为基础继续精进，不回退到最初的简陋页面。
-
-- 暖白背景 `#F4F5F2`，纯白卡片 `#FFFFFF`；
-- 青绿色品牌色 `#0B6B65`，深青色 `#17483F`，陶土强调色 `#C77955`；
-- 标题使用思源宋体角色，正文与控件使用思源黑体角色；
-- 圆润卡片、轻阴影和大留白；
-- 顶部不显示“饭有谱”导航标题；
-- Tab 未选中图标为空心，选中图标为实心青绿色；
-- 主要触控区域不小于约 44px；
-- 字体栈必须有系统字体回退；
-- 菜谱无图片时使用稳定的抽象餐盘或首字占位图。
-
-现有依据包括 `docs/superpowers/specs/2026-09-04-miniprogram-ui-v1-design.md`、`docs/superpowers/plans/2026-09-04-miniprogram-ui-v1.md`、`miniprogram/app.wxss`、`miniprogram/pages/**`、`miniprogram/assets/tab/**` 和 `UIexample/**`。
-
-UI AI 可以优化页面构图、层级、配色、卡片、图标、动效和组件状态，可以新增占位页面与按钮，也可以展示后端已经返回但当前未展示的 `insights.popular`。
-
-UI AI 不得读取旧项目、删除人工菜单、擅改 API、伪造成功结果或统计数据、丢弃当前未提交文件，也不能为了装饰加入无法解释的重复导航。
-
-## 11. 后端后续开发优先级
-
-1. 修正 JWT 与演示登录环境配置未传入 `createApp`；
-2. 成员偏好与忌口 CRUD；
-3. 推荐批次持久化和原子化应用推荐；
-4. 接入真实时令、营养和成员偏好评分；
-5. 菜单备注、状态、替换、清空和历史接口；
-6. 菜单评分与反馈 API；
-7. 食材与时令 CRUD；
-8. 完整洞察统计；
-9. 家庭成员管理；
-10. 正式微信登录与生产部署。
-
-前端可以提前完成这些功能的页面和按钮，后端开发完成后直接接上。
-
-## 12. 测试与验收
-
-后端测试：
-
-```powershell
+~~~powershell
 cd E:\Database_Design\server
 npm test
-```
+~~~
 
-前端契约测试：
+当前基线：141 passed，0 failed，0 skipped。Direct 测试不连接、不读取、不写入 smart_meal。
 
-```powershell
-cd E:\Database_Design
-node --test miniprogram/test/ui-v1.test.js
-```
+### Backend Real MySQL Integration
 
-每次 UI 升级至少手动验证：
+~~~powershell
+cd E:\Database_Design\server
+$env:MYSQL_TEST_DATABASE = 'smart_meal_test'
+$env:PHASE_1C_ALLOW_DB_WRITES = '1'
+npm run test:integration
+~~~
 
-1. 登录；
-2. 生成、重生成并应用推荐；
-3. 菜单日期切换、三餐、手动加菜和移除；
-4. 菜谱搜索、分类、详情、新增、编辑、删除；
-5. 菜谱选择日期/餐次/备注并加入菜单；
-6. 家庭创建/加入、邀请码复制、成员和洞察；
-7. 所有占位按钮能够说明“待后端接入”；
-8. loading、空数据、网络失败、校验失败、成功反馈和删除确认；
-9. Tab 图标切换、窄屏布局、底部安全区和触控面积。
+当前声明测试：23 个。安全门禁要求测试库名称包含 test，且不得等于 MYSQL_DATABASE。Integration 可以 DROP/CREATE 和清理测试库，但绝对不能使用 smart_meal。没有安全环境时命令会 fail-fast，不会 fallback 到业务库。
 
-## 13. 已知限制
+### Frontend
 
-- 双击 `启动后端.bat` 后必须保持黑色窗口开启。
-- 微信开发者工具网络失败时，检查后端窗口及本地合法域名设置。
-- 手机扫码预览不能直接访问电脑的 `127.0.0.1`。
-- 当前是演示登录，不是正式微信授权。
-- 推荐页当前固定向晚餐写入。
-- 菜谱搜索当前只按标题匹配。
-- 种子菜谱可能显示“暂无食材明细”。
-- 平均评分可能为 0，因为反馈 API 未开发。
-- 当前工作区存在前端任务留下的未提交文件，只提交自己负责的修改。
+~~~powershell
+npm test --prefix miniprogram
+~~~
 
-## 14. 给下一位 UI AI 的直接任务说明
+当前基线：94 passed，0 failed，0 skipped。Frontend 测试使用 Node built-in runner，覆盖 contract、纯函数和 source-level checks，不等同于微信开发者工具真实 E2E。
 
-```text
-你将在 E:\Database_Design 中继续升级“家庭智能配餐系统”的微信小程序前端。
+### 全部 Backend
 
-开始前必须完整阅读 E:\Database_Design\README.md，并读取前端 v1 来源任务 codex://threads/01a06b21-684c-7961-babc-cd44932fa41a、现有 miniprogram 文件、docs/superpowers/specs/2026-09-04-miniprogram-ui-v1-design.md 以及 UIexample 参考图。
+~~~powershell
+cd E:\Database_Design\server
+npm run test:all
+~~~
 
-必须以当前工作区中的前端 v1 为基础继续精进，禁止读取或参考 E:\Mini_Program\What_To_Eat，禁止丢弃当前未提交的前端文件。保持原生 WXML/WXSS/JavaScript、四个 Tab 和本机 Express API。
+该命令会先运行 Direct，再运行带安全门禁的 Integration；未配置测试库时会明确失败，不应把失败误报为完整测试通过。
 
-README 中标为“已接通”的按钮必须继续调用真实接口；标为“UI 占位”的按钮也要设计并放入合适页面，允许暂未接通后端，但点击后应明确提示“待后端接入”，不要伪造保存成功或假数据。完成后逐页验证所有按钮、加载/空/错误/成功状态以及删除二次确认。
-```
+## 16. Real MySQL Integration 测试库
 
-## 15. 相关文档
+建议使用独立的 smart_meal_test，不要复制或清空业务库。使用 MySQL 管理账号准备测试库和专用权限，例如：
 
-- `docs/FRONTEND_HANDOFF.md`：早期前端交接说明；本文是更新后更完整的依据。
-- `docs/superpowers/specs/2026-09-04-miniprogram-ui-v1-design.md`：当前 v1 视觉规格。
-- `docs/superpowers/plans/2026-09-04-miniprogram-ui-v1.md`：v1 实施计划。
-- `docs/COURSE_REPORT_OUTLINE.md`：课程报告目录。
-- `database/01_schema.sql`：数据库结构和约束。
-- `database/03_queries.sql`：课程展示用统计查询。
+~~~sql
+CREATE DATABASE IF NOT EXISTS smart_meal_test CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+GRANT ALL PRIVILEGES ON smart_meal_test.* TO 'smart_meal_app'@'localhost';
+GRANT CREATE, DROP ON *.* TO 'smart_meal_app'@'localhost';
+FLUSH PRIVILEGES;
+~~~
+
+测试 runner 会读取正式 database/01_schema.sql，在测试库中重建 Schema 和最小 fixture；不维护第二份 Schema，不复制 smart_meal 数据。
+
+## 17. Course Design Scope
+
+项目同时作为数据库课程设计，真实体现：
+
+- Primary Key、Foreign Key、Composite Key、UNIQUE、CHECK、DEFAULT、NOT NULL
+- 1:N、M:N、关联实体、索引和参照完整性
+- Transaction、Rollback、Concurrency、FOR UPDATE、UPSERT、Idempotency
+- Soft Delete、JOIN、LEFT JOIN、GROUP BY、AVG、COUNT、Family isolation
+
+最终 ER 图、数据字典、课程报告和答辩材料另行整理，不在本 README 中展开。
+
+## 18. Known Limitations / Deferred
+
+这些不是当前业务 Bug，而是明确的后续范围：
+
+- 用户资料完善、头像上传、UnionID 数据模型。
+- Refresh Token、logout revoke、Token blacklist、多设备 Session 中心。
+- 多 Family、Family switch、Owner transfer、Owner leave、Family delete。
+- Menu completed 流程。
+- Recommendation 行为学习、Feedback 学习、AI/LLM、协同过滤。
+- 云对象存储、CDN、orphan image cleanup。
+- 生产服务器、域名、HTTPS、监控、备份与灾备部署。
+
+## 19. Production Prerequisites
+
+当前代码已经提供正式认证基础，但尚未完成生产部署。上线前仍需：
+
+1. 配置真实 WECHAT_APP_ID 和 WECHAT_APP_SECRET。
+2. 将 miniprogram/config.js production API 替换为正式 HTTPS 地址。
+3. 在微信后台配置 request 合法域名。
+4. 部署 Express、MySQL、上传目录和备份策略。
+5. 重新执行安全的 Real MySQL Integration 和现场小程序验收。
+
+不要把当前 localhost 或 HTTPS placeholder 误认为已经部署。

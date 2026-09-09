@@ -1,48 +1,80 @@
 @echo off
-setlocal
-title 家庭智能配餐系统 - 后端服务
+setlocal EnableExtensions
 
-cd /d "%~dp0server"
+rem Keep console output ASCII so cmd.exe never renders batch text as mojibake.
+chcp 65001 >nul
+title Smart Meal Backend
+
+set "PROJECT_ROOT=%~dp0"
+set "SERVER_ROOT=%PROJECT_ROOT%server"
+
+if not exist "%SERVER_ROOT%\package.json" (
+  echo [ERROR] Backend project folder not found: %SERVER_ROOT%
+  goto :failed
+)
 
 where node >nul 2>nul
 if errorlevel 1 (
-  echo [错误] 未找到 Node.js。请先安装 Node.js 24 或更高版本。
+  echo [ERROR] Node.js was not found. Install Node.js 18 or newer.
   goto :failed
 )
 
 where npm >nul 2>nul
 if errorlevel 1 (
-  echo [错误] 未找到 npm。请重新安装 Node.js。
+  echo [ERROR] npm was not found. Reinstall Node.js.
+  goto :failed
+)
+
+pushd "%SERVER_ROOT%"
+if errorlevel 1 (
+  echo [ERROR] Cannot enter backend folder: %SERVER_ROOT%
   goto :failed
 )
 
 if not exist ".env" (
-  echo [错误] 缺少 server\.env 配置文件。
-  echo 请先复制 .env.example 并填写 MySQL 项目账号密码。
-  goto :failed
+  echo [ERROR] Missing server\.env configuration file.
+  echo [INFO] Copy server\.env.example to server\.env and fill in local database settings.
+  goto :failed_in_server
 )
 
 if not exist "node_modules" (
-  echo [提示] 第一次启动，正在安装后端依赖...
+  echo [INFO] Backend dependencies are missing. Running npm install...
   call npm install
-  if errorlevel 1 goto :failed
+  if errorlevel 1 goto :failed_in_server
+)
+
+netstat -ano -p tcp | findstr /R /C:":3000 .*LISTENING" >nul
+if not errorlevel 1 (
+  echo [WARN] Port 3000 is already in use.
+  echo [INFO] Stop the old backend process and run this script again.
+  echo [INFO] Restarting the backend is required after route changes.
+  goto :failed_in_server
 )
 
 echo.
-echo [提示] 后端正在启动。看到 API listening 后即可在微信开发者工具点击“编译”。
-echo [提示] 请保持此窗口开启；关闭窗口即停止后端服务。
+echo [INFO] Starting backend. Wait for the API listening message.
+echo [INFO] Working directory: %CD%
+echo [INFO] Keep this window open. Closing it stops the backend.
 echo.
+
 call npm run dev
-set "exitCode=%errorlevel%"
+set "EXIT_CODE=%errorlevel%"
 
 echo.
-if not "%exitCode%"=="0" echo [错误] 后端已退出，退出代码：%exitCode%
-if "%exitCode%"=="0" echo [提示] 后端已停止。
+if "%EXIT_CODE%"=="0" (
+  echo [INFO] Backend stopped.
+) else (
+  echo [ERROR] Backend exited with code %EXIT_CODE%.
+)
+popd
 pause
-exit /b %exitCode%
+exit /b %EXIT_CODE%
+
+:failed_in_server
+popd
 
 :failed
 echo.
-echo [提示] 请根据上方信息处理后，再双击“启动后端.bat”。
+echo [INFO] Resolve the message above and run this script again.
 pause
 exit /b 1
