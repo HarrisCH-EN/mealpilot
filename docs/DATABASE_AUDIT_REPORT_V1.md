@@ -1,5 +1,7 @@
 # Database Audit Report v1
 
+> 历史审计快照：本报告记录 2026-09-06 的数据库状态，保留用于追溯，不代表当前数据库计数、角色模型或交付结论。当前实现和数据库边界以 [CURRENT_VERSION.md](/E:/Database_Design/docs/CURRENT_VERSION.md) 及 [2026-09-16 交付前审计报告](/E:/Database_Design/docs/reports/2026-09-16-release-audit.md) 为准。
+
 审计范围：`database/00_create_user.sql`、`database/01_schema.sql`、`database/02_seed.sql`、`database/03_queries.sql`，全部后端数据库访问代码、相关小程序 API/状态代码，以及 `server/test`、`miniprogram/test` 中与数据契约有关的测试。
 
 审计时间：2026-09-06（Asia/Shanghai）。

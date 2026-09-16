@@ -11,27 +11,28 @@ const ALLOWED_TYPES = new Map([
   ['image/webp', new Set(['.webp'])]
 ])
 
-function router({ uploadRoot, maxBytes = DEFAULT_MAX_BYTES, auth, family }) {
+function router({ uploadRoot, maxBytes = DEFAULT_MAX_BYTES, auth, family, database }) {
   const result = express.Router()
   result.post('/uploads/recipe-cover', auth, family, asyncRoute(async (request, response) => {
     const file = await readMultipartFile(request, maxBytes)
-    const extension = path.extname(file.filename).toLowerCase()
-    const allowedExtensions = ALLOWED_TYPES.get(file.mime)
-    if (!allowedExtensions || !allowedExtensions.has(extension) || !hasValidSignature(file.buffer, file.mime)) {
-      throw new HttpError(400, '仅支持 JPG、PNG 或 WebP 图片')
-    }
-    if (file.buffer.length > maxBytes) throw new HttpError(413, '图片不能超过 5MB')
-
-    const filename = `${crypto.randomUUID()}${extension}`
-    const relativeDirectory = path.join('recipes')
-    const directory = path.join(uploadRoot, relativeDirectory)
-    await fs.mkdir(directory, { recursive: true })
+    validateImage(file, maxBytes)
+    const stored = await storeImage(uploadRoot, 'recipes', file)
+    response.status(201).json({ ok: true, data: { coverUrl: stored.url } })
+  }))
+  result.post('/uploads/avatar', auth, asyncRoute(async (request, response) => {
+    if (!database) throw new HttpError(500, '头像服务未配置')
+    const file = await readMultipartFile(request, maxBytes)
+    validateImage(file, maxBytes)
+    const stored = await storeImage(uploadRoot, 'avatars', file)
     try {
-      await fs.writeFile(path.join(directory, filename), file.buffer, { flag: 'wx' })
-    } catch (_error) {
-      throw new HttpError(500, '图片保存失败')
+      await database.execute('UPDATE users SET avatar_url = ? WHERE id = ?', [stored.url, request.user.id])
+      const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE id = ?', [request.user.id])
+      if (!rows[0]) throw new HttpError(401, '登录已失效')
+      response.status(201).json({ ok: true, data: { user: rows[0] } })
+    } catch (error) {
+      await fs.rm(stored.filePath, { force: true })
+      throw error
     }
-    response.status(201).json({ ok: true, data: { coverUrl: `/uploads/recipes/${filename}` } })
   }))
   return result
 }
@@ -91,6 +92,29 @@ function readRequestBody(request, maxBytes) {
       }
     })
   })
+}
+
+function validateImage(file, maxBytes) {
+  const extension = path.extname(file.filename).toLowerCase()
+  const allowedExtensions = ALLOWED_TYPES.get(file.mime)
+  if (!allowedExtensions || !allowedExtensions.has(extension) || !hasValidSignature(file.buffer, file.mime)) {
+    throw new HttpError(400, '仅支持 JPG、PNG 或 WebP 图片')
+  }
+  if (file.buffer.length > maxBytes) throw new HttpError(413, '图片不能超过 5MB')
+}
+
+async function storeImage(uploadRoot, relativeDirectory, file) {
+  const extension = path.extname(file.filename).toLowerCase()
+  const filename = `${crypto.randomUUID()}${extension}`
+  const directory = path.join(uploadRoot, relativeDirectory)
+  const filePath = path.join(directory, filename)
+  await fs.mkdir(directory, { recursive: true })
+  try {
+    await fs.writeFile(filePath, file.buffer, { flag: 'wx' })
+  } catch (_error) {
+    throw new HttpError(500, '图片保存失败')
+  }
+  return { filePath, url: `/uploads/${relativeDirectory}/${filename}` }
 }
 
 function parsePartHeaders(value) {

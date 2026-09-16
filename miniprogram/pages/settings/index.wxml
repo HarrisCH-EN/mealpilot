@@ -7,37 +7,22 @@
     <view class="settings-skeleton settings-skeleton--group"></view>
   </view>
 
-  <view wx:elif="{{error && !user.display_name}}" class="settings-error">
-    <image class="settings-error__icon settings-icon" src="/assets/icons/settings/account.png" mode="aspectFit"></image>
-    <view class="settings-error__title">还没有登录</view>
-    <view class="settings-error__copy">请使用微信登录后继续。</view>
-    <button class="settings-action settings-action--primary" bindtap="retryLogin">重新登录</button>
-    <button wx:if="{{allowDevLogin}}" class="settings-action settings-action--secondary" bindtap="login">本地开发登录</button>
-  </view>
-
   <view wx:else class="settings-content">
     <view class="settings-header">
       <view class="settings-header__copy">
         <view class="settings-header__title">设置</view>
         <view class="settings-header__subtitle">用美食，连接家人的每一餐。</view>
       </view>
-      <view class="settings-header__art" aria-hidden="true">
-        <image class="settings-art__heart" src="/assets/icons/about/heart.png" mode="aspectFit" />
-        <view class="settings-art__house">
-          <view class="settings-art__roof"></view>
-          <view class="settings-art__door"></view>
-          <view class="settings-art__window"></view>
-        </view>
-        <view class="settings-art__tree settings-art__tree--left"><view></view></view>
-        <view class="settings-art__tree settings-art__tree--right"><view></view></view>
-      </view>
     </view>
 
     <view class="settings-profile" bindtap="handleUserTap">
-      <view class="settings-profile__avatar">{{userInitial}}</view>
+      <view class="settings-profile__avatar">
+        <image wx:if="{{user.avatar_url}}" class="settings-profile__avatar-image" src="{{userAvatarUrl}}" mode="aspectFill" />
+        <text wx:else>{{userInitial}}</text>
+      </view>
       <view class="settings-profile__copy">
         <view class="settings-profile__name">{{user.display_name || '微信用户'}}</view>
-        <view class="settings-profile__meta">{{allowDevLogin ? '本地开发身份' : '微信登录用户'}}</view>
+        <view class="settings-profile__meta">{{userRoleLabel}}</view>
       </view>
       <image class="settings-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
     </view>
@@ -53,7 +38,7 @@
         <view class="settings-quick-card" bindtap="copyCode">
           <image class="settings-quick-card__icon" src="/assets/icons/settings/invite.png" mode="aspectFit"></image>
           <view class="settings-quick-card__title">家庭邀请码</view>
-          <view class="settings-quick-card__subtitle settings-quick-card__subtitle--code">{{membership.invite_code || '—'}}</view>
+          <view class="settings-quick-card__subtitle settings-quick-card__subtitle--code">点击复制</view>
         </view>
         <view class="settings-quick-card" bindtap="toggleMembers">
           <image class="settings-quick-card__icon" src="/assets/icons/settings/member.png" mode="aspectFit"></image>
@@ -63,10 +48,13 @@
       </view>
       <view wx:if="{{membership && membersExpanded}}" class="settings-members settings-members--dashboard">
         <view wx:for="{{family.members}}" wx:key="id" class="settings-member">
-          <view class="settings-member__avatar">{{item.initial}}</view>
+          <view class="settings-member__avatar">
+            <image wx:if="{{item.avatarUrl}}" class="settings-member__avatar-image" src="{{item.avatarUrl}}" mode="aspectFill" />
+            <text wx:else>{{item.initial}}</text>
+          </view>
           <view class="settings-member__copy">
-            <view class="settings-member__name">{{item.nickname || item.displayName}}</view>
-            <view class="settings-member__role">{{item.role === 'owner' ? '所有者' : '家庭成员'}}</view>
+            <view class="settings-member__name">{{item.displayName || item.nickname}}</view>
+            <view class="settings-member__role">{{item.role === 'owner' || item.role === 'admin' ? '管理员' : '成员'}}</view>
           </view>
         </view>
       </view>
@@ -100,7 +88,13 @@
           <image wx:else class="settings-chevron" src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" />
         </view>
         <view wx:if="{{insight && insightExpanded}}" class="settings-insight-card insight-card">
-          <view class="settings-insight-card__title">最近的餐桌记录</view>
+          <view class="settings-insight-card__header">
+            <view class="settings-insight-card__title">最近的餐桌记录</view>
+            <view class="settings-insight-range" aria-label="选择统计范围">
+              <button class="settings-insight-range__button settings-insight-range__button--7 {{insightRangeDays === 7 ? 'settings-insight-range__button--active' : ''}}" data-days="7" bindtap="selectInsightRange">近7天</button>
+              <button class="settings-insight-range__button settings-insight-range__button--30 {{insightRangeDays === 30 ? 'settings-insight-range__button--active' : ''}}" data-days="30" bindtap="selectInsightRange">近30天</button>
+            </view>
+          </view>
           <view class="settings-insight-card__summary insight-summary">共安排 {{insight.summary.menuCount || 0}} 次菜单 · {{insight.summary.itemCount || 0}} 道菜</view>
           <view class="settings-insight-card__rating">平均评分 {{insight.summary.averageRating || 0}} / 5</view>
           <view wx:if="{{insight.popular && insight.popular.length}}" class="settings-insight-card__list">

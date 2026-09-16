@@ -1,5 +1,7 @@
 # 《基于微信小程序的家庭膳食管理与菜谱推荐系统设计与实现》
 
+> 当前版本说明：本文已同步至 2026-09-16 代码基线。当前实现以全局强制登录、全局 User 资料、Owner/Admin/Member 家庭角色、6 位大小写敏感邀请码和 19 张数据库表为准；课程报告正文中的历史方案差异以本文后续修订内容和 [CURRENT_VERSION.md](/E:/Database_Design/docs/CURRENT_VERSION.md) 为准。
+
 ## 一、需求分析
 
 ### 1.1 项目背景与意义
@@ -23,7 +25,7 @@
 
 #### 1.3.1 用户与家庭管理
 
-系统支持正式微信登录和开发环境登录。用户登录后可以创建家庭，也可以通过邀请码加入已有家庭。家庭成员具有 owner 和 member 两种角色，并具有 active 和 left 两种状态。当前系统约束同一用户在同一时刻最多具有一个有效家庭成员关系；没有有效家庭关系的用户仍可以登录、创建家庭或加入家庭，但不能访问家庭业务数据。
+系统支持正式微信登录和开发环境登录。未登录用户只能停留在登录页，登录成功后进入推荐页；退出登录或 Token 失效后回到登录页。用户登录后可以创建家庭，也可以通过邀请码加入已有家庭。家庭成员具有 owner、admin 和 member 三种角色，并具有 active 和 left 两种状态。普通成员可以读取和复制邀请码，Owner/Admin 可以修改家庭名称、刷新邀请码和管理成员，Owner 可以向 active 成员移交创建者身份。当前系统约束同一用户在同一时刻最多具有一个有效家庭成员关系；没有有效家庭关系的用户仍可以创建家庭或加入家庭，但不能访问家庭业务数据。
 
 #### 1.3.2 菜谱管理
 
@@ -49,7 +51,7 @@
 
 ### 1.4 系统功能模块
 
-系统功能可以划分为身份与家庭管理、菜谱与食材管理、菜单管理、推荐管理、家庭限制与偏好管理、反馈与统计六个模块。各模块通过家庭成员关系与当前家庭边界关联起来。
+系统功能可以划分为认证与全局账号资料、家庭管理、菜谱与食材管理、菜单管理、推荐管理、家庭限制与偏好管理、反馈与统计七个模块。各模块通过家庭成员关系与当前家庭边界关联起来；用户名和头像属于全局 User 资料，在多个家庭相关页面共用。
 
 `【图1-1 系统功能模块图，此处后补】`
 
@@ -66,9 +68,10 @@
 | 用户状态 | 主要权限 |
 | --- | --- |
 | 未登录用户 | 不能访问受保护的家庭业务接口 |
-| 已登录但没有有效家庭关系的用户 | 可以查看身份、创建家庭和通过邀请码加入家庭 |
-| Owner | 使用家庭业务功能，并维护当前家庭所有有效成员的饮食限制和口味偏好 |
-| 普通有效成员 | 使用当前家庭业务功能，只维护自己的饮食限制和口味偏好 |
+| 已登录但没有有效家庭关系的用户 | 可以查看账号资料、创建家庭和通过邀请码加入家庭 |
+| Owner | 使用家庭业务功能，维护当前家庭所有有效成员的饮食限制和口味偏好，并可改名、刷新邀请码、管理成员和移交创建者身份 |
+| Admin | 使用家庭业务功能，可改名、刷新邀请码、管理成员；不能移交创建者身份 |
+| 普通有效成员 | 使用当前家庭业务功能，维护自己的饮食限制和口味偏好，并可读取和复制邀请码 |
 | 已离开成员 | 保留历史关系和历史数据，不再编辑限制、偏好或新增反馈 |
 
 所有 Recipe、Menu、RecommendationRun、MenuItem 和成员级配置都必须与当前用户的有效家庭关系一致。任何跨家庭的实体访问或引用均视为非法业务关系。
@@ -91,9 +94,9 @@
 
 | 实体或关联实体 | 主要作用 |
 | --- | --- |
-| User | 保存用户登录身份及展示信息 |
-| Family | 保存家庭名称、邀请码和所有者 |
-| FamilyMember | 表示用户与家庭的成员关系、角色和状态 |
+| User | 保存用户登录身份、用户名和全局头像 |
+| Family | 保存家庭名称、6 位邀请码和所有者 |
+| FamilyMember | 表示用户与家庭的成员关系、owner/admin/member 角色和状态 |
 | Ingredient | 保存全局食材参考信息 |
 | IngredientSeason | 表示食材与月份的季节关系 |
 | Recipe | 保存家庭菜谱主信息 |
@@ -124,7 +127,7 @@
 | Family—RecommendationRun | 1:N | 一个家庭可以产生多次推荐运行 |
 | RecommendationRun—Recipe | M:N | 通过 RecommendationCandidateItem 保存候选菜单中的推荐结果；历史旧 Run 可通过 RecommendationItem 兼容 |
 | MenuItem—MenuFeedback | 1:N | 一个菜单项可以接受多个成员的反馈，同一成员最多一条 |
-| User—Family(owner) | 1:N/角色约束 | Family 保存 owner_user_id，FamilyMember 保存 owner 角色 |
+| User—Family(owner) | 1:N/角色约束 | Family 保存 owner_user_id，FamilyMember 保存 owner 角色；admin/member 权限保存在 FamilyMember.role |
 
 ### 2.3 E-R 模型说明
 
@@ -138,7 +141,7 @@ FamilyMember、RecipeIngredient、MenuItem、RecommendationCandidateItem、Membe
 
 ### 3.1 数据库总体说明
 
-数据库采用 MySQL 8.0+ 的 InnoDB 存储引擎和 utf8mb4 字符集，共设计 17 张表，分别承担身份、家庭、成员、基础食材、菜谱、菜单、推荐和反馈等数据的存储任务。以下表结构以 `database/01_schema.sql` 为准。新建数据库直接使用完整 Schema；既有数据库按 `04_recommendation_refactor_r1.sql`、`05_recommendation_run_nullable_legacy.sql`、`06_recipe_tag_metadata_backfill.sql`、`07_remove_cuisine_tags.sql` 的顺序升级。
+数据库采用 MySQL 8.0+ 的 InnoDB 存储引擎和 utf8mb4 字符集，共设计 19 张表，分别承担身份、家庭、成员、基础食材、菜谱、标签、菜单、推荐和反馈等数据的存储任务。以下表结构以 `database/01_schema.sql` 为准。新建数据库直接使用完整 Schema；既有数据库按 `04_recommendation_refactor_r1.sql`、`05_recommendation_run_nullable_legacy.sql`、`06_recipe_tag_metadata_backfill.sql`、`07_remove_cuisine_tags.sql`、`08_tag_system_v1.sql`、`09_family-admin-role.sql`、`10_family-invite-code.sql` 的顺序升级。
 
 符号说明：PK 为主键，FK 为外键，UQ 为唯一约束，CK 为检查约束，NN 为非空，DF 为默认值，AI 为自增。
 
@@ -161,7 +164,7 @@ FamilyMember、RecipeIngredient、MenuItem、RecommendationCandidateItem、Membe
 | --- | --- | --- | --- |
 | id | BIGINT UNSIGNED | PK, AI | 家庭标识 |
 | name | VARCHAR(40) | NN | 家庭名称 |
-| invite_code | CHAR(6) | NN, UQ | 邀请码 |
+| invite_code | CHAR(6) | NN, UQ, ASCII `ascii_bin` | 区分大小写的邀请码 |
 | owner_user_id | BIGINT UNSIGNED | NN, FK→users.id | 所有者用户 |
 | created_at/updated_at | DATETIME | NN，时间默认值和更新值 | 时间信息 |
 
@@ -172,12 +175,12 @@ FamilyMember、RecipeIngredient、MenuItem、RecommendationCandidateItem、Membe
 | id | BIGINT UNSIGNED | PK, AI | 成员关系标识 |
 | family_id | BIGINT UNSIGNED | NN, FK→families.id, ON DELETE CASCADE | 所属家庭 |
 | user_id | BIGINT UNSIGNED | NN, FK→users.id, ON DELETE CASCADE | 对应用户 |
-| role | ENUM('owner','member') | NN, DF `member` | 家庭角色 |
+| role | ENUM('owner','admin','member') | NN, DF `member` | 家庭角色 |
 | nickname | VARCHAR(40) | NN | 家庭内昵称 |
 | status | ENUM('active','left') | NN, DF `active` | 成员状态 |
 | joined_at | DATETIME | NN, DF CURRENT_TIMESTAMP | 加入时间 |
 
-约束为 `UNIQUE(family_id,user_id)`，并建立 `idx_member_user_status(user_id,status)`。有效成员关系的单一性、所有者不能直接离开等规则由应用层保证。
+约束为 `UNIQUE(family_id,user_id)`，并建立 `idx_member_user_status(user_id,status)`。有效成员关系的单一性、所有者不能直接离开、管理员权限和创建者移交等规则由应用层保证。邀请码由服务端生成 6 位数字/大小写字母组合，管理员刷新时在事务中替换家庭当前邀请码，旧值立即失效。
 
 ### 3.3 基础食材与季节
 
@@ -318,21 +321,21 @@ menu_feedback 包含 `id`、`menu_item_id`、`member_id`、`rating`、`comment` 
 
 | 类别 | 工具或技术 | 版本 | 用途 |
 | --- | --- | --- | --- |
-| 小程序开发工具 | 微信开发者工具 | 【待确认：微信开发者工具版本】 | 小程序编译、调试和运行 |
+| 小程序开发工具 | 微信开发者工具 | 本地安装版本需现场记录 | 小程序编译、调试和运行 |
 | 客户端开发 | WXML、WXSS、JavaScript | 随微信开发者工具 | 页面结构、样式和交互逻辑 |
 | 服务端运行环境 | Node.js | 24.14.0（README 记录） | 运行 Express 服务 |
 | Web 服务框架 | Express | 5.x（以 package.json 为准） | REST API 和中间件 |
 | 数据库 | MySQL | 8.0.45（README 记录） | 关系数据存储、约束和事务 |
-| 数据库连接 | mysql2/promise | 【待确认：package.json 锁定版本】 | 连接池、参数化 SQL 和事务 |
-| 身份认证 | JWT | 【待确认：package.json 锁定版本】 | 登录状态令牌签发与校验 |
-| 配置管理 | dotenv | 【待确认：package.json 锁定版本】 | 读取环境变量 |
+| 数据库连接 | mysql2/promise | 3.24.3 | 连接池、参数化 SQL 和事务 |
+| 身份认证 | jsonwebtoken | 9.0.3 | 登录状态令牌签发与校验 |
+| 配置管理 | dotenv | 16.6.1 | 读取环境变量 |
 
 ### 4.2 数据库初始化
 
 数据库初始化脚本位于 `database/` 目录，建议按以下顺序执行：
 
 1. `00_create_user.sql`：创建数据库和应用连接用户并进行授权。
-2. `01_schema.sql`：创建 17 张表、约束和索引；其中已包含 canonical Recommendation 的标签、Candidate 和 CandidateItem 结构。
+2. `01_schema.sql`：创建 19 张表、约束和索引；其中已包含标签、canonical Recommendation、Candidate 和 CandidateItem 结构，并启用 admin 角色与区分大小写的邀请码。
 3. `02_seed.sql`：插入演示家庭、食材、菜谱和菜谱食材关系。
 4. `03_queries.sql`：提供分类统计和热门菜谱查询示例。
 5. 已有旧数据库如需升级，按 `04_recommendation_refactor_r1.sql`、`05_recommendation_run_nullable_legacy.sql`、`06_recipe_tag_metadata_backfill.sql`、`07_remove_cuisine_tags.sql` 顺序执行；其中 06 仅 insert-only 补齐现有 Recipe 的口味、饮食和烹饪方法标签，07 清理已废弃的菜系标签并收窄标签类型，新数据库不重复执行这些增量脚本。
@@ -349,7 +352,9 @@ menu_feedback 包含 `id`、`menu_item_id`、`member_id`、`rating`、`comment` 
 
 ### 5.2 用户登录与家庭操作
 
-用户登录后，系统根据令牌中的用户标识查询 users 和当前有效的 family_members。没有有效成员关系时，系统返回空的当前家庭状态，允许用户继续创建家庭或加入家庭。创建家庭时，在事务中写入 families 和 owner 成员关系；加入家庭时，根据邀请码定位家庭并检查当前用户是否已经属于有效家庭。
+用户登录后，系统根据令牌中的用户标识查询 users 和当前有效的 family_members。没有有效成员关系时，系统返回空的当前家庭状态，允许用户继续创建家庭或加入家庭。创建家庭时，在事务中写入 families 和 owner 成员关系；加入家庭时，根据邀请码定位家庭并检查当前用户是否已经属于有效家庭。小程序的全局认证闸门保证未登录用户只能看到登录页；用户名和头像通过 User 资料接口更新，并在设置、账号管理和家庭成员页面共用。
+
+家庭管理按 owner、admin、member 分权。Owner/Admin 可以修改家庭名称、刷新邀请码和管理成员；普通成员可以读取、复制邀请码。Owner 可以将创建者身份原子地移交给同家庭 active 成员，移交后原 Owner 变为 member；邀请码刷新使用事务和唯一约束，旧邀请码立即失效。
 
 系统不会从多条有效成员关系中随机选择家庭。如果数据库中出现同一用户多条有效成员关系，系统将其视为数据冲突并返回通用服务端错误，不向用户暴露其他家庭的详细信息。
 
@@ -508,17 +513,17 @@ function evaluateMenuCandidate(recipes, context) {
 
 用户在菜单项上选择 1～5 分并可填写短评。服务端以当前有效成员作为 feedback owner，不允许客户端自由指定成员。写入采用 UPSERT，重复评分更新原反馈；删除操作只删除当前成员的反馈关系，不改变 MenuItem、Menu 或 Recipe。
 
-Insights 从当前家庭范围内读取真实数据。菜单数量通过菜单表统计，菜单项数量通过菜单项表统计，热门菜谱通过 Recipe 与 MenuItem 的连接和分组统计得到，平均评分通过 MenuFeedback 的 AVG 得到。查询使用家庭边界，并通过 LEFT JOIN 保留没有反馈或没有使用记录的数据项。
+Insights 从当前家庭范围内读取真实数据，并支持 `days=7` 或 `days=30` 两个菜单日期范围，未传参数默认近 7 天。菜单数量通过菜单表统计，菜单项数量通过菜单项表统计，热门菜谱通过 Recipe、MenuItem 与 Menu 的连接和分组统计得到，平均评分通过 MenuFeedback 的 AVG 得到。查询使用家庭边界和菜单日期范围，不把未来菜单纳入统计。
 
 **代码5-4 Insights 聚合查询核心代码**
 
 ```sql
-SELECT r.id, r.title, r.category, COUNT(mi.id) AS usedCount FROM recipes r LEFT JOIN menu_items mi ON mi.recipe_id = r.id LEFT JOIN menus m ON m.id = mi.menu_id AND m.family_id = ? WHERE r.family_id = ? AND r.status = 'active' GROUP BY r.id ORDER BY usedCount DESC, r.title LIMIT 10
+SELECT r.id, r.title, r.category, COUNT(m.id) AS usedCount FROM recipes r LEFT JOIN menu_items mi ON mi.recipe_id = r.id LEFT JOIN menus m ON m.id = mi.menu_id AND m.family_id = ? AND m.menu_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE() WHERE r.family_id = ? AND r.status = 'active' GROUP BY r.id HAVING COUNT(m.id) > 0 ORDER BY usedCount DESC, r.title LIMIT 10
 
-SELECT COUNT(DISTINCT m.id) AS menuCount, COUNT(mi.id) AS itemCount, COALESCE(AVG(f.rating), 0) AS averageRating FROM menus m LEFT JOIN menu_items mi ON mi.menu_id = m.id LEFT JOIN menu_feedback f ON f.menu_item_id = mi.id WHERE m.family_id = ?
+SELECT COUNT(DISTINCT m.id) AS menuCount, COUNT(mi.id) AS itemCount, COALESCE(AVG(f.rating), 0) AS averageRating FROM menus m LEFT JOIN menu_items mi ON mi.menu_id = m.id LEFT JOIN menu_feedback f ON f.menu_item_id = mi.id WHERE m.family_id = ? AND m.menu_date BETWEEN DATE_SUB(CURDATE(), INTERVAL 6 DAY) AND CURDATE()
 ```
 
-以上 SQL 来自 `server/src/routes/menus.js` 的 `/insights` 路由。第一条查询通过 Recipe、MenuItem 和 Menu 的 LEFT JOIN 统计家庭范围内菜谱的使用次数；第二条查询通过 Menu、MenuItem 和 MenuFeedback 的 LEFT JOIN 统计菜单数量、菜单项数量和平均评分。涉及的数据库表为 `recipes`、`menus`、`menu_items` 和 `menu_feedback`，体现了 JOIN、LEFT JOIN、COUNT、AVG、GROUP BY、COALESCE 和 ORDER BY 等数据库查询知识点。
+以上 SQL 来自 `server/src/routes/menus.js` 的 `/insights` 路由，示例为近 7 天；近 30 天将 6 替换为 29。第一条查询通过 Recipe、MenuItem 和 Menu 的 LEFT JOIN 统计日期范围内的菜谱使用次数；第二条查询通过 Menu、MenuItem 和 MenuFeedback 的 LEFT JOIN 统计日期范围内的菜单数量、菜单项数量和平均评分。涉及的数据库表为 `recipes`、`menus`、`menu_items` 和 `menu_feedback`，体现了 JOIN、LEFT JOIN、COUNT、AVG、GROUP BY、HAVING、COALESCE 和 ORDER BY 等数据库查询知识点。
 
 `【图5-6 Feedback 与 Insights 界面截图，此处后补】`
 
@@ -537,17 +542,17 @@ SELECT COUNT(DISTINCT m.id) AS menuCount, COUNT(mi.id) AS itemCount, COALESCE(AV
 
 | 测试项目 | 预期结果 | 实际结果 | 是否通过 |
 | --- | --- | --- | --- |
-| Backend direct tests | 所有直接测试通过 | 141 passed，0 failed | 通过 |
-| Frontend tests | 所有小程序测试通过 | 94 passed，0 failed | 通过 |
+| Backend direct tests | 所有直接测试通过 | 196 passed，0 failed | 通过 |
+| Backend Real MySQL integration | 独立测试库约束、事务、并发和家庭隔离 | 46 passed，0 failed，使用 `smart_meal_test` | 通过 |
+| Frontend tests | 页面契约和纯函数检查 | 147 passed，0 failed | 通过 |
 | JavaScript syntax check | JavaScript 语法检查通过 | passed | 通过 |
 | git diff --check | 不存在空白错误 | passed | 通过 |
-| Real MySQL integration | 使用独立测试库执行集成验证 | 本轮未运行 | 待另行执行 |
 
 ## 六、总结
 
 ### 6.1 系统完成情况
 
-本系统完成了家庭膳食管理和菜谱推荐的主要功能。系统以 FamilyMember 表表达用户与家庭的关系，以 RecipeIngredient、MenuItem 和 RecommendationItem 等关联实体表达多对多联系，以主键、外键、复合主键、唯一约束和检查约束维护数据库完整性。服务端通过事务、家庭边界校验和并发幂等处理保证业务数据的一致性，小程序端提供了对应的操作入口和结果展示。
+本系统完成了家庭膳食管理和菜谱推荐的主要功能。系统以 FamilyMember 表表达用户与家庭的关系，以 RecipeIngredient、MenuItem、RecommendationCandidateItem 等关联实体表达多对多联系，以主键、外键、复合主键、唯一约束和检查约束维护数据库完整性。服务端通过事务、家庭边界校验、角色权限和并发幂等处理保证业务数据的一致性，小程序端提供了全局登录、账号资料、家庭管理、菜谱、菜单、推荐、忌口、偏好、标签、反馈和洞察入口。
 
 ### 6.2 系统特点与优点
 
@@ -562,7 +567,7 @@ SELECT COUNT(DISTINCT m.id) AS menuCount, COUNT(mi.id) AS itemCount, COALESCE(AV
 当前版本仍有以下可以改进的方向：
 
 1. 账号体系仍以当前微信登录和开发环境登录为主，刷新令牌、主动注销和多设备会话管理尚未展开。
-2. 当前用户同一时刻只能有一个有效家庭关系，家庭切换、所有者转移、所有者离开和家庭删除尚未实现。
+2. 当前用户同一时刻只能有一个有效家庭关系，家庭切换和家庭删除尚未实现；Owner 转移和 Owner 离开约束已经实现。
 3. 菜单 completed 状态尚未形成完整业务流程。
 4. 推荐暂不使用用户长期行为进行学习，也未引入协同过滤、人工智能或复杂模型。
 5. 封面文件采用服务端本地保存方式，云存储、生产环境部署、定期清理孤儿文件和监控备份仍可作为后续工程改进方向。

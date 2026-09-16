@@ -1,3 +1,5 @@
+const { requireAuthentication } = require('../../utils/api')
+
 function getNavigationLayout() {
   const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
   const statusBarHeight = Number(windowInfo.statusBarHeight || 20)
@@ -35,6 +37,7 @@ Page({
   },
 
   onLoad() {
+    if (!requireAuthentication()) return
     let versionLabel = '开发预览版'
     try {
       const account = wx.getAccountInfoSync()

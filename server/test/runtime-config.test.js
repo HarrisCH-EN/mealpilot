@@ -17,12 +17,17 @@ function withEnv(name, value, callback) {
   }
 }
 
-function runtimeDatabase() {
+function runtimeDatabase({ displayName = '运行用户' } = {}) {
+  const user = { id: 42, openid: 'runtime-user', display_name: displayName, avatar_url: '' }
   return {
-    async execute(sql) {
-      if (/INSERT INTO users/i.test(sql)) return [{ affectedRows: 1 }]
+    user,
+    async execute(sql, params = []) {
+      if (/INSERT INTO users/i.test(sql)) {
+        if (/display_name = VALUES\(display_name\)/i.test(sql)) user.display_name = params[1]
+        return [{ affectedRows: 1 }]
+      }
       if (/SELECT id, openid, display_name, avatar_url FROM users/i.test(sql)) {
-        return [[{ id: 42, openid: 'runtime-user', display_name: '运行用户', avatar_url: '' }]]
+        return [[user]]
       }
       if (/FROM family_members fm JOIN families f/i.test(sql)) return [[]]
       throw new Error(`unexpected SQL: ${sql}`)
@@ -54,6 +59,23 @@ test('runtime app wiring uses the configured JWT secret for dev-login tokens', a
     const { data } = await response.json()
     assert.deepEqual(readToken(data.token, 'runtime-secret-a'), { userId: 42, openid: 'runtime-user' })
     assert.throws(() => readToken(data.token, 'runtime-secret-b'))
+  })
+})
+
+test('dev-login preserves an existing custom display name', async () => {
+  const database = runtimeDatabase({ displayName: '昨天修改的名字' })
+  const { app } = createRuntimeApp({ jwtSecret: 'runtime-secret', devAuthEnabled: true, uploadRoot: 'runtime-uploads' }, database)
+
+  await withServer(app, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/auth/dev-login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ openid: 'runtime-user' })
+    })
+    assert.equal(response.status, 200)
+    const { data } = await response.json()
+    assert.equal(data.user.display_name, '昨天修改的名字')
+    assert.equal(database.user.display_name, '昨天修改的名字')
   })
 })
 
@@ -92,6 +114,14 @@ test('production config rejects a missing or development JWT secret', () => {
     () => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'local-development-secret-change-me' }),
     /JWT_SECRET/
   )
+})
+
+test('production config rejects development login even with a valid JWT secret', () => {
+  assert.throws(
+    () => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'explicit-production-secret', DEV_AUTH_ENABLED: 'true' }),
+    /DEV_AUTH_ENABLED|开发登录/
+  )
+  assert.doesNotThrow(() => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'explicit-production-secret', DEV_AUTH_ENABLED: 'false' }))
 })
 
 test('only exact production NODE_ENV activates production config rules', () => {

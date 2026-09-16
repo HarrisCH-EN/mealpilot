@@ -1,4 +1,4 @@
-const { request, resolveCoverUrl } = require('../../utils/api')
+const { request, resolveCoverUrl, requireAuthentication } = require('../../utils/api')
 const { getMenuContextStore } = require('../../utils/menu-context')
 const { displayTags } = require('../../utils/tags')
 const {
@@ -69,6 +69,7 @@ Page({
   },
 
   onLoad(options) {
+    if (!requireAuthentication()) return
     this._initialShowPending = true
     const id = Number(options.id)
     const menuDate = String(options.menuDate || '')
@@ -85,6 +86,7 @@ Page({
   },
 
   onShow() {
+    if (!requireAuthentication()) return
     if (!this.data.id) return
     this.refreshFavorite()
     if (this._initialShowPending) {

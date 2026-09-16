@@ -21,40 +21,36 @@
 
   <view wx:else class="restrictions-content">
     <view class="restrictions-section-head">
-      <view class="restrictions-section-title">管理成员 <text class="restrictions-count">{{activeMembers.length}}</text></view>
-      <view class="restrictions-section-note">仅显示当前家庭成员</view>
+      <view class="restrictions-section-title">全家忌口 <text class="restrictions-count">{{restrictionTotal}}</text></view>
     </view>
 
-    <view class="restrictions-member-card">
-      <view wx:for="{{activeMembers}}" wx:key="id" class="restrictions-member-row {{item.id === selectedMemberId ? 'restrictions-member-row--active' : ''}}" data-id="{{item.id}}" bindtap="selectMember">
-        <view class="restrictions-member-avatar">{{item.initial}}</view>
-        <view class="restrictions-member-copy">
-          <view class="restrictions-member-name">{{item.nickname || item.displayName || '家庭成员'}}</view>
-          <view class="restrictions-member-role">{{item.role === 'owner' ? '家庭所有者' : '家庭成员'}}</view>
-        </view>
-        <view wx:if="{{item.id === selectedMemberId}}" class="restrictions-member-selected">当前</view>
-      </view>
-    </view>
-
-    <view class="restrictions-section-head restrictions-section-head--restriction">
-      <view class="restrictions-section-title">当前忌口 <text class="restrictions-count">{{restrictions.length}}</text></view>
-      <button class="restrictions-create" loading="{{pickerLoading}}" disabled="{{restrictionLoading || pickerLoading || !selectedMemberId}}" bindtap="openAdd">＋ 添加忌口食材</button>
-    </view>
-
-    <view class="restrictions-card">
-      <view class="restrictions-card__helper">{{selectedMember.nickname || selectedMember.displayName || '当前成员'}} 的忌口会影响新的家庭推荐，不会修改历史菜单。</view>
+    <view class="restrictions-card restrictions-card--grouped">
       <view wx:if="{{error}}" class="restrictions-inline-error">{{error}}</view>
-      <view wx:elif="{{!restrictionLoading && !restrictions.length}}" class="restrictions-empty">
-        <view class="restrictions-empty__title">暂无成员忌口</view>
+      <view wx:elif="{{restrictionLoading}}" class="restrictions-group-loading"></view>
+      <view wx:elif="{{!restrictionSections.length}}" class="restrictions-empty">
+        <view class="restrictions-empty__title">暂无家庭成员忌口</view>
       </view>
-      <view wx:else class="restrictions-list">
-        <view wx:for="{{restrictions}}" wx:key="ingredientId" class="restrictions-row">
-          <view class="restrictions-chip">{{item.ingredientName}}</view>
-          <button class="restrictions-remove" data-id="{{item.ingredientId}}" loading="{{deletingIngredientId === item.ingredientId}}" disabled="{{deletingIngredientId}}" bindtap="removeRestriction" aria-label="移除{{item.ingredientName}}">×</button>
+      <view wx:else class="restrictions-member-groups">
+          <view wx:for="{{restrictionSections}}" wx:key="memberId" class="restriction-member-group">
+            <view class="restriction-member-group__header">
+            <view class="restrictions-member-avatar">
+              <image wx:if="{{item.avatarUrl}}" class="restrictions-member-avatar-image" src="{{item.avatarUrl}}" mode="aspectFill" />
+              <text wx:else>{{item.initial}}</text>
+            </view>
+            <view class="restriction-member-group__copy">
+              <view class="restriction-member-group__name">{{item.name}}</view>
+            </view>
+            <button class="restrictions-create restriction-member-group__add" data-member-id="{{item.memberId}}" loading="{{pickerLoading && targetMemberId === item.memberId}}" disabled="{{restrictionLoading || pickerLoading}}" bindtap="openAdd" aria-label="为{{item.name}}添加忌口">+</button>
+          </view>
+          <view wx:if="{{item.restrictions.length}}" class="restrictions-list">
+            <view wx:for="{{item.restrictions}}" wx:for-item="restriction" wx:for-index="restrictionIndex" wx:key="ingredientId" class="restrictions-row">
+              <view class="restrictions-row__label"><text class="restrictions-row__index">{{restrictionIndex + 1}}.</text><text class="restrictions-row__name">{{restriction.ingredientName}}</text></view>
+              <button class="restrictions-remove" data-member-id="{{item.memberId}}" data-id="{{restriction.ingredientId}}" loading="{{deletingMemberId === item.memberId && deletingIngredientId === restriction.ingredientId}}" disabled="{{deletingIngredientId}}" bindtap="removeRestriction" aria-label="移除{{restriction.ingredientName}}">×</button>
+            </view>
+          </view>
         </view>
       </view>
     </view>
-
   </view>
 </view>
 

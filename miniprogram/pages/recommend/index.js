@@ -1,14 +1,21 @@
-const { request, ensureAuthenticated, resolveCoverUrl, isNoActiveFamilyError } = require('../../utils/api')
+const { request, ensureAuthenticated, resolveCoverUrl, isNoActiveFamilyError, requireAuthentication } = require('../../utils/api')
 const app = getApp()
 const { difficultyStars, getGreeting, toLocalISODate } = require('../../utils/ui')
 const { displayTags, flattenTagCatalog } = require('../../utils/tags')
 const {
   DEFAULT_STRUCTURE,
+  PREFERENCE_STORAGE_KEY,
+  PREP_RULER_TICK_WIDTH_PX,
   PREP_TIME_OPTIONS,
   STRUCTURE_LABELS,
   buildCanonicalRequest,
+  buildPersistedPreferences,
   normalizePeopleCount,
   normalizeStructure,
+  prepRulerGeometry,
+  prepRulerScrollLeft,
+  prepRulerValueFromScrollLeft,
+  restorePersistedPreferences,
   structureDishCount,
   structureSummary,
   toggleTagId,
@@ -16,7 +23,6 @@ const {
 } = require('./preference-state')
 
 const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六']
-const PREP_TICK_WIDTH_PX = 12
 const PREP_DISPLAY_STEP = 5
 
 const PREP_TICKS = PREP_TIME_OPTIONS.filter(({ value }) => value % PREP_DISPLAY_STEP === 0).map(({ value }) => ({
@@ -27,9 +33,7 @@ const PREP_TICKS = PREP_TIME_OPTIONS.filter(({ value }) => value % PREP_DISPLAY_
 }))
 
 function prepDisplayIndex(value) {
-  const numericValue = Number(value)
-  const index = PREP_TICKS.findIndex((item) => item.value >= numericValue)
-  return index >= 0 ? index : PREP_TICKS.length - 1
+  return Math.round(prepRulerScrollLeft(value) / PREP_RULER_TICK_WIDTH_PX)
 }
 
 function dateCaption(date) {
@@ -87,7 +91,7 @@ Page({
     maxPrepMinutes: 60,
     prepOptions: PREP_TIME_OPTIONS,
     prepTicks: PREP_TICKS,
-    prepScrollLeft: prepDisplayIndex(60) * PREP_TICK_WIDTH_PX,
+    prepScrollLeft: prepRulerScrollLeft(60),
     prepRulerInset: 0,
     structure: { ...DEFAULT_STRUCTURE },
     structureRows: structureRows(DEFAULT_STRUCTURE),
@@ -97,6 +101,7 @@ Page({
     tagCatalog: [],
     tagOptions: [],
     tagLoading: false,
+    tagReady: false,
     tagError: '',
     preferences: { selectedTagIds: [] },
     loading: false,
@@ -116,11 +121,45 @@ Page({
   },
 
   onLoad() {
+    if (!requireAuthentication()) return
+    this.restoreSavedPreferences()
     this.syncPrepRuler()
     this.ensureLogin()
   },
 
+  restoreSavedPreferences() {
+    let storedPreferences = null
+    try {
+      storedPreferences = wx.getStorageSync(PREFERENCE_STORAGE_KEY)
+    } catch (_error) {}
+    const saved = restorePersistedPreferences(storedPreferences)
+    const validation = validateStructure(saved.structure)
+    this.setData({
+      peopleCount: saved.peopleCount,
+      maxPrepMinutes: saved.maxPrepMinutes,
+      structure: saved.structure,
+      structureRows: structureRows(saved.structure),
+      structureTotal: validation.total,
+      structureSummary: structureSummary(saved.structure),
+      structureMessage: validation.message,
+      'preferences.selectedTagIds': saved.preferences.selectedTagIds
+    })
+  },
+
+  persistPreferences(overrides = {}) {
+    try {
+      wx.setStorageSync(PREFERENCE_STORAGE_KEY, buildPersistedPreferences({
+        peopleCount: this.data.peopleCount,
+        maxPrepMinutes: this.data.maxPrepMinutes,
+        structure: this.data.structure,
+        preferences: this.data.preferences,
+        ...overrides
+      }))
+    } catch (_error) {}
+  },
+
   onShow() {
+    if (!requireAuthentication()) return
     this.setData({ greeting: getGreeting(new Date().getHours()) })
     if (this._loadedOnce) {
       if (!app.globalData.membership || this.data.noFamily) this.ensureLogin()
@@ -157,7 +196,7 @@ Page({
 
   async loadTags() {
     if (this.data.tagLoading) return
-    this.setData({ tagLoading: true, tagError: '' })
+    this.setData({ tagLoading: true, tagReady: false, tagError: '' })
     try {
       const tagCatalog = flattenTagCatalog(await request('/tags'))
       const validIds = new Set(tagCatalog.map((tag) => tag.id))
@@ -165,10 +204,18 @@ Page({
       this.setData({
         tagCatalog,
         tagOptions: tagOptions(tagCatalog, selectedTagIds),
-        'preferences.selectedTagIds': selectedTagIds
+        'preferences.selectedTagIds': selectedTagIds,
+        tagReady: true
       })
+      this.persistPreferences({ preferences: { selectedTagIds } })
     } catch (error) {
-      this.setData({ tagCatalog: [], tagOptions: [], 'preferences.selectedTagIds': [], tagError: error.message || '标签加载失败' })
+      this.setData({
+        tagCatalog: [],
+        tagOptions: [],
+        'preferences.selectedTagIds': [],
+        tagReady: true,
+        tagError: error.message || '标签加载失败'
+      })
     } finally {
       this.setData({ tagLoading: false })
     }
@@ -216,25 +263,25 @@ Page({
 
   changePeople(event) {
     const delta = Number(event.currentTarget.dataset.delta || 0)
-    this.setData({ peopleCount: normalizePeopleCount(this.data.peopleCount + delta) })
+    const peopleCount = normalizePeopleCount(this.data.peopleCount + delta)
+    this.setData({ peopleCount })
+    this.persistPreferences({ peopleCount })
   },
 
   syncPrepRuler() {
     if (!wx.getSystemInfoSync) return
     const { windowWidth = 375 } = wx.getSystemInfoSync()
-    const viewportWidth = windowWidth - (72 * windowWidth / 750)
-    const prepRulerInset = Math.max(0, Math.round(viewportWidth / 2 - PREP_TICK_WIDTH_PX / 2))
+    const { sidePadding: prepRulerInset } = prepRulerGeometry(windowWidth)
     this.setData({
       prepRulerInset,
-      prepScrollLeft: prepDisplayIndex(this.data.maxPrepMinutes) * PREP_TICK_WIDTH_PX
+      prepScrollLeft: prepRulerScrollLeft(this.data.maxPrepMinutes)
     })
   },
 
   handlePrepScroll(event) {
     const scrollLeft = Number(event.detail && event.detail.scrollLeft)
     if (!Number.isFinite(scrollLeft)) return
-    const index = Math.max(0, Math.min(PREP_TICKS.length - 1, Math.round(scrollLeft / PREP_TICK_WIDTH_PX)))
-    const value = PREP_TICKS[index].value
+    const value = prepRulerValueFromScrollLeft(scrollLeft)
     if (value === this.data.maxPrepMinutes) return
     this.setData({ maxPrepMinutes: value })
     this.maybeVibratePrepMajor(value)
@@ -256,8 +303,9 @@ Page({
     const index = prepDisplayIndex(value)
     this.setData({
       maxPrepMinutes: PREP_TICKS[index].value,
-      prepScrollLeft: index * PREP_TICK_WIDTH_PX
+      prepScrollLeft: prepRulerScrollLeft(PREP_TICKS[index].value)
     })
+    this.persistPreferences({ maxPrepMinutes: PREP_TICKS[index].value })
   },
 
   changeStructure(event) {
@@ -273,6 +321,7 @@ Page({
       structureSummary: structureSummary(structure),
       structureMessage: validation.message
     })
+    this.persistPreferences({ structure })
   },
 
   togglePreferenceTag(event) {
@@ -283,6 +332,7 @@ Page({
       'preferences.selectedTagIds': selectedTagIds,
       tagOptions: tagOptions(this.data.tagCatalog, selectedTagIds)
     })
+    this.persistPreferences({ preferences: { selectedTagIds } })
   },
 
   buildRequest() {

@@ -18,7 +18,7 @@ test('restriction management is a registered page with an enabled Settings entry
   assert.match(settingsScript, /goRestrictions\(\)/)
 })
 
-test('restriction page exposes active member selection, real APIs, empty/error states and guarded mutations', () => {
+test('restriction page exposes member restriction management, real APIs, empty/error states and guarded mutations', () => {
   const pageRoot = path.join(root, 'pages', 'restrictions')
   const script = fs.readFileSync(path.join(pageRoot, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(pageRoot, 'index.wxml'), 'utf8')
@@ -31,8 +31,8 @@ test('restriction page exposes active member selection, real APIs, empty/error s
   assert.match(script, /savingIngredientId/)
   assert.match(script, /deletingIngredientId/)
   assert.match(template, /activeMembers/)
-  assert.match(template, /暂无成员忌口/)
-  assert.match(template, /添加忌口食材/)
+  assert.match(template, /暂无家庭成员忌口/)
+  assert.match(template, /添加忌口/)
   assert.match(template, /bindtap="removeRestriction"/)
   assert.match(template, /restrictions-nav__slot/)
   assert.match(template, /restrictions-nav__title/)
@@ -44,6 +44,37 @@ test('restriction page exposes active member selection, real APIs, empty/error s
   assert.match(styles, /padding: 13rpx 16rpx/)
   assert.match(styles, /border-radius: 50% !important/)
   assert.equal(pageConfig.navigationStyle, 'custom')
+})
+
+test('restriction page loads and renders every member restriction as grouped sections', () => {
+  const pageRoot = path.join(root, 'pages', 'restrictions')
+  const script = fs.readFileSync(path.join(pageRoot, 'index.js'), 'utf8')
+  const template = fs.readFileSync(path.join(pageRoot, 'index.wxml'), 'utf8')
+
+  assert.match(script, /Promise\.all/)
+  assert.match(script, /restrictionSections/)
+  assert.match(script, /targetMemberId/)
+  assert.match(template, /wx:for="{{restrictionSections}}"/)
+  assert.match(template, /item\.restrictions/)
+  assert.match(template, /data-member-id="{{item\.memberId}}"/)
+  assert.match(template, /bindtap="openAdd"/)
+})
+
+test('restriction groups use the compact numbered-list presentation', () => {
+  const pageRoot = path.join(root, 'pages', 'restrictions')
+  const template = fs.readFileSync(path.join(pageRoot, 'index.wxml'), 'utf8')
+  const styles = fs.readFileSync(path.join(pageRoot, 'index.wxss'), 'utf8')
+
+  assert.match(template, /wx:for-index="restrictionIndex"/)
+  assert.match(template, /restrictions-row__index/)
+  assert.match(template, />\+<\/button>/)
+  assert.doesNotMatch(template, />[^<]*添加忌口<\/button>/)
+  assert.doesNotMatch(template, /restrictions-card__helper/)
+  assert.doesNotMatch(template, /restriction-member-group__role/)
+  assert.doesNotMatch(template, /按成员分类展示/)
+  assert.match(styles, /\.restriction-member-group__add[\s\S]*width: 64rpx/)
+  assert.match(styles, /\.restrictions-remove[\s\S]*background: transparent/)
+  assert.match(styles, /\.restrictions-remove[\s\S]*border-radius: 0/)
 })
 
 test('recommendation only presents the persisted family restriction source', () => {

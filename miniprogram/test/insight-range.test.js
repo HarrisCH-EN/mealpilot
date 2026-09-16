@@ -1,0 +1,33 @@
+const test = require('node:test')
+const assert = require('node:assert/strict')
+const fs = require('node:fs')
+const path = require('node:path')
+
+const root = path.join(__dirname, '..')
+const pageRoot = path.join(root, 'pages', 'settings')
+const script = fs.readFileSync(path.join(pageRoot, 'index.js'), 'utf8')
+const template = fs.readFileSync(path.join(pageRoot, 'index.wxml'), 'utf8')
+const styles = fs.readFileSync(path.join(pageRoot, 'index.wxss'), 'utf8')
+
+test('settings insight provides real 7-day and 30-day range controls on the card title row', () => {
+  assert.match(script, /insightRangeDays:\s*7/)
+  assert.match(script, /selectInsightRange\(event\)/)
+  assert.match(script, /request\(`\/insights\?days=\$\{this\.data\.insightRangeDays\}`\)/)
+  assert.match(template, /settings-insight-card__header/)
+  assert.match(template, /data-days="7"[^>]*bindtap="selectInsightRange"/)
+  assert.match(template, /data-days="30"[^>]*bindtap="selectInsightRange"/)
+  assert.match(template, /近7天/)
+  assert.match(template, /近30天/)
+  assert.match(styles, /\.settings-insight-card__header\s*\{[^}]*display:\s*flex/s)
+  assert.match(styles, /\.settings-insight-range__button\s*\{[^}]*background:\s*transparent/s)
+})
+
+test('settings insight range buttons size to their labels instead of using oversized pills', () => {
+  assert.match(styles, /\.settings-insight-range__button\s*\{[^}]*min-width:\s*0/s)
+  assert.match(styles, /\.settings-insight-range__button\s*\{[^}]*width:\s*auto\s*!important/s)
+  assert.match(styles, /\.settings-insight-range__button\s*\{[^}]*flex:\s*0 0 auto/s)
+  assert.match(styles, /\.settings-insight-range__button\s*\{[^}]*height:\s*36rpx/s)
+  assert.match(styles, /\.settings-insight-range__button\s*\{[^}]*padding:\s*0 4rpx/s)
+  assert.match(styles, /\.settings-insight-range__button--7\s*\{[^}]*width:\s*62rpx\s*!important/s)
+  assert.match(styles, /\.settings-insight-range__button--30\s*\{[^}]*width:\s*76rpx\s*!important/s)
+})

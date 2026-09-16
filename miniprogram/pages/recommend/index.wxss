@@ -243,9 +243,9 @@
 }
 .recommend-time-ruler__tick { width: 12px; flex-basis: 12px; }
 .recommend-time-ruler__hint { color: #a39d9a; }
-.recommend-time-ruler__mark { background: rgba(255, 56, 92, .24); }
-.recommend-time-ruler__tick--medium .recommend-time-ruler__mark { background: rgba(255, 56, 92, .48); }
-.recommend-time-ruler__tick--major .recommend-time-ruler__mark { background: #ff385c; }
+.recommend-time-ruler__mark { background: #b9b9b9; }
+.recommend-time-ruler__tick--medium .recommend-time-ruler__mark { background: #e3b5be; }
+.recommend-time-ruler__tick--major .recommend-time-ruler__mark { background: #f0a5b2; }
 .recommend-time-ruler__pointer, .recommend-time-ruler__pointer-tip { background-color: #ff385c; }
 .recommend-time-ruler__pointer-tip { border-bottom-color: #ff385c; }
 .preference-sheet__body .recommend-cta { border-color: #ff385c; background: #ff385c; color: #ffffff; }

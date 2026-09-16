@@ -21,6 +21,9 @@ function resolveJwtSecret(environment, configuredSecret) {
 
 function getConfig(env = process.env) {
   const environment = env.NODE_ENV === 'production' ? 'production' : 'development'
+  if (environment === 'production' && env.DEV_AUTH_ENABLED === 'true') {
+    throw new Error('生产环境禁止启用开发登录，请设置 DEV_AUTH_ENABLED=false')
+  }
   return {
     environment,
     port: Number(env.PORT || 3000),

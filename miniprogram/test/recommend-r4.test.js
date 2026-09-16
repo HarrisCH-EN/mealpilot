@@ -79,6 +79,12 @@ test('T4 uses one API-backed tag selector for session preferences', () => {
   assert.doesNotMatch(script, /familyPreferences|loadPreferenceSummary|goPreferences/)
 })
 
+test('T4 keeps the first tag request in a loading state until tags are ready', () => {
+  assert.match(script, /tagReady:\s*false/)
+  assert.match(script, /tagReady:\s*true/)
+  assert.match(template, /wx:if="\{\{tagLoading \|\| !tagReady\}\}"/)
+})
+
 test('R4 uses a wheel time selector bound to maxPrepMinutes', () => {
   assert.match(template, /scroll-view[^>]*class="recommend-time-ruler__scroll"/)
   assert.match(template, /scroll-x/)

@@ -1,5 +1,7 @@
 # 演示菜谱图片来源记录
 
+> 素材来源与许可记录，不是当前业务接口或数据库状态说明。当前实现请以 [CURRENT_VERSION.md](/E:/Database_Design/docs/CURRENT_VERSION.md) 为准。
+
 用途：课程项目 / Demo seed image。下载日期：2026-09-05。图片均保存为 800 × 600、4:3 的 JPEG；为通过微信开发者工具当前 2 MB 预览包限制，统一做了 4:3 缩放与 JPEG 优化；数据库只保存小程序 bundle 内的 `/assets/recipes/` 路径。
 
 ## 已采用

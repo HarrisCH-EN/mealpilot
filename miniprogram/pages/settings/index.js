@@ -1,11 +1,19 @@
-const { request, ensureAuthenticated, devLogin } = require('../../utils/api')
-const { allowDevLogin } = require('../../config')
+const { request, ensureAuthenticated, resolveCoverUrl, requireAuthentication } = require('../../utils/api')
 const app = getApp()
 
 const TEMP_CACHE_KEYS = new Set(['recipeImageCache', 'menuPreviewCache', 'settingsCache'])
 
 function getDisplayName(user) {
   return String((user && user.display_name) || '微信用户').trim() || '微信用户'
+}
+
+function isAdminRole(role) {
+  return role === 'owner' || role === 'admin'
+}
+
+function getRoleLabel(membership) {
+  if (!membership) return '未加入家庭'
+  return isAdminRole(membership.role) ? '管理员' : '成员'
 }
 
 function getNavigationLayout() {
@@ -29,29 +37,36 @@ Page({
     navStyle: '',
     user: {},
     userInitial: '微',
+    userAvatarUrl: '',
     membership: null,
+    userRoleLabel: '未加入家庭',
+    canManageFamily: false,
     family: null,
     familyMemberCount: 0,
     insight: null,
+    insightRangeDays: 7,
     insightExpanded: false,
     membersExpanded: false,
     loading: false,
     insightLoading: false,
     error: '',
-    cacheLabel: '',
-    allowDevLogin
+    cacheLabel: ''
   },
 
   onLoad() {
-    this.setData({ navStyle: getNavigationLayout() })
+    if (!requireAuthentication()) return
+    this.setData({
+      navStyle: getNavigationLayout()
+    })
   },
 
   onShow() {
+    if (!requireAuthentication()) return
     this.refresh()
   },
 
   async refresh() {
-    this.setData({ loading: true, error: '', family: null, familyMemberCount: 0, insight: null, insightExpanded: false, membersExpanded: false, cacheLabel: '' })
+    this.setData({ loading: true, error: '', family: null, familyMemberCount: 0, insight: null, insightRangeDays: 7, insightExpanded: false, membersExpanded: false, cacheLabel: '', userRoleLabel: '未加入家庭', canManageFamily: false })
     try {
       const data = await ensureAuthenticated()
       const user = data.user || app.globalData.user || {}
@@ -59,12 +74,16 @@ Page({
       this.setData({
         user,
         userInitial: displayName.slice(0, 1),
-        membership: data.membership || null
+        userAvatarUrl: resolveCoverUrl(user.avatar_url),
+        membership: data.membership || null,
+        userRoleLabel: getRoleLabel(data.membership),
+        canManageFamily: isAdminRole(data.membership && data.membership.role)
       })
       if (data.membership) {
         const family = await request('/families/current')
         const members = (family.members || []).map((member) => ({
           ...member,
+          avatarUrl: resolveCoverUrl(member.avatarUrl),
           initial: String(member.displayName || member.nickname || '家').slice(0, 1)
         }))
         this.setData({
@@ -78,7 +97,16 @@ Page({
     } catch (error) {
       const user = app.globalData.user || {}
       const displayName = getDisplayName(user)
-      this.setData({ user, userInitial: displayName.slice(0, 1), error: error.message || '账户信息加载失败' })
+      const membership = app.globalData.membership || null
+      this.setData({
+        user,
+        userInitial: displayName.slice(0, 1),
+        userAvatarUrl: resolveCoverUrl(user.avatar_url),
+        membership,
+        userRoleLabel: getRoleLabel(membership),
+        canManageFamily: isAdminRole(membership && membership.role),
+        error: error.message || '账户信息加载失败'
+      })
     } finally {
       this.setData({ loading: false })
     }
@@ -86,30 +114,7 @@ Page({
 
   handleUserTap() {
     if (this.data.user && this.data.user.display_name) {
-      wx.showToast({ title: this.data.allowDevLogin ? '本地开发身份' : '微信登录用户', icon: 'none' })
-      return
-    }
-    this.retryLogin()
-  },
-
-  async retryLogin() {
-    if (this.data.loading) return
-    this.setData({ loading: true, error: '' })
-    try {
-      await ensureAuthenticated({ force: true })
-      await this.refresh()
-    } catch (error) {
-      this.setData({ loading: false, error: error.message || '登录失败，请重试' })
-    }
-  },
-
-  async login() {
-    try {
-      await devLogin()
-      wx.showToast({ title: '本地开发登录成功', icon: 'success' })
-      this.refresh()
-    } catch (error) {
-      wx.showToast({ title: error.message || '登录失败', icon: 'none' })
+      wx.navigateTo({ url: '/pages/account-management/index' })
     }
   },
 
@@ -138,7 +143,7 @@ Page({
       editable: true,
       placeholderText: '输入 6 位邀请码',
       success: async (result) => {
-        const inviteCode = String(result.content || '').trim().toUpperCase()
+        const inviteCode = String(result.content || '').trim()
         if (!result.confirm || !inviteCode) return
         try {
           await request('/families/join', 'POST', { inviteCode })
@@ -151,16 +156,21 @@ Page({
     })
   },
 
-  copyCode() {
-    const inviteCode = (this.data.membership && this.data.membership.invite_code) || (this.data.family && this.data.family.invite_code)
-    if (!inviteCode) {
-      wx.showToast({ title: '暂时没有邀请码', icon: 'none' })
-      return
+  async copyCode() {
+    try {
+      const result = await request('/families/current/invite-code')
+      const inviteCode = result && result.inviteCode
+      if (!inviteCode) {
+        wx.showToast({ title: '暂时没有邀请码', icon: 'none' })
+        return
+      }
+      wx.setClipboardData({
+        data: inviteCode,
+        success: () => wx.showToast({ title: '邀请码已复制', icon: 'success' })
+      })
+    } catch (error) {
+      wx.showToast({ title: error.message || '邀请码获取失败', icon: 'none' })
     }
-    wx.setClipboardData({
-      data: inviteCode,
-      success: () => wx.showToast({ title: '邀请码已复制', icon: 'success' })
-    })
   },
 
   showFamilyInfo() {
@@ -168,15 +178,7 @@ Page({
       wx.showToast({ title: '暂时没有家庭信息', icon: 'none' })
       return
     }
-    const membership = this.data.membership
-    const familyName = membership.family_name || (this.data.family && this.data.family.name) || '家庭信息'
-    const role = membership.role === 'owner' ? '家庭创建者' : '家庭成员'
-    wx.showModal({
-      title: familyName,
-      content: `${role}\n${this.data.familyMemberCount} 位成员`,
-      showCancel: false,
-      confirmText: '知道了'
-    })
+    wx.navigateTo({ url: '/pages/family-management/index' })
   },
 
   toggleMembers() {
@@ -195,7 +197,22 @@ Page({
     }
     this.setData({ insightLoading: true })
     try {
-      this.setData({ insight: await request('/insights'), insightExpanded: true })
+      this.setData({ insight: await request(`/insights?days=${this.data.insightRangeDays}`), insightExpanded: true })
+    } catch (error) {
+      wx.showToast({ title: error.message || '洞察加载失败', icon: 'none' })
+    } finally {
+      this.setData({ insightLoading: false })
+    }
+  },
+
+  async selectInsightRange(event) {
+    if (this.data.insightLoading) return
+    const rangeDays = Number(event.currentTarget.dataset.days)
+    if (![7, 30].includes(rangeDays)) return
+    if (this.data.insight && this.data.insightRangeDays === rangeDays) return
+    this.setData({ insightLoading: true, insightRangeDays: rangeDays })
+    try {
+      this.setData({ insight: await request(`/insights?days=${rangeDays}`), insightExpanded: true })
     } catch (error) {
       wx.showToast({ title: error.message || '洞察加载失败', icon: 'none' })
     } finally {

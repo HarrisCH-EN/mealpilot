@@ -13,6 +13,7 @@
     "test:t1": "node src/scripts/run-tag-system-t1-acceptance.js",
     "test:all": "npm run test:direct && npm run test:integration",
     "db:init": "node src/scripts/init-database.js",
+    "db:migrate": "node src/scripts/migrate-database.js",
     "db:seed": "node src/scripts/seed-database.js"
   },
   "dependencies": {

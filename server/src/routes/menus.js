@@ -25,6 +25,12 @@ function mapRecommendationError(error) {
   return new HttpError(400, error.message)
 }
 
+function parseInsightDays(value) {
+  const raw = value === undefined ? '7' : String(value)
+  requireEnum(raw, ['7', '30'], '统计范围')
+  return Number(raw)
+}
+
 function router({ database, auth, family }) {
   const result = express.Router()
   result.get('/ingredients', auth, asyncRoute(async (_request, response) => {
@@ -155,7 +161,50 @@ function router({ database, auth, family }) {
       response.json({ ok: true, data })
     } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
   }))
-  result.get('/insights', auth, family, asyncRoute(async (request, response) => { const [popular] = await database.execute(`SELECT r.id, r.title, r.category, COUNT(mi.id) AS usedCount FROM recipes r LEFT JOIN menu_items mi ON mi.recipe_id = r.id LEFT JOIN menus m ON m.id = mi.menu_id AND m.family_id = ? WHERE r.family_id = ? AND r.status = 'active' GROUP BY r.id ORDER BY usedCount DESC, r.title LIMIT 10`, [request.membership.family_id, request.membership.family_id]); const [summary] = await database.execute(`SELECT COUNT(DISTINCT m.id) AS menuCount, COUNT(mi.id) AS itemCount, COALESCE(AVG(f.rating), 0) AS averageRating FROM menus m LEFT JOIN menu_items mi ON mi.menu_id = m.id LEFT JOIN menu_feedback f ON f.menu_item_id = mi.id WHERE m.family_id = ?`, [request.membership.family_id]); const insightSummary = summary[0] || { menuCount: 0, itemCount: 0, averageRating: 0 }; insightSummary.averageRating = Number(Number(insightSummary.averageRating || 0).toFixed(1)); response.json({ ok: true, data: { popular, summary: insightSummary } }) }))
+  result.get('/insights', auth, family, asyncRoute(async (request, response) => {
+    const rangeDays = parseInsightDays(request.query.days)
+    const intervalDays = rangeDays - 1
+    const familyId = request.membership.family_id
+    const dateFilter = `m.menu_date BETWEEN DATE_SUB(CURDATE(), INTERVAL ${intervalDays} DAY) AND CURDATE()`
+    const [popular] = await database.execute(
+      `SELECT r.id, r.title, r.category, COUNT(m.id) AS usedCount
+       FROM recipes r
+       LEFT JOIN menu_items mi ON mi.recipe_id = r.id
+       LEFT JOIN menus m ON m.id = mi.menu_id
+         AND m.family_id = ?
+         AND ${dateFilter}
+       WHERE r.family_id = ? AND r.status = 'active'
+       GROUP BY r.id
+       HAVING COUNT(m.id) > 0
+       ORDER BY usedCount DESC, r.title
+       LIMIT 10`,
+      [familyId, familyId]
+    )
+    const [summary] = await database.execute(
+      `SELECT COUNT(DISTINCT m.id) AS menuCount,
+              COUNT(mi.id) AS itemCount,
+              COALESCE(AVG(f.rating), 0) AS averageRating
+       FROM menus m
+       LEFT JOIN menu_items mi ON mi.menu_id = m.id
+       LEFT JOIN menu_feedback f ON f.menu_item_id = mi.id
+       WHERE m.family_id = ? AND ${dateFilter}`,
+      [familyId]
+    )
+    const insightSummary = {
+      ...(summary[0] || { menuCount: 0, itemCount: 0, averageRating: 0 }),
+      menuCount: Number(summary[0]?.menuCount || 0),
+      itemCount: Number(summary[0]?.itemCount || 0),
+      averageRating: Number(Number(summary[0]?.averageRating || 0).toFixed(1))
+    }
+    response.json({
+      ok: true,
+      data: {
+        rangeDays,
+        popular: popular.map((item) => ({ ...item, usedCount: Number(item.usedCount || 0) })),
+        summary: insightSummary
+      }
+    })
+  }))
   return result
 }
 module.exports = { router }

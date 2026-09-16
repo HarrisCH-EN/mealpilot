@@ -1,7 +1,7 @@
 USE smart_meal;
 
 INSERT INTO users (openid, display_name) VALUES ('demo-owner', '演示用户')
-ON DUPLICATE KEY UPDATE display_name = '演示用户';
+ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id);
 SET @user_id = (SELECT id FROM users WHERE openid = 'demo-owner');
 INSERT INTO families (name, invite_code, owner_user_id) VALUES ('示例家庭', 'MEAL26', @user_id)
 ON DUPLICATE KEY UPDATE name = VALUES(name);

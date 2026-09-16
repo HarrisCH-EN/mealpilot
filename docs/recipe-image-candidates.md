@@ -1,5 +1,7 @@
 # 小红书菜谱图片候选记录
 
+> 素材来源与版权核验历史记录，不是当前业务接口或数据库状态说明。当前实现请以 [CURRENT_VERSION.md](/E:/Database_Design/docs/CURRENT_VERSION.md) 为准。
+
 本轮使用 Agent-Reach 的 OpenCLI 小红书适配器。按当前确认的简化规则，每道试点菜只取搜索结果第一条笔记，并检查该笔记的第一张图片。公开可访问不代表获得版权授权；实际采用的小红书素材均标记为 `REFERENCE_ONLY`，用途限定为课程 / 本地 Demo 技术验证。
 
 ## 小红书图片检索能力检查

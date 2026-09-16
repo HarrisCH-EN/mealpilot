@@ -41,4 +41,16 @@ function requireFamily(database) {
   }
 }
 
-module.exports = { authenticate, currentMembership, requireFamily }
+function requireFamilyAdmin(database) {
+  return async (request, _response, next) => {
+    try {
+      const membership = await currentMembership(database, request.user.id)
+      if (!membership) throw new HttpError(403, '请先创建或加入家庭')
+      if (!['owner', 'admin'].includes(membership.role)) throw new HttpError(403, '仅家庭管理员可执行此操作')
+      request.membership = membership
+      next()
+    } catch (error) { next(error) }
+  }
+}
+
+module.exports = { authenticate, currentMembership, requireFamily, requireFamilyAdmin }

@@ -25,7 +25,7 @@ if errorlevel 1 (
   goto :failed
 )
 
-pushd "%SERVER_ROOT%"
+cd /d "%~dp0server"
 if errorlevel 1 (
   echo [ERROR] Cannot enter backend folder: %SERVER_ROOT%
   goto :failed
@@ -42,6 +42,10 @@ if not exist "node_modules" (
   call npm install
   if errorlevel 1 goto :failed_in_server
 )
+
+echo [INFO] Applying idempotent database upgrades...
+call npm run db:migrate
+if errorlevel 1 goto :failed_in_server
 
 netstat -ano -p tcp | findstr /R /C:":3000 .*LISTENING" >nul
 if not errorlevel 1 (
@@ -66,12 +70,12 @@ if "%EXIT_CODE%"=="0" (
 ) else (
   echo [ERROR] Backend exited with code %EXIT_CODE%.
 )
-popd
+cd /d "%PROJECT_ROOT%"
 pause
 exit /b %EXIT_CODE%
 
 :failed_in_server
-popd
+cd /d "%PROJECT_ROOT%"
 
 :failed
 echo.

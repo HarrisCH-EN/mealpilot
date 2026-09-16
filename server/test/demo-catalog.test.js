@@ -37,3 +37,10 @@ test('seed SQL contains the complete demo catalog and core ingredient relations'
   assert.equal(relationCounts.size, 48)
   assert.ok([...relationCounts.values()].every((count) => count >= 2))
 })
+
+test('seed SQL does not overwrite a customized demo user name', () => {
+  const seed = fs.readFileSync(path.join(__dirname, '../../database/02_seed.sql'), 'utf8')
+  const userSeed = seed.slice(0, seed.indexOf('SET @user_id'))
+  assert.match(userSeed, /ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID\(id\)/i)
+  assert.doesNotMatch(userSeed, /ON DUPLICATE KEY UPDATE display_name = '演示用户'/i)
+})

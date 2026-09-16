@@ -1,7 +1,7 @@
 const express = require('express')
 const cors = require('cors')
 const path = require('node:path')
-const { authenticate, requireFamily } = require('./middleware/authenticate')
+const { authenticate, requireFamily, requireFamilyAdmin } = require('./middleware/authenticate')
 const authFamily = require('./routes/auth-family')
 const recipes = require('./routes/recipes')
 const menus = require('./routes/menus')
@@ -26,15 +26,16 @@ function createApp({ database, jwtSecret = 'local-development-secret-change-me',
   if (database) {
     const auth = authenticate({ database, jwtSecret })
     const family = requireFamily(database)
+    const familyAdmin = requireFamilyAdmin(database)
     const wechat = wechatAuthService || createWechatAuthService({ appId: wechatAppId, appSecret: wechatAppSecret })
-    app.use('/api', authFamily.router({ database, jwtSecret, devAuthEnabled, wechatAuthService: wechat, auth, family }))
+    app.use('/api', authFamily.router({ database, jwtSecret, devAuthEnabled, wechatAuthService: wechat, auth, family, familyAdmin }))
     app.use('/api', recipes.router({ database, auth, family }))
     app.use('/api', menus.router({ database, auth, family }))
     app.use('/api', restrictions.router({ database, auth, family }))
     app.use('/api', preferences.router({ database, auth, family }))
     app.use('/api', feedback.router({ database, auth, family }))
     app.use('/api', tags.router({ database, auth, family }))
-    app.use('/api', uploads.router({ uploadRoot, maxBytes: maxUploadBytes, auth, family }))
+    app.use('/api', uploads.router({ uploadRoot, maxBytes: maxUploadBytes, auth, family, database }))
   }
 
   app.use((error, _request, response, _next) => {

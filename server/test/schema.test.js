@@ -11,4 +11,42 @@ test('schema defines the required relational tables and menu uniqueness constrai
   }
   assert.match(sql, /UNIQUE KEY uq_menu_slot \(family_id, menu_date, meal_type\)/)
   assert.match(sql, /FOREIGN KEY \(recipe_id\) REFERENCES recipes\(id\)/)
+  assert.match(sql, /role ENUM\('owner', 'admin', 'member'\) NOT NULL DEFAULT 'member'/)
+  assert.match(sql, /invite_code CHAR\(6\) CHARACTER SET ascii COLLATE ascii_bin NOT NULL/)
+
+  const migration = fs.readFileSync(path.join(__dirname, '../../database/09_family-admin-role.sql'), 'utf8')
+  assert.match(migration, /MODIFY COLUMN role ENUM\('owner', 'admin', 'member'\) NOT NULL DEFAULT 'member'/)
+
+  const inviteMigration = fs.readFileSync(path.join(__dirname, '../../database/10_family-invite-code.sql'), 'utf8')
+  assert.match(inviteMigration, /CHAR\(6\).*CHARACTER SET ascii COLLATE ascii_bin/i)
+})
+
+test('database migration entry point applies ordered history without forcing the smart_meal database', () => {
+  const migrationRunnerPath = path.join(__dirname, '../src/scripts/migration-runner.js')
+  assert.equal(fs.existsSync(migrationRunnerPath), true, 'migration runner must exist')
+  const runner = fs.readFileSync(migrationRunnerPath, 'utf8')
+  for (const migration of [
+    '04_recommendation_refactor_r1.sql',
+    '05_recommendation_run_nullable_legacy.sql',
+    '06_recipe_tag_metadata_backfill.sql',
+    '07_remove_cuisine_tags.sql',
+    '08_tag_system_v1.sql',
+    '09_family-admin-role.sql',
+    '10_family-invite-code.sql'
+  ]) assert.match(runner, new RegExp(migration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
+  assert.match(runner, /schema_migrations/)
+  assert.match(runner, /GET_LOCK/)
+  assert.match(runner, /normalizeMigrationSql/)
+  const { normalizeMigrationSql, MIGRATION_FILES } = require('../src/scripts/migration-runner')
+  assert.deepEqual(MIGRATION_FILES, [
+    '04_recommendation_refactor_r1.sql',
+    '05_recommendation_run_nullable_legacy.sql',
+    '06_recipe_tag_metadata_backfill.sql',
+    '07_remove_cuisine_tags.sql',
+    '08_tag_system_v1.sql',
+    '09_family-admin-role.sql',
+    '10_family-invite-code.sql'
+  ])
+  assert.equal(normalizeMigrationSql('USE smart_meal;\nSELECT 1;'), 'SELECT 1;')
+  assert.match(runner, /tag_type|recipe_tags.*tag_id/s)
 })

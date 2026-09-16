@@ -100,7 +100,7 @@ test('T4 tag management is a shared registered page for Settings and Recipe Form
   assert.match(script, /openTagManagement\(\)/)
   assert.match(template, /bindtap="openTagManagement"/)
   assert.match(pageTemplate, /自定义标签/)
-  assert.match(pageTemplate, /系统标签不可修改或删除/)
+  assert.match(pageTemplate, /默认标签不可修改或删除/)
   assert.match(pageTemplate, /bindtap="renameTag"/)
   assert.match(pageTemplate, /bindtap="deleteTag"/)
   assert.match(pageScript, /request\('\/tags'\)/)

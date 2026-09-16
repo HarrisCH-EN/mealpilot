@@ -1,4 +1,4 @@
-const { request, resolveCoverUrl, isNoActiveFamilyError } = require('../../utils/api')
+const { request, resolveCoverUrl, isNoActiveFamilyError, requireAuthentication } = require('../../utils/api')
 const { difficultyStars, getCurrentMealType, normalizeMeals, toLocalISODate } = require('../../utils/ui')
 const { displayTags } = require('../../utils/tags')
 const { getMenuContextStore } = require('../../utils/menu-context')
@@ -89,6 +89,7 @@ Page({
   },
 
   onLoad() {
+    if (!requireAuthentication()) return
     this.shouldUseCurrentMealDefault = true
     const date = this.data.date
     const systemInfo = wx.getSystemInfoSync()
@@ -132,6 +133,7 @@ Page({
   },
 
   onShow() {
+    if (!requireAuthentication()) return
     const context = getMenuContextStore().consume('focus')
     if (context) {
       const activeMealIndex = mealIndexForType(context.mealType)
@@ -149,7 +151,8 @@ Page({
 
   async load() {
     if (this.data.loading) return
-    this.setData({ loading: true, error: '' })
+    const emptyMenus = normalizeMeals([])
+    this.setData({ loading: true, error: '', menus: emptyMenus, mealCards: buildMealCards(emptyMenus, this.data.activeMealIndex), totalItems: 0 })
     try {
       const rows = await request(`/menus?date=${this.data.date}`)
       let recipes = []

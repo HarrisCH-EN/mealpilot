@@ -1,4 +1,4 @@
-const { request } = require('../../utils/api')
+const { request, requireAuthentication } = require('../../utils/api')
 
 function getNavigationLayout() {
   const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -42,10 +42,12 @@ Page({
   },
 
   onLoad() {
+    if (!requireAuthentication()) return
     this.setData(getNavigationLayout())
   },
 
   onShow() {
+    if (!requireAuthentication()) return
     this.loadTags()
   },
 

@@ -1,4 +1,4 @@
-const { request, resolveCoverUrl, isNoActiveFamilyError } = require('../../utils/api')
+const { request, resolveCoverUrl, isNoActiveFamilyError, requireAuthentication } = require('../../utils/api')
 const { getMenuContextStore } = require('../../utils/menu-context')
 const { displayTags } = require('../../utils/tags')
 const {
@@ -40,6 +40,7 @@ Page({
   },
 
   onShow() {
+    if (!requireAuthentication()) return
     this.loadFavoriteIds()
     this.load()
   },
@@ -53,7 +54,7 @@ Page({
   },
 
   async load() {
-    this.setData({ loading: true, error: '' })
+    this.setData({ loading: true, error: '', recipes: [] })
     try {
       const favoriteIds = this.data.favoriteIds
       const apiCategory = this.data.category === '收藏' ? '全部' : this.data.category

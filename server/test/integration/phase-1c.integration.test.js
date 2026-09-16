@@ -616,18 +616,18 @@ integrationTest('real Feedback persists idempotently, updates Insights, respects
   assert.equal((await queryOne('SELECT COUNT(*) AS count FROM menu_feedback WHERE menu_item_id = ? AND member_id = ?', [menuItemId, fixture.members.memberA])).count, 1)
   assert.deepEqual((await queryOne('SELECT rating, comment FROM menu_feedback WHERE menu_item_id = ? AND member_id = ?', [menuItemId, fixture.members.memberA])), { rating: 5, comment: '更新评分' })
 
-  let insights = await requestAs(fixture.users.userA, '/api/insights')
+  let insights = await requestAs(fixture.users.userA, '/api/insights?days=30')
   assert.equal(insights.status, 200)
   assert.equal((await insights.json()).data.summary.averageRating, 5)
 
   const secondMemberFeedback = await requestAs(fixture.users.memberA2User, `/api/menu-items/${menuItemId}/feedback`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rating: 3 }) })
   assert.equal(secondMemberFeedback.status, 201)
-  insights = await requestAs(fixture.users.userA, '/api/insights')
+  insights = await requestAs(fixture.users.userA, '/api/insights?days=30')
   assert.equal((await insights.json()).data.summary.averageRating, 4)
 
   const familyBFeedback = await requestAs(fixture.users.userB, `/api/menu-items/${fixture.menus.menuBItem}/feedback`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rating: 1 }) })
   assert.equal(familyBFeedback.status, 201)
-  insights = await requestAs(fixture.users.userA, '/api/insights')
+  insights = await requestAs(fixture.users.userA, '/api/insights?days=30')
   assert.equal((await insights.json()).data.summary.averageRating, 4)
   for (const method of ['GET', 'PUT', 'DELETE']) {
     const response = await requestAs(fixture.users.userA, `/api/menu-items/${fixture.menus.menuBItem}/feedback`, { method, ...(method === 'PUT' ? { headers: { 'content-type': 'application/json' }, body: JSON.stringify({ rating: 5 }) } : {}) })
@@ -643,7 +643,7 @@ integrationTest('real Feedback persists idempotently, updates Insights, respects
   const removed = await requestAs(fixture.users.userA, `/api/menu-items/${menuItemId}/feedback`, { method: 'DELETE' })
   assert.equal(removed.status, 200)
   assert.equal((await removed.json()).data.status, 'removed')
-  insights = await requestAs(fixture.users.userA, '/api/insights')
+  insights = await requestAs(fixture.users.userA, '/api/insights?days=30')
   assert.equal((await insights.json()).data.summary.averageRating, 3)
   const removedAgain = await requestAs(fixture.users.userA, `/api/menu-items/${menuItemId}/feedback`, { method: 'DELETE' })
   assert.equal((await removedAgain.json()).data.status, 'already-absent')

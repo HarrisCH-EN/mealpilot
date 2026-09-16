@@ -4,11 +4,17 @@
 
 推荐是规则和可解释评分模型，不是 AI、机器学习或协同过滤系统。
 
+当前实现基线、数据库边界和交付状态见 [docs/CURRENT_VERSION.md](/E:/Database_Design/docs/CURRENT_VERSION.md)。
+
 ## 1. 当前功能
 
 - 正式微信登录：wx.login、Backend code2Session、OpenID 映射、JWT 会话。
 - 本地开发登录：受 DEV_AUTH_ENABLED 控制，仅用于开发和自动化测试。
-- Family：创建家庭、邀请码加入、成员与 Owner 展示、单 active Family。
+- 全局认证闸门：未登录只能停留在登录页，登录成功进入推荐页，退出或 401 失效回到登录页。
+- 全局用户资料：用户名、头像在账号、设置、家庭成员和成员忌口页面共用并持久化。
+- Family：创建家庭、邀请码加入、家庭改名、成员与 Owner/Admin 展示、单 active Family。
+- Family Admin：普通成员可读取/复制邀请码；管理员可改名、刷新邀请码、设置成员权限和移除成员；创建者可移交创建者身份。
+- Invite Code：密码学随机 6 位数字/大小写字母组合，ASCII 区分大小写，刷新后旧邀请码立即失效。
 - Recipe：列表、详情、新增、编辑、软删除、食材明细、步骤和封面。
 - Recipe Cover：本地上传 JPG、PNG、WebP，数据库保存相对 URL。
 - Menu：按日期和餐次查看、手动加菜、备注、幂等添加、删除 MenuItem。
@@ -56,7 +62,10 @@ database/
 ├─ 04_recommendation_refactor_r1.sql
 ├─ 05_recommendation_run_nullable_legacy.sql
 ├─ 06_recipe_tag_metadata_backfill.sql
-└─ 07_remove_cuisine_tags.sql
+├─ 07_remove_cuisine_tags.sql
+├─ 08_tag_system_v1.sql
+├─ 09_family-admin-role.sql
+└─ 10_family-invite-code.sql
 server/
 ├─ src/routes/
 ├─ src/services/
@@ -66,11 +75,15 @@ server/
 └─ test/integration/
 miniprogram/
 ├─ pages/
+│  ├─ login/
+│  ├─ account-management/
+│  └─ family-management/
 ├─ utils/
 ├─ config.js
 ├─ test/
 └─ scripts/run-tests.js
 docs/
+├─ CURRENT_VERSION.md
 ├─ FRONTEND_HANDOFF.md
 └─ superpowers/
 启动后端.bat
@@ -100,6 +113,7 @@ docs/
 | MYSQL_DATABASE | 业务数据库，通常为 smart_meal | 本地 Backend 必需 |
 | JWT_SECRET | JWT 签名密钥 | 必须配置为稳定随机值 |
 | DEV_AUTH_ENABLED | 是否启用 /api/auth/dev-login | 开发可为 true，生产建议 false |
+| NODE_ENV | 生产配置校验开关 | 生产部署建议设置为 production |
 | WECHAT_APP_ID | 微信小程序 AppID | 正式微信登录必需 |
 | WECHAT_APP_SECRET | 微信小程序 AppSecret | 仅 Backend，正式微信登录必需 |
 | RECIPE_UPLOAD_ROOT | 菜谱封面上传目录 | 可选 |
@@ -122,6 +136,7 @@ mysql -u root -p < database/00_create_user.sql
 cd E:\Database_Design\server
 npm install
 npm run db:init
+npm run db:migrate
 npm run db:seed
 ~~~
 
@@ -130,9 +145,9 @@ npm run db:seed
 - db:init：读取项目 database/01_schema.sql 创建数据库和表；当前新建 Schema 已包含 canonical Recommendation 结构。
 - db:seed：读取项目 database/02_seed.sql 写入本地演示数据。
 - 03_queries.sql：课程展示和统计用 SQL，不是启动必需步骤。
-- 04、05、06、07：针对已经存在的旧数据库执行的增量升级，顺序为先 04、05、06，再 07；06 用于按 seed 映射 insert-only 补齐现有 Recipe 的口味、饮食和烹饪方法标签，07 用于清理已废弃的菜系标签并收窄标签类型。它们不替代新环境的 01_schema.sql，也不应跳过数据库基础表初始化。
+- 04、05、06、07、08、09、10：针对已经存在的旧数据库执行的增量升级，按数据库演进顺序执行；06 用于按 seed 映射 insert-only 补齐现有 Recipe 的口味、饮食和烹饪方法标签，07 用于清理已废弃的菜系标签并收窄标签类型，08 用于启用系统/自定义标签，09 用于启用家庭管理员角色，10 用于让邀请码区分大小写。`npm run db:migrate` 当前只幂等校正家庭管理相关的旧库结构，不能替代 04～08 的完整历史迁移。
 
-当前 `01_schema.sql` 定义 17 张表；seed 包含 48 道 Recipe、食材和完整的 recipe_ingredients 关系，供本地演示和开发使用。
+当前 `01_schema.sql` 定义 19 张表；seed 包含 48 道 Recipe、食材和完整的 recipe_ingredients 关系，供本地演示和开发使用。
 
 ## 8. Backend 启动
 
@@ -142,6 +157,7 @@ npm install
 Copy-Item .env.example .env
 # 编辑 .env 后：
 npm run db:init
+npm run db:migrate
 npm run db:seed
 npm run dev
 ~~~
@@ -190,14 +206,20 @@ DEV_AUTH_ENABLED=true
 
 仅用于本地开发、自动化测试和没有微信运行环境的调试。正式产品入口应使用微信登录。
 
+### 强制登录闸门
+
+未登录、没有 Token 或 Token 失效时，小程序只展示 `pages/login/index`。业务页面进入时会先检查共享会话；普通请求收到 401 会清理会话并回到登录页。登录成功后统一进入 `pages/recommend/index`，退出登录直接 `reLaunch` 到登录页。
+
 ## 11. 核心 API
 
 基础地址为 API_BASE/api。除健康检查和登录接口外，业务接口需要 Bearer JWT。
 
 | 模块 | API |
 | --- | --- |
-| Auth | POST /auth/wechat-login、POST /auth/dev-login、GET /auth/me |
-| Family | POST /families、POST /families/join、GET /families/current |
+| Auth | POST /auth/wechat-login、POST /auth/dev-login、GET /auth/me、PATCH /auth/profile |
+| Profile | POST /uploads/avatar |
+| Family | POST /families、POST /families/join、GET /families/current、PATCH /families/current/name、GET /families/current/invite-code、POST /families/current/invite-code/refresh、POST /families/leave |
+| Family Admin | POST /families/current/transfer-ownership、PATCH /families/current/members/:memberId/role、DELETE /families/current/members/:memberId |
 | Recipe | GET/POST /recipes、GET/PUT/DELETE /recipes/:id |
 | Ingredient | GET /ingredients |
 | Menu | GET /menus、GET /menus/dates、POST /menus/items、DELETE /menus/items/:id |
@@ -205,8 +227,8 @@ DEV_AUTH_ENABLED=true
 | Restriction | GET/POST /family-members/:memberId/restrictions、DELETE .../:ingredientId |
 | Preference | GET /family-members/:memberId/preferences、PUT/DELETE .../:category |
 | Feedback | GET/PUT/DELETE /menu-items/:menuItemId/feedback |
-| Insights | GET /insights |
-| Upload | POST /uploads/recipe-cover |
+| Insights | GET /insights?days=7|30（默认 7 天，设置页可切换近 7 天/近 30 天） |
+| Upload | POST /uploads/avatar、POST /uploads/recipe-cover |
 
 统一响应：
 
@@ -226,7 +248,8 @@ DEV_AUTH_ENABLED=true
 
 - 一个 User 同一时间最多拥有一个 active Family membership。
 - Family 是 Recipe、Menu、RecommendationRun、Member 等家庭业务数据的隔离边界。
-- Owner 不能直接 leave；Owner transfer、Family delete 暂不实现。
+- Owner 不能直接 leave；创建者可将创建者身份转移给 active 成员，转移后原创建者降为普通成员并可退出家庭。Admin 可以管理成员、修改家庭名称和刷新邀请码；普通成员可以查看并复制邀请码。Family delete 暂不实现。
+- 邀请码由服务端随机生成 6 位数字/大小写字母组合，`families.invite_code` 使用 `ascii_bin` 区分大小写；管理员刷新后旧码立即失效。
 - Recipe 使用 soft delete；历史 MenuItem 使用 Dynamic Reference，仍可展示同 Family 的 deleted Recipe。
 - 新 Menu 的粒度是 family_id + menu_date + meal_type，同一槽位只能有一个 Menu。
 - 同一 Menu 中同一 Recipe 只能有一个 MenuItem；空 Menu 保留。
@@ -259,7 +282,7 @@ persisted candidates with score/reason snapshots
 POST /api/uploads/recipe-cover
 ~~~
 
-支持 JPG、JPEG、PNG、WebP，大小上限 5 MB。文件保存在本地 upload directory，服务端生成安全文件名；数据库只保存 /uploads/recipes/<filename> 相对 URL。
+支持 JPG、JPEG、PNG、WebP，大小上限 5 MB。文件保存在本地 upload directory，服务端生成安全文件名；数据库只保存 `/uploads/recipes/<filename>` 或 `/uploads/avatars/<filename>` 相对 URL。头像属于全局用户资料，菜谱封面属于家庭菜谱资料。
 
 上传失败时 Recipe 不会假装保存成功。孤儿图片清理、云对象存储和 CDN 属于 Deferred。
 
@@ -272,7 +295,7 @@ cd E:\Database_Design\server
 npm test
 ~~~
 
-当前基线：141 passed，0 failed，0 skipped。Direct 测试不连接、不读取、不写入 smart_meal。
+当前基线：196 passed，0 failed，0 skipped。Direct 测试不连接、不读取、不写入 smart_meal。
 
 ### Backend Real MySQL Integration
 
@@ -283,7 +306,7 @@ $env:PHASE_1C_ALLOW_DB_WRITES = '1'
 npm run test:integration
 ~~~
 
-当前声明测试：23 个。安全门禁要求测试库名称包含 test，且不得等于 MYSQL_DATABASE。Integration 可以 DROP/CREATE 和清理测试库，但绝对不能使用 smart_meal。没有安全环境时命令会 fail-fast，不会 fallback 到业务库。
+当前声明测试：46 passed，0 failed，0 skipped。安全门禁要求测试库名称包含 test，且不得等于 MYSQL_DATABASE。Integration 可以 DROP/CREATE 和清理测试库，但绝对不能使用 smart_meal。没有安全环境时命令会 fail-fast，不会 fallback 到业务库。
 
 ### Frontend
 
@@ -291,7 +314,7 @@ npm run test:integration
 npm test --prefix miniprogram
 ~~~
 
-当前基线：94 passed，0 failed，0 skipped。Frontend 测试使用 Node built-in runner，覆盖 contract、纯函数和 source-level checks，不等同于微信开发者工具真实 E2E。
+当前基线：147 passed，0 failed，0 skipped。Frontend 测试使用 Node built-in runner，覆盖 contract、纯函数和 source-level checks，不等同于微信开发者工具真实 E2E。
 
 ### 全部 Backend
 
@@ -330,9 +353,9 @@ FLUSH PRIVILEGES;
 
 这些不是当前业务 Bug，而是明确的后续范围：
 
-- 用户资料完善、头像上传、UnionID 数据模型。
+- UnionID 数据模型、刷新令牌和多设备 Session 中心。
 - Refresh Token、logout revoke、Token blacklist、多设备 Session 中心。
-- 多 Family、Family switch、Owner transfer、Owner leave、Family delete。
+- 多 Family、Family switch、Family delete。
 - Menu completed 流程。
 - Recommendation 行为学习、Feedback 学习、AI/LLM、协同过滤。
 - 云对象存储、CDN、orphan image cleanup。
@@ -340,12 +363,13 @@ FLUSH PRIVILEGES;
 
 ## 19. Production Prerequisites
 
-当前代码已经提供正式认证基础，但尚未完成生产部署。上线前仍需：
+当前代码已经提供正式认证、账号资料和家庭管理能力，但尚未完成生产部署。上线前仍需：
 
 1. 配置真实 WECHAT_APP_ID 和 WECHAT_APP_SECRET。
 2. 将 miniprogram/config.js production API 替换为正式 HTTPS 地址。
 3. 在微信后台配置 request 合法域名。
 4. 部署 Express、MySQL、上传目录和备份策略。
-5. 重新执行安全的 Real MySQL Integration 和现场小程序验收。
+5. 旧库按 04～08、09、10 的迁移顺序完成升级；新库按当前 schema 初始化。
+6. 重新执行安全的 Real MySQL Integration 和现场小程序验收。
 
 不要把当前 localhost 或 HTTPS placeholder 误认为已经部署。

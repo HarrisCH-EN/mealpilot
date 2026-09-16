@@ -10,6 +10,8 @@ const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8')
 const recommendation = fs.readFileSync(path.join(root, 'pages', 'recommend', 'index.js'), 'utf8')
 const settings = fs.readFileSync(path.join(root, 'pages', 'settings', 'index.js'), 'utf8')
 const settingsTemplate = fs.readFileSync(path.join(root, 'pages', 'settings', 'index.wxml'), 'utf8')
+const loginPage = fs.readFileSync(path.join(root, 'pages', 'login', 'index.js'), 'utf8')
+const loginTemplate = fs.readFileSync(path.join(root, 'pages', 'login', 'index.wxml'), 'utf8')
 const config = fs.readFileSync(path.join(root, 'config.js'), 'utf8')
 
 test('frontend centralizes API base and implements wx.login authentication', () => {
@@ -26,8 +28,8 @@ test('frontend has an explicit development-only dev login and no silent demo fal
   assert.match(api, /devLogin/) 
   assert.match(recommendation, /wechatLogin|ensureAuthenticated/)
   assert.doesNotMatch(recommendation, /await devLogin\(\)/)
-  assert.match(settings, /devLogin/)
-  assert.match(settingsTemplate, /allowDevLogin|本地开发登录/)
+  assert.match(loginPage, /devLogin/)
+  assert.match(loginTemplate, /allowDevLogin|本地开发登录/)
 })
 
 test('frontend session lifecycle persists and can clear JWT state', () => {
@@ -39,12 +41,13 @@ test('frontend session lifecycle persists and can clear JWT state', () => {
 
 test('production identity copy is not forced to say demo account', () => {
   assert.doesNotMatch(settingsTemplate, /settings-row__status">演示账号/) 
-  assert.match(settingsTemplate, /allowDevLogin/) 
+  assert.match(loginTemplate, /allowDevLogin/)
 })
 
 function createAuthHarness({ token = '', loginOutcomes = ['success'], meResponse = null } = {}) {
   const calls = { wxLogin: 0, wechatLogin: 0, me: 0 }
   const protectedAttempts = {}
+  const uploadAttempts = {}
   const states = []
   const storage = { token }
   const app = {
@@ -109,6 +112,17 @@ function createAuthHarness({ token = '', loginOutcomes = ['success'], meResponse
         }), 0)
       }
       throw new Error(`unexpected request: ${options.url}`)
+    },
+    uploadFile(options) {
+      const uploadName = options.url.endsWith('/uploads/avatar') ? 'avatar' : 'cover'
+      uploadAttempts[uploadName] = (uploadAttempts[uploadName] || 0) + 1
+      const expired = uploadAttempts[uploadName] === 1
+      return setTimeout(() => options.success({
+        statusCode: expired ? 401 : 200,
+        data: expired
+          ? { ok: false, message: '登录已失效' }
+          : { ok: true, data: { url: `/uploads/${uploadName}-retried.jpg` } }
+      }), 0)
     }
   }
   const module = { exports: {} }
@@ -128,7 +142,7 @@ function createAuthHarness({ token = '', loginOutcomes = ['success'], meResponse
     URL,
     encodeURIComponent
   })
-  return { api: module.exports, app, calls, states, protectedAttempts }
+  return { api: module.exports, app, calls, states, protectedAttempts, uploadAttempts }
 }
 
 test('initial authentication deduplicates concurrent callers', async () => {
@@ -199,9 +213,18 @@ test('concurrent 401 responses share one re-authentication and retry once', asyn
   assert.deepEqual(Object.values(protectedAttempts), [2, 2, 2])
 })
 
-test('settings exposes a formal retry entry separate from development login', () => {
-  assert.match(settingsTemplate, /bindtap="retryLogin"/)
-  assert.match(settings, /ensureAuthenticated\(\{\s*force:\s*true\s*\}\)/)
+test('upload retries once after an expired session and reuses the shared authentication recovery', async () => {
+  const { api, calls, uploadAttempts } = createAuthHarness({ token: 'expired-token' })
+  const result = await api.uploadFile('/tmp/cover.jpg')
+  assert.deepEqual(result, { url: '/uploads/cover-retried.jpg' })
+  assert.equal(uploadAttempts.cover, 2)
+  assert.equal(calls.wxLogin, 1)
+  assert.equal(calls.wechatLogin, 1)
+})
+
+test('settings relies on the global auth gate instead of exposing a login flow', () => {
+  assert.match(settings, /requireAuthentication/)
+  assert.doesNotMatch(settingsTemplate, /bindtap="retryLogin"|本地开发登录|还没有登录/)
 })
 
 test('production environment validation rejects unsafe API and dev login settings', () => {

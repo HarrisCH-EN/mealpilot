@@ -1,0 +1,94 @@
+<view class="page family-page">
+  <view class="family-nav" style="{{navStyle}}">
+    <view class="family-nav__slot family-nav__left-slot">
+      <button class="family-nav__button family-nav__back" aria-label="返回" bindtap="goBack">
+        <image class="family-nav__icon" src="/assets/icons/recipes/back.png" mode="aspectFit" />
+      </button>
+    </view>
+    <view class="family-nav__title">家庭信息</view>
+    <view class="family-nav__slot family-nav__spacer"></view>
+  </view>
+
+  <scroll-view class="family-main" scroll-y enhanced show-scrollbar="{{false}}" style="{{contentStyle}}">
+    <view wx:if="{{loading}}" class="family-state family-state--loading">
+      <view class="family-skeleton family-skeleton--hero"></view>
+      <view class="family-skeleton family-skeleton--card"></view>
+      <view class="family-skeleton family-skeleton--group"></view>
+    </view>
+
+    <view wx:elif="{{error && !family}}" class="family-state family-state--error">
+      <view class="family-state__icon">家</view>
+      <view class="family-state__title">家庭信息加载失败</view>
+      <view class="family-state__copy">{{error}}</view>
+      <button class="family-button family-button--primary" bindtap="loadFamily">重新加载</button>
+    </view>
+
+    <view wx:elif="{{!membership}}" class="family-state family-state--empty">
+      <view class="family-state__icon">家</view>
+      <view class="family-state__title">还没有加入家庭</view>
+      <view class="family-state__copy">创建家庭，或输入邀请码加入已有家庭。</view>
+      <view class="family-state__actions">
+        <button class="family-button family-button--primary" bindtap="createFamily">创建家庭</button>
+        <button class="family-button family-button--secondary" bindtap="joinFamily">加入家庭</button>
+      </view>
+    </view>
+
+    <view wx:else class="family-content">
+      <view class="family-hero">
+        <view class="family-hero__eyebrow">我的家庭</view>
+        <view class="family-hero__name-row">
+          <view class="family-hero__name">{{family.name}}</view>
+          <button wx:if="{{isAdmin}}" class="family-hero__edit" aria-label="编辑家庭名称" bindtap="renameFamily">
+            <image class="family-hero__edit-icon" src="/assets/icons/recipes/edit.png" mode="aspectFit" />
+          </button>
+        </view>
+        <view class="family-hero__meta">{{roleLabel}} · {{members.length}} 位成员</view>
+      </view>
+
+      <view class="family-section family-invite-section">
+        <view class="family-section__heading">
+          <view>
+            <view class="family-section__title">家庭邀请码</view>
+            <view class="family-section__subtitle">用于邀请家人加入这个家庭</view>
+          </view>
+          <image class="family-section__icon" src="/assets/icons/settings/invite.png" mode="aspectFit" />
+        </view>
+        <view class="family-invite" bindtap="copyInviteCode">
+          <text class="family-invite__code">{{inviteCode || '加载中'}}</text>
+          <text class="family-invite__action">复制</text>
+        </view>
+        <view wx:if="{{isAdmin}}" class="family-invite__refresh-wrap">
+          <button class="family-invite__refresh" loading="{{actionLoading}}" disabled="{{actionLoading}}" aria-label="刷新家庭邀请码" bindtap="refreshInviteCode">刷新邀请码</button>
+        </view>
+      </view>
+
+      <view class="family-section family-members-section">
+        <view class="family-section__heading">
+          <view>
+            <view class="family-section__title">家庭成员</view>
+            <view class="family-section__subtitle">查看成员与家庭权限</view>
+          </view>
+          <image class="family-section__icon" src="/assets/icons/settings/member.png" mode="aspectFit" />
+        </view>
+        <view class="family-member-list">
+          <view wx:for="{{members}}" wx:key="id" class="family-member">
+            <view class="family-member__avatar">
+              <image wx:if="{{item.avatarUrl}}" class="family-member__avatar-image" src="{{item.avatarUrl}}" mode="aspectFill" />
+              <text wx:else>{{item.initial}}</text>
+            </view>
+            <view class="family-member__copy">
+              <view class="family-member__name">{{item.displayName || item.nickname}}<text wx:if="{{item.isCurrent}}" class="family-member__self">我</text></view>
+              <view class="family-member__meta">{{item.roleLabel}}<text wx:if="{{item.isOwner}}"> · 创建者</text></view>
+            </view>
+            <button wx:if="{{isAdmin && !item.isOwner && !item.isCurrent}}" class="family-member__manage" data-member-id="{{item.id}}" bindtap="manageMember">管理</button>
+          </view>
+        </view>
+      </view>
+
+      <view class="family-actions">
+        <button class="family-button family-button--danger" loading="{{actionLoading}}" disabled="{{actionLoading || isOwner}}" bindtap="leaveFamily">{{isOwner ? '创建者暂不能退出' : '退出家庭'}}</button>
+        <view class="family-actions__note">创建者需要先移交创建者身份后才能退出家庭。</view>
+      </view>
+    </view>
+  </scroll-view>
+</view>

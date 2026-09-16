@@ -1,6 +1,7 @@
 const { apiBaseUrl, allowDevLogin } = require('../config')
 const app = getApp()
 let authPromise = null
+let loginRedirecting = false
 
 function updateAuthState(patch) {
   if (typeof app.setAuthState === 'function') app.setAuthState(patch)
@@ -21,7 +22,43 @@ function toSafeAuthError(error) {
   return safeError
 }
 
+function readToken() {
+  const token = app.globalData.token || wx.getStorageSync('token') || ''
+  if (token && !app.globalData.token) app.globalData.token = token
+  return token
+}
+
+function redirectToLogin() {
+  if (typeof app.clearSession === 'function') app.clearSession()
+  let currentRoute = ''
+  try {
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
+    currentRoute = pages.length ? String(pages[pages.length - 1].route || '') : ''
+  } catch (_error) {
+    currentRoute = ''
+  }
+  if (currentRoute === 'pages/login/index' || currentRoute === '/pages/login/index') {
+    loginRedirecting = false
+    return
+  }
+  if (loginRedirecting || typeof wx.reLaunch !== 'function') return
+  loginRedirecting = true
+  wx.reLaunch({ url: '/pages/login/index' })
+}
+
+function requireAuthentication() {
+  if (readToken() && app.globalData.authReady === true) return true
+  redirectToLogin()
+  return false
+}
+
 function request(path, method = 'GET', data = {}, options = {}) {
+  const isAuthRequest = /^\/auth\/(wechat-login|dev-login)$/.test(path)
+  if (!isAuthRequest && !options.skipAuth && !readToken()) {
+    const error = Object.assign(new Error('登录已失效，请重新登录'), { status: 401 })
+    redirectToLogin()
+    return Promise.reject(error)
+  }
   return new Promise((resolve, reject) => wx.request({
     url: apiBaseUrl + path,
     method,
@@ -38,6 +75,7 @@ function request(path, method = 'GET', data = {}, options = {}) {
           return resolve(await request(path, method, data, { ...options, skipReauth: true }))
         } catch (reauthError) {
           if (typeof app.clearSession === 'function') app.clearSession()
+          redirectToLogin()
           reject(reauthError)
           return
         }
@@ -63,11 +101,13 @@ async function performWechatLogin() {
     const data = await request('/auth/wechat-login', 'POST', { code }, { skipReauth: true })
     if (!data || !data.token) throw new Error('登录响应无效')
     app.setSession(data)
+    loginRedirecting = false
     updateAuthState({ authReady: true, authenticating: false, authError: null })
     return data
   } catch (error) {
     const safeError = toSafeAuthError(error)
     updateAuthState({ authReady: true, authenticating: false, authError: safeError.message })
+    if (safeError.status === 401) redirectToLogin()
     throw safeError
   }
 }
@@ -86,9 +126,23 @@ function reauthenticate() {
 }
 
 async function ensureAuthenticated(options = {}) {
-  if (options.force === true) return authenticateWithWechat()
-  const token = app.globalData.token || wx.getStorageSync('token') || ''
-  if (!token) return authenticateWithWechat()
+  if (options.force === true) {
+    try {
+      return await authenticateWithWechat()
+    } catch (error) {
+      if (Number(error && error.status) === 401) redirectToLogin()
+      throw error
+    }
+  }
+  const token = readToken()
+  if (!token) {
+    try {
+      return await authenticateWithWechat()
+    } catch (error) {
+      redirectToLogin()
+      throw error
+    }
+  }
   updateAuthState({ authenticating: true, authError: null })
   try {
     const session = await request('/auth/me')
@@ -98,6 +152,7 @@ async function ensureAuthenticated(options = {}) {
   } catch (error) {
     const safeError = toSafeAuthError(error)
     updateAuthState({ authReady: true, authenticating: false, authError: safeError.message })
+    if (safeError.status === 401) redirectToLogin()
     throw safeError
   }
 }
@@ -108,6 +163,7 @@ async function devLogin() {
   try {
     const data = await request('/auth/dev-login', 'POST', { openid: 'demo-owner', displayName: '演示用户' }, { skipReauth: true })
     app.setSession(data)
+    loginRedirecting = false
     updateAuthState({ authReady: true, authenticating: false, authError: null })
     return data
   } catch (error) {
@@ -116,22 +172,48 @@ async function devLogin() {
     throw safeError
   }
 }
-function uploadFile(filePath) {
+function parseUploadResponse(res, fallbackMessage) {
+  let body = {}
+  try {
+    body = typeof res.data === 'string' ? JSON.parse(res.data) : (res.data || {})
+  } catch (_error) {
+    return { error: new Error('上传响应格式不正确') }
+  }
+  if (res.statusCode >= 200 && res.statusCode < 300 && body.ok !== false) return { data: body.data }
+  const error = new Error(body.message || fallbackMessage)
+  error.status = res.statusCode
+  return { error }
+}
+
+function uploadRequest(path, filePath, fallbackMessage, options = {}) {
   return new Promise((resolve, reject) => wx.uploadFile({
-    url: apiBaseUrl + '/uploads/recipe-cover',
+    url: apiBaseUrl + path,
     filePath,
     name: 'file',
-    header: app.globalData.token ? { Authorization: 'Bearer ' + app.globalData.token } : {},
-    success: (res) => {
-      let body = {}
-      try { body = typeof res.data === 'string' ? JSON.parse(res.data) : (res.data || {}) } catch (_error) { reject(new Error('上传响应格式不正确')); return }
-      if (res.statusCode >= 200 && res.statusCode < 300 && body.ok !== false) return resolve(body.data)
-      const error = new Error(body.message || '上传失败')
-      error.status = res.statusCode
-      reject(error)
+    header: readToken() ? { Authorization: 'Bearer ' + readToken() } : {},
+    success: async (res) => {
+      const result = parseUploadResponse(res, fallbackMessage)
+      if (!result.error) return resolve(result.data)
+      if (result.error.status !== 401 || options.skipReauth) return reject(result.error)
+      try {
+        await reauthenticate()
+        resolve(await uploadRequest(path, filePath, fallbackMessage, { ...options, skipReauth: true }))
+      } catch (error) {
+        if (typeof app.clearSession === 'function') app.clearSession()
+        redirectToLogin()
+        reject(error)
+      }
     },
     fail: reject
   }))
+}
+
+function uploadFile(filePath) {
+  return uploadRequest('/uploads/recipe-cover', filePath, '上传失败')
+}
+
+function uploadAvatar(filePath) {
+  return uploadRequest('/uploads/avatar', filePath, '头像上传失败')
 }
 function resolveCoverUrl(coverUrl) {
   const value = String(coverUrl || '').trim()
@@ -140,4 +222,4 @@ function resolveCoverUrl(coverUrl) {
 function isNoActiveFamilyError(error) {
   return Number(error && error.status) === 403 && /创建或加入家庭|active Family/.test(String(error && error.message || ''))
 }
-module.exports = { request, wechatLogin, ensureAuthenticated, devLogin, uploadFile, resolveCoverUrl, isNoActiveFamilyError }
+module.exports = { request, wechatLogin, ensureAuthenticated, devLogin, uploadFile, uploadAvatar, resolveCoverUrl, isNoActiveFamilyError, redirectToLogin, requireAuthentication }

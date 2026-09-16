@@ -2,12 +2,19 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const {
   DEFAULT_STRUCTURE,
+  PREFERENCE_STORAGE_KEY,
+  PREP_RULER_TICK_WIDTH_PX,
   PREP_TIME_OPTIONS,
   STRUCTURE_LABELS,
+  buildPersistedPreferences,
   buildCanonicalRequest,
   normalizeSelectedTagIds,
   normalizePeopleCount,
   normalizeStructure,
+  prepRulerGeometry,
+  prepRulerScrollLeft,
+  prepRulerValueFromScrollLeft,
+  restorePersistedPreferences,
   structureDishCount,
   structureSummary,
   toggleTagId,
@@ -65,4 +72,50 @@ test('T4 keeps unified tag preferences session-scoped and toggleable', () => {
   assert.deepEqual(toggleTagId([], 8), [8])
   assert.deepEqual(toggleTagId([8], 8), [])
   assert.deepEqual(toggleTagId([8, 8], 3), [8, 3])
+})
+
+test('persistent recommendation preferences restore the last valid custom choices', () => {
+  const saved = buildPersistedPreferences({
+    peopleCount: 3,
+    maxPrepMinutes: 80,
+    structure: { meat: 2, vegetable: 1, soup: 1, staple: 1 },
+    preferences: { selectedTagIds: [9, '4', 9, 0, 'bad'] }
+  })
+
+  assert.equal(PREFERENCE_STORAGE_KEY, 'recommendation-preferences-v1')
+  assert.deepEqual(saved, {
+    version: 1,
+    peopleCount: 3,
+    maxPrepMinutes: 80,
+    structure: { meat: 2, vegetable: 1, soup: 1, staple: 1 },
+    preferences: { selectedTagIds: [9, 4] }
+  })
+  assert.deepEqual(restorePersistedPreferences(saved), saved)
+})
+
+test('persistent recommendation preferences fall back safely for missing or invalid storage', () => {
+  assert.deepEqual(restorePersistedPreferences(null), {
+    version: 1,
+    peopleCount: 2,
+    maxPrepMinutes: 60,
+    structure: { meat: 1, vegetable: 2, soup: 1, staple: 0 },
+    preferences: { selectedTagIds: [] }
+  })
+  assert.deepEqual(restorePersistedPreferences({ peopleCount: 99, maxPrepMinutes: 999, preferences: { selectedTagIds: ['7'] } }), {
+    version: 1,
+    peopleCount: 12,
+    maxPrepMinutes: 480,
+    structure: { meat: 1, vegetable: 2, soup: 1, staple: 0 },
+    preferences: { selectedTagIds: [7] }
+  })
+})
+
+test('preparation ruler centers its selected tick directly under the pointer', () => {
+  const geometry = prepRulerGeometry(375)
+  assert.equal(PREP_RULER_TICK_WIDTH_PX, 12)
+  assert.equal(geometry.viewportWidth, 343)
+  assert.equal(geometry.sidePadding, 165.5)
+  assert.equal(geometry.sidePadding + PREP_RULER_TICK_WIDTH_PX / 2, geometry.viewportWidth / 2)
+  assert.equal(prepRulerScrollLeft(60), 120)
+  assert.equal(prepRulerValueFromScrollLeft(120), 60)
 })

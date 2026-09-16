@@ -110,7 +110,7 @@
 
         <view class="recommend-form-section">
           <view class="recommend-section-heading">今晚想吃什么</view>
-          <view wx:if="{{tagLoading}}" class="recommend-tag-state">正在加载标签…</view>
+          <view wx:if="{{tagLoading || !tagReady}}" class="recommend-tag-state">正在加载标签…</view>
           <view wx:elif="{{tagError}}" class="recommend-tag-state recommend-tag-state--error">{{tagError}}<text class="recommend-tag-retry" bindtap="retryTags">重试</text></view>
           <view wx:elif="{{tagOptions.length}}" class="recommend-tag-row">
             <view wx:for="{{tagOptions}}" wx:key="id" class="recommend-chip {{item.selected ? 'recommend-chip--selected' : ''}}" data-tag-id="{{item.id}}" bindtap="togglePreferenceTag">{{item.name}}</view>

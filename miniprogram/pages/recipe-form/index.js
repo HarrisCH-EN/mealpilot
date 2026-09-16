@@ -1,4 +1,4 @@
-const { request, uploadFile, resolveCoverUrl } = require('../../utils/api')
+const { request, uploadFile, resolveCoverUrl, requireAuthentication } = require('../../utils/api')
 const {
   parseRecipeSteps,
   serializeIngredients,
@@ -111,11 +111,13 @@ Page({
   },
 
   onLoad(options) {
+    if (!requireAuthentication()) return
     const id = Number(options.id || 0)
     this.setData({ id, isEdit: Boolean(id), ...getNavigationLayout() }, () => this.initialize())
   },
 
   onShow() {
+    if (!requireAuthentication()) return
     if (!this._tagManagementOpened) return
     this._tagManagementOpened = false
     this.loadTags()

@@ -1,5 +1,6 @@
 {
   "pages": [
+    "pages/login/index",
     "pages/recommend/index",
     "pages/menu/index",
     "pages/recipes/index",
@@ -8,7 +9,9 @@
     "pages/recipe-form/index",
     "pages/tag-management/index",
     "pages/restrictions/index",
-    "pages/about/index"
+    "pages/about/index",
+    "pages/family-management/index",
+    "pages/account-management/index"
   ],
   "window": {
     "navigationBarTitleText": "",

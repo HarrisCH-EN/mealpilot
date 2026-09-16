@@ -43,6 +43,13 @@ test('frontend request errors preserve HTTP status for accurate UX mapping', () 
   assert.match(apiScript, /error\.status\s*=\s*res\.statusCode/)
 })
 
+test('menu and recipe reloads clear stale collections before requesting fresh data', () => {
+  const menuScript = read('pages', 'menu', 'index.js')
+  const recipesScript = read('pages', 'recipes', 'index.js')
+  assert.match(menuScript, /async load\(\)\s*\{[\s\S]*?const emptyMenus = normalizeMeals\(\[\]\)[\s\S]*?this\.setData\(\{ loading: true, error: '', menus: emptyMenus, mealCards: buildMealCards\(emptyMenus, this\.data\.activeMealIndex\), totalItems: 0 \}\)/)
+  assert.match(recipesScript, /async load\(\)\s*\{[\s\S]*?this\.setData\(\{ loading: true, error: '', recipes: \[\] \}\)/)
+})
+
 test('recommendation presentation keeps the backend explanation instead of replacing it', () => {
   const recommendScript = read('pages', 'recommend', 'index.js')
   assert.match(recommendScript, /reason: String\(item\.reason \|\| '符合本次搭配条件'\)/)

@@ -1,5 +1,7 @@
 # 菜谱模块第二轮视觉 QA
 
+> 历史视觉审计记录：本文记录 2026-09-05 的截图和环境，保留用于追溯。当前功能、测试和交付状态以 [docs/CURRENT_VERSION.md](/E:/Database_Design/docs/CURRENT_VERSION.md) 与 [交付前审计报告](/E:/Database_Design/docs/reports/2026-09-16-release-audit.md) 为准。
+
 ## 对照输入
 
 - 视觉基准：`C:\Users\CHQ\AppData\Local\Temp\codex-clipboard-ac30f1b5-72cc-4a70-832d-9d4d4b6e9348.png`（1312 × 1199）

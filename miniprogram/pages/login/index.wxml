@@ -1,0 +1,28 @@
+<view class="login-page" style="{{navStyle}}">
+  <view wx:if="{{checkingSession}}" class="login-checking">正在检查登录状态…</view>
+  <view wx:else class="login-shell">
+    <view class="login-brand">
+      <image class="login-brand__logo" src="/assets/brand/logo.png" mode="aspectFit" />
+      <view class="login-brand__name">饭有谱</view>
+      <view class="login-brand__subtitle">家庭智能配餐</view>
+    </view>
+
+    <view class="login-card">
+      <view class="login-card__title">欢迎回来</view>
+      <view class="login-card__copy">登录后继续管理家庭餐桌</view>
+
+      <button class="login-option login-option--wechat" loading="{{loading}}" disabled="{{loading}}" bindtap="loginWithWechat">
+        <image class="login-option__icon" src="/assets/icons/settings/account.png" mode="aspectFit" />
+        <text>微信登录</text>
+      </button>
+
+      <button wx:if="{{allowDevLogin}}" class="login-option login-option--dev" loading="{{loading}}" disabled="{{loading}}" bindtap="loginWithDev">
+        <text>本地开发登录</text>
+      </button>
+
+      <view wx:if="{{error}}" class="login-error">{{error}}</view>
+    </view>
+
+    <view class="login-footer">登录即表示你同意使用饭有谱管理家庭信息</view>
+  </view>
+</view>

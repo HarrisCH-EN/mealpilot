@@ -65,6 +65,18 @@ function makeDatabase({ memberships = [], families = [] } = {}) {
       return [family ? [{ id: family.id }] : []]
     }
 
+    if (/SELECT id, status FROM family_members WHERE family_id = \? AND user_id = \? FOR UPDATE/i.test(sql)) {
+      const member = state.memberships.find((item) => item.family.id === params[0] && item.user_id === params[1])
+      return [member ? [{ id: member.id, status: member.status }] : []]
+    }
+
+    if (/UPDATE family_members SET status = 'active'/i.test(sql)) {
+      const [nickname, memberId] = params
+      const member = state.memberships.find((item) => item.id === memberId)
+      if (member) Object.assign(member, { nickname, role: 'member', status: 'active' })
+      return [{ affectedRows: member ? 1 : 0 }]
+    }
+
     if (/INSERT INTO families/i.test(sql)) {
       const [name, inviteCode, ownerUserId] = params
       const family = { id: state.nextFamilyId++, name, invite_code: inviteCode, owner_user_id: ownerUserId }
@@ -271,6 +283,7 @@ test('create family succeeds when the user has no active family', async () => {
     })
     assert.equal(response.status, 201)
     assert.equal(database.state.memberships.filter((member) => member.status === 'active').length, 1)
+    assert.equal(database.state.memberships[0].role, 'owner')
   })
 })
 

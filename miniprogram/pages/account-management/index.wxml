@@ -1,0 +1,46 @@
+<view class="page account-page" style="{{navStyle}}">
+  <view class="account-header">
+    <view class="account-header__back" bindtap="goBack" aria-label="返回">
+      <image class="account-header__back-icon" src="/assets/icons/recipes/back.png" mode="aspectFit" />
+    </view>
+    <view class="account-header__title">账号管理</view>
+  </view>
+
+  <view class="account-content">
+    <view class="account-profile">
+      <view class="account-profile__avatar">
+        <image wx:if="{{user.avatar_url}}" class="account-profile__avatar-image" src="{{avatarUrl}}" mode="aspectFill" />
+        <text wx:else>{{userInitial}}</text>
+      </view>
+      <view class="account-profile__copy">
+        <view class="account-profile__name">{{user.display_name || '微信用户'}}</view>
+        <view class="account-profile__meta">{{roleLabel}}</view>
+      </view>
+      <button class="account-profile__edit" loading="{{profileUpdating}}" disabled="{{profileUpdating}}" bindtap="editProfile" aria-label="编辑个人资料">
+        <image class="account-profile__edit-icon" src="/assets/icons/recipes/edit.png" mode="aspectFit" />
+      </button>
+    </view>
+
+    <view class="account-section">
+      <view class="account-section__title">登录信息</view>
+      <view class="account-group">
+        <view class="account-row">
+          <view class="account-row__copy">登录方式</view>
+          <text class="account-row__value">{{loginType}}</text>
+        </view>
+        <view class="account-row">
+          <view class="account-row__copy">家庭权限</view>
+          <text class="account-row__value">{{roleLabel}}</text>
+        </view>
+      </view>
+    </view>
+
+    <view class="account-section">
+      <view class="account-section__title">账号操作</view>
+      <view class="account-group">
+        <button class="account-logout" loading="{{loggingOut}}" disabled="{{loggingOut}}" bindtap="logout">退出登录</button>
+      </view>
+      <view class="account-note">退出登录只会清除当前设备的登录状态，不会删除家庭和菜单数据。</view>
+    </view>
+  </view>
+</view>
