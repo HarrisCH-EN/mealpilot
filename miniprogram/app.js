@@ -1,19 +1,3 @@
-const LOGIN_PAGE = '/pages/login/index'
-
-function getCurrentRoute() {
-  try {
-    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
-    return pages.length ? `/${String(pages[pages.length - 1].route || '')}` : ''
-  } catch (_error) {
-    return ''
-  }
-}
-
-function relaunchIfNeeded(url) {
-  if (typeof wx.reLaunch !== 'function' || getCurrentRoute() === url) return
-  wx.reLaunch({ url })
-}
-
 App({
   globalData: {
     token: '',
@@ -26,11 +10,6 @@ App({
   },
   onLaunch() {
     this.globalData.token = wx.getStorageSync('token') || ''
-  },
-  onShow() {
-    if (this.globalData.initialRouteResolved) return
-    this.globalData.initialRouteResolved = true
-    relaunchIfNeeded(LOGIN_PAGE)
   },
   setAuthState(patch = {}) { Object.assign(this.globalData, patch) },
   setSession(data = {}) {

@@ -53,11 +53,19 @@ test('restriction page loads and renders every member restriction as grouped sec
 
   assert.match(script, /Promise\.all/)
   assert.match(script, /restrictionSections/)
-  assert.match(script, /targetMemberId/)
+  assert.match(script, /const activeMembers = members\.map/)
+  assert.doesNotMatch(script, /scopedMembers/)
+  assert.doesNotMatch(script, /members\.filter\(\(member\) => Number\(member\.id\) === currentMemberId\)/)
   assert.match(template, /wx:for="{{restrictionSections}}"/)
   assert.match(template, /item\.restrictions/)
   assert.match(template, /data-member-id="{{item\.memberId}}"/)
   assert.match(template, /bindtap="openAdd"/)
+})
+
+test('restriction page clears stale member data before and after a failed reload', () => {
+  const script = fs.readFileSync(path.join(root, 'pages', 'restrictions', 'index.js'), 'utf8')
+  assert.match(script, /this\.setData\(\{[\s\S]*activeMembers:\s*\[\][\s\S]*restrictionSections:\s*\[\][\s\S]*restrictionTotal:\s*0/)
+  assert.match(script, /catch \(error\) \{[\s\S]*this\.setData\(\{[\s\S]*activeMembers:\s*\[\][\s\S]*restrictionSections:\s*\[\][\s\S]*restrictionTotal:\s*0/)
 })
 
 test('restriction groups use the compact numbered-list presentation', () => {

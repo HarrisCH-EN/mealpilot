@@ -92,10 +92,21 @@ test('owner can read another active family member restrictions', async () => {
   })
 })
 
-test('normal member cannot manage another family member restriction', async () => {
+test('normal member can read another active family member restrictions', async () => {
   const database = makeDatabase()
   await withServer(makeApp(database, { user_id: 2, family_id: 1, member_id: 102, role: 'member' }), async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/family-members/101/restrictions`)
+    assert.equal(response.status, 200)
+    assert.deepEqual((await response.json()).data, [])
+  })
+})
+
+test('normal member cannot manage another family member restriction', async () => {
+  const database = makeDatabase()
+  await withServer(makeApp(database, { user_id: 2, family_id: 1, member_id: 102, role: 'member' }), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/family-members/101/restrictions`, {
+      method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ingredientId: 2 })
+    })
     assert.equal(response.status, 403)
   })
 })

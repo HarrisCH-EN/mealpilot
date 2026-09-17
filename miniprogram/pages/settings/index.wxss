@@ -60,8 +60,8 @@ page {
 .settings-insight-card__title { min-width: 0; flex: 1; color: var(--settings-text-primary); font-size: 27rpx; font-weight: 700; white-space: nowrap; }
 .settings-insight-range { display: flex; flex: 0 0 auto; gap: 4rpx; }
 .settings-insight-range__button { display: inline-flex; width: auto !important; min-width: 0 !important; height: 36rpx; flex: 0 0 auto; align-items: center; justify-content: center; margin: 0; padding: 0 4rpx; border: 1rpx solid rgba(184, 90, 112, .28); border-radius: 18rpx; background: transparent; color: var(--settings-text-secondary); font-size: 24rpx; line-height: 34rpx; white-space: nowrap; }
-.settings-insight-range__button--7 { width: 82rpx !important; }
-.settings-insight-range__button--30 { width: 92rpx !important; }
+.settings-insight-range__button--7 { width: 62rpx !important; }
+.settings-insight-range__button--30 { width: 76rpx !important; }
 .settings-insight-range__button::after { border: 0; }
 .settings-insight-range__button--active { border-color: var(--settings-accent); background: var(--settings-accent-soft); color: var(--settings-accent); font-weight: 600; }
 .settings-insight-card__summary { margin-top: 7rpx; color: var(--settings-text-secondary); font-size: 22rpx; }

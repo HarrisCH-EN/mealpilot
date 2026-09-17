@@ -16,7 +16,7 @@ async function findActiveMember(database, memberId, familyId) {
 
 function assertCanManage(request, member) {
   const currentMemberId = Number(request.membership.member_id)
-  if (request.membership.role !== 'owner' && currentMemberId !== Number(member.id)) {
+  if (!['owner', 'admin'].includes(request.membership.role) && currentMemberId !== Number(member.id)) {
     throw new HttpError(403, '无权管理该成员的忌口')
   }
 }
@@ -53,7 +53,6 @@ function router({ database, auth, family }) {
   result.get('/family-members/:memberId/restrictions', auth, family, asyncRoute(async (request, response) => {
     requirePositiveInteger(request.params.memberId, '成员ID')
     const member = await findActiveMember(database, Number(request.params.memberId), request.membership.family_id)
-    assertCanManage(request, member)
     response.json({ ok: true, data: await readRestrictions(database, member.id) })
   }))
 

@@ -41,9 +41,13 @@ Page({
   },
 
   onLoad(options = {}) {
+    this._redirectUrl = getRedirectUrl(options.redirect)
+  },
+
+  onReady() {
     this.setData({
       navStyle: getNavigationLayout(),
-      redirectUrl: getRedirectUrl(options.redirect)
+      redirectUrl: this._redirectUrl || '/pages/recommend/index'
     })
     this.restoreSession()
   },
@@ -77,7 +81,9 @@ Page({
     this.setData({ loading: true, error: '' })
     try {
       await loginAction()
-      this.redirectToHome()
+      const navigate = () => this.redirectToHome()
+      if (typeof wx.nextTick === 'function') wx.nextTick(navigate)
+      else setTimeout(navigate, 100)
     } catch (error) {
       this.setData({ loading: false, error: error.message || fallbackMessage })
     }

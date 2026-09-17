@@ -20,14 +20,14 @@ const protectedPages = [
   'account-management'
 ]
 
-test('the app starts behind the login gate and routes authenticated users to recommendations', () => {
+test('the app starts on the login page without a launch-time relaunch', () => {
   const appConfig = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
   const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8')
   const login = fs.readFileSync(path.join(root, 'pages', 'login', 'index.js'), 'utf8')
 
   assert.equal(appConfig.pages[0], 'pages/login/index')
-  assert.match(app, /const LOGIN_PAGE = ['"]\/pages\/login\/index['"]/) 
-  assert.match(app, /relaunchIfNeeded\(LOGIN_PAGE\)/)
+  assert.match(app, /wx\.getStorageSync\(['"]token['"]\)/)
+  assert.doesNotMatch(app, /wx\.reLaunch\(/)
   assert.match(login, /ensureAuthenticated/)
   assert.match(login, /\/pages\/recommend\/index/)
   assert.match(login, /if \(this\._redirecting\) return/)

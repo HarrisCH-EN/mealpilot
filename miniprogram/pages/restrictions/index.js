@@ -65,7 +65,13 @@ Page({
   async load() {
     if (this._loading) return
     this._loading = true
-    this.setData({ loading: true, error: '' })
+    this.setData({
+      loading: true,
+      error: '',
+      activeMembers: [],
+      restrictionSections: [],
+      restrictionTotal: 0
+    })
     try {
       const session = await request('/auth/me')
       const membership = session.membership || null
@@ -75,22 +81,23 @@ Page({
 
       const family = await request('/families/current')
       const members = (family.members || []).filter((member) => member.status === undefined || member.status === 'active')
-      const currentMemberId = Number(membership.member_id || membership.memberId)
-      const scopedMembers = membership.role === 'owner'
-        ? members
-        : members.filter((member) => Number(member.id) === currentMemberId)
-      const activeMembers = scopedMembers.map((member) => ({
+      const activeMembers = members.map((member) => ({
         ...member,
         avatarUrl: resolveCoverUrl(member.avatarUrl),
         initial: this.memberInitial(member)
       }))
-      if (!activeMembers.length) throw new Error('当前没有可管理的家庭成员')
+      if (!activeMembers.length) throw new Error('当前没有可用的家庭成员')
 
       this.setData({ activeMembers })
       await this.loadRestrictions(activeMembers)
       this._loaded = true
     } catch (error) {
-      this.setData({ error: error.message || '成员忌口加载失败', restrictionSections: [], restrictionTotal: 0 })
+      this.setData({
+        error: error.message || '成员忌口加载失败',
+        activeMembers: [],
+        restrictionSections: [],
+        restrictionTotal: 0
+      })
     } finally {
       this.setData({ loading: false })
       this._loading = false
