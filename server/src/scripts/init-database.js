@@ -11,6 +11,6 @@ async function run() {
   await connection.query(sql)
   await ensureFamilyManagementSchema(connection)
   await connection.end()
-  console.log('smart_meal schema initialized')
+  console.log('mealpilot schema initialized')
 }
 run().catch((error) => { console.error(error.message); process.exitCode = 1 })

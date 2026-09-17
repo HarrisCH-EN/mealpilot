@@ -4,7 +4,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 
 test('root launcher enters server, validates setup, and starts the development server', () => {
-  const launcherPath = path.resolve(__dirname, '..', '..', '启动后端.bat')
+  const launcherPath = path.resolve(__dirname, '..', '..', 'start-mealpilot-api.bat')
   assert.equal(fs.existsSync(launcherPath), true, '应提供根目录双击启动脚本')
 
   const launcher = fs.readFileSync(launcherPath, 'utf8')

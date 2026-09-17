@@ -1,4 +1,4 @@
-USE smart_meal;
+USE mealpilot;
 
 INSERT INTO users (openid, display_name) VALUES ('demo-owner', '演示用户')
 ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id);

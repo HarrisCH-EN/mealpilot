@@ -543,7 +543,7 @@ SELECT COUNT(DISTINCT m.id) AS menuCount, COUNT(mi.id) AS itemCount, COALESCE(AV
 | 测试项目 | 预期结果 | 实际结果 | 是否通过 |
 | --- | --- | --- | --- |
 | Backend direct tests | 所有直接测试通过 | 196 passed，0 failed | 通过 |
-| Backend Real MySQL integration | 独立测试库约束、事务、并发和家庭隔离 | 46 passed，0 failed，使用 `smart_meal_test` | 通过 |
+| Backend Real MySQL integration | 独立测试库约束、事务、并发和家庭隔离 | 46 passed，0 failed，使用 `mealpilot_test` | 通过 |
 | Frontend tests | 页面契约和纯函数检查 | 147 passed，0 failed | 通过 |
 | JavaScript syntax check | JavaScript 语法检查通过 | passed | 通过 |
 | git diff --check | 不存在空白错误 | passed | 通过 |

@@ -1,4 +1,4 @@
-USE smart_meal;
+USE mealpilot;
 
 ALTER TABLE recommendation_runs
   MODIFY COLUMN max_cook_minutes SMALLINT UNSIGNED NULL,

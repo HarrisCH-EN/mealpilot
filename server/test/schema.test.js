@@ -21,7 +21,7 @@ test('schema defines the required relational tables and menu uniqueness constrai
   assert.match(inviteMigration, /CHAR\(6\).*CHARACTER SET ascii COLLATE ascii_bin/i)
 })
 
-test('database migration entry point applies ordered history without forcing the smart_meal database', () => {
+test('database migration entry point applies ordered history without forcing the mealpilot database', () => {
   const migrationRunnerPath = path.join(__dirname, '../src/scripts/migration-runner.js')
   assert.equal(fs.existsSync(migrationRunnerPath), true, 'migration runner must exist')
   const runner = fs.readFileSync(migrationRunnerPath, 'utf8')
@@ -47,6 +47,6 @@ test('database migration entry point applies ordered history without forcing the
     '09_family-admin-role.sql',
     '10_family-invite-code.sql'
   ])
-  assert.equal(normalizeMigrationSql('USE smart_meal;\nSELECT 1;'), 'SELECT 1;')
+  assert.equal(normalizeMigrationSql('USE mealpilot;\nSELECT 1;'), 'SELECT 1;')
   assert.match(runner, /tag_type|recipe_tags.*tag_id/s)
 })

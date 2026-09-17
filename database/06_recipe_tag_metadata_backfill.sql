@@ -1,4 +1,4 @@
-USE smart_meal;
+USE mealpilot;
 
 -- Insert-only backfill copied from the controlled recipe metadata in 02_seed.sql.
 -- The current business database was verified against the seed: recipe IDs 1-48

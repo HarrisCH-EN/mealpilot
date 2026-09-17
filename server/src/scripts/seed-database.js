@@ -8,6 +8,6 @@ async function run() {
   const connection = await mysql.createConnection({ ...config.mysql, multipleStatements: true })
   await connection.query(await fs.readFile(path.join(__dirname, '../../../database/02_seed.sql'), 'utf8'))
   await connection.end()
-  console.log('smart_meal sample data seeded')
+  console.log('mealpilot sample data seeded')
 }
 run().catch((error) => { console.error(error.message); process.exitCode = 1 })

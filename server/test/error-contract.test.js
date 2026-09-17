@@ -100,7 +100,7 @@ test('unexpected database errors are returned without SQL or constraint details'
       if (/FROM users WHERE id =/i.test(sql)) return [[user]]
       if (/FROM family_members fm JOIN families f/i.test(sql)) return [[{ ...membership, family_name: '家庭 A' }]]
       if (/FROM recipes/i.test(sql)) {
-        const error = new Error("ER_NO_SUCH_TABLE: Table 'smart_meal.secret_table' doesn't exist")
+        const error = new Error("ER_NO_SUCH_TABLE: Table 'mealpilot.secret_table' doesn't exist")
         error.code = 'ER_NO_SUCH_TABLE'
         error.sqlMessage = 'secret_table details'
         throw error
@@ -114,6 +114,6 @@ test('unexpected database errors are returned without SQL or constraint details'
     assert.equal(response.status, 500)
     const data = await response.json()
     assert.equal(data.message, '服务器发生错误')
-    assert.doesNotMatch(data.message, /SQL|constraint|smart_meal|secret_table/i)
+    assert.doesNotMatch(data.message, /SQL|constraint|mealpilot|secret_table/i)
   })
 })

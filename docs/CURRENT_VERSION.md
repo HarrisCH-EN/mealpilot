@@ -23,7 +23,7 @@
 
 ## 数据库边界
 
-运行中的后端业务库是 `smart_meal`。`smart_meal_test` 只用于 Real MySQL Integration 测试，测试 runner 可以在该库内重建和清理数据，不应在生产环境使用。
+运行中的后端业务库是 `mealpilot`。`mealpilot_test` 只用于 Real MySQL Integration 测试，测试 runner 可以在该库内重建和清理数据，不应在生产环境使用。
 
 当前 `database/01_schema.sql` 定义 19 张表，包含角色、大小写敏感邀请码、标签、推荐候选、菜单和反馈结构。新库使用 `00_create_user.sql`、`01_schema.sql` 和按需执行的 `02_seed.sql`；已有旧库必须按数据库演进顺序执行 `04`～`08`，再执行 `09_family-admin-role.sql`、`10_family-invite-code.sql` 或使用后端的 `npm run db:migrate` 完成家庭管理结构校正。`npm run db:migrate` 当前只负责家庭管理结构预检，不替代全部历史迁移。
 
@@ -47,7 +47,7 @@
 | 验证项 | 结果 |
 | --- | --- |
 | Backend Direct | 196/196 通过 |
-| Real MySQL Integration | 46/46 通过，使用 `smart_meal_test` |
+| Real MySQL Integration | 46/46 通过，使用 `mealpilot_test` |
 | 小程序源代码测试 | 147/147 通过 |
 | JavaScript 语法检查 | 后端 42 个文件、小程序非测试代码 21 个文件通过 |
 | 业务库只读完整性 | 外键孤儿、跨家庭关系、重复 active 家庭关系、空家庭名称均为 0 |
@@ -57,4 +57,4 @@
 
 ## 上线前仍需配置
 
-需要替换小程序 production API placeholder、配置 HTTPS 和微信 request 合法域名，生产环境关闭开发登录，部署后端和 `smart_meal`，为上传目录、密钥、备份和监控建立生产配置，并完成开发者工具和真机的登录、家庭、头像、封面、菜单、推荐、反馈、退出登录验收。
+需要替换小程序 production API placeholder、配置 HTTPS 和微信 request 合法域名，生产环境关闭开发登录，部署后端和 `mealpilot`，为上传目录、密钥、备份和监控建立生产配置，并完成开发者工具和真机的登录、家庭、头像、封面、菜单、推荐、反馈、退出登录验收。

@@ -1,4 +1,4 @@
-CREATE DATABASE IF NOT EXISTS smart_meal CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-CREATE USER IF NOT EXISTS 'smart_meal_app'@'localhost' IDENTIFIED BY 'smart_meal_local_2026';
-GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES ON smart_meal.* TO 'smart_meal_app'@'localhost';
+CREATE DATABASE IF NOT EXISTS mealpilot CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+CREATE USER IF NOT EXISTS 'mealpilot_app'@'localhost' IDENTIFIED BY 'smart_meal_local_2026';
+GRANT SELECT, INSERT, UPDATE, DELETE, CREATE, ALTER, INDEX, REFERENCES ON mealpilot.* TO 'mealpilot_app'@'localhost';
 FLUSH PRIVILEGES;

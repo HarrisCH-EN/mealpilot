@@ -118,13 +118,13 @@ Expected: all frontend tests pass.
 - Modify: `server/test/schema.test.js`
 
 **Interfaces:**
-- `migration-runner.js` exports ordered migration metadata, SQL normalization that removes hard-coded `USE smart_meal`, and an async runner accepting a MySQL connection and database root.
+- `migration-runner.js` exports ordered migration metadata, SQL normalization that removes hard-coded `USE mealpilot`, and an async runner accepting a MySQL connection and database root.
 - The runner creates `schema_migrations`, applies `04` through `10` in order, records applied/skipped migrations, skips legacy tag backfill/removal when the current `recipe_tags` table is already in V1 form, and uses a named MySQL advisory lock.
-- The configured `MYSQL_DATABASE` is the only target database; migration files cannot silently redirect to `smart_meal`.
+- The configured `MYSQL_DATABASE` is the only target database; migration files cannot silently redirect to `mealpilot`.
 
 - [ ] **Step 1: Write migration-runner contract tests**
 
-Test ordered file discovery, removal of hard-coded `USE smart_meal`, and schema-aware skip selection for a V1 `recipe_tags(recipe_id, tag_id)` table.
+Test ordered file discovery, removal of hard-coded `USE mealpilot`, and schema-aware skip selection for a V1 `recipe_tags(recipe_id, tag_id)` table.
 
 - [ ] **Step 2: Run the migration tests and confirm they fail**
 
@@ -195,7 +195,7 @@ Require zero failures.
 
 - [ ] **Step 1: Run Mini Program syntax and full tests**
 - [ ] **Step 2: Run Backend Direct tests**
-- [ ] **Step 3: Run Backend Integration tests against `smart_meal_test` without touching `smart_meal`**
+- [ ] **Step 3: Run Backend Integration tests against `mealpilot_test` without touching `mealpilot`**
 - [ ] **Step 4: Run `npm audit --omit=dev --audit-level=moderate`**
 - [ ] **Step 5: Run `git diff --check` and inspect the final diff**
 - [ ] **Step 6: Report any remaining release-only blocker requiring the real HTTPS API URL or manual WeChat Developer Tools/device interaction**

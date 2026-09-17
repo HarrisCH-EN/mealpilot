@@ -652,7 +652,7 @@ FOREIGN KEY(recipe_id) REFERENCES recipes(id) ON DELETE RESTRICT
 
 ### R5：真实数据库验证与课程交付验收
 
-- 在独立 `smart_meal_test` 上验证新增 FK、UNIQUE、Candidate 内不重复、Apply rollback、并发 Apply、Family isolation、历史 legacy compatibility。
+- 在独立 `mealpilot_test` 上验证新增 FK、UNIQUE、Candidate 内不重复、Apply rollback、并发 Apply、Family isolation、历史 legacy compatibility。
 - 验证 score/reason 与持久化快照一致，验证近期菜单惩罚和 overlap 放宽规则。
 - 更新数据库说明、ER 图、数据字典、API 文档和演示脚本。
 - 验收：新旧 contract、Schema constraint、真实 MySQL integration 和课程演示路径均有可追溯证据。
@@ -681,7 +681,7 @@ R0 期间执行了不连接 MySQL 的验证：
 | Backend Direct runner | 26 个非 integration 测试文件被收集 |
 | Frontend runner | 9 个 `.test.js` 文件被递归收集 |
 | Real MySQL integration | 本阶段未运行 |
-| 业务数据库 `smart_meal` 写入 | 未执行 |
+| 业务数据库 `mealpilot` 写入 | 未执行 |
 
 Backend `server/src/scripts/run-direct-tests.js` 会递归收集 `server/test`，排除 `server/test/integration`，再调用 Node test runner。`npm test` 实际等于 `npm run test:direct`，不代表 Real MySQL integration。Integration 由单独的 `npm run test:integration` 启动，并具有测试数据库安全门禁。
 

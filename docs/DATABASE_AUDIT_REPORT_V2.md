@@ -1,8 +1,8 @@
 # 当前数据库审计报告
 
 审计日期：2026-09-16（Asia/Shanghai）  
-审计对象：当前业务数据库 `smart_meal` 及其运行时 Schema。  
-测试数据库：`smart_meal_test`，仅供 Real MySQL Integration 使用。
+审计对象：当前业务数据库 `mealpilot` 及其运行时 Schema。
+测试数据库：`mealpilot_test`，仅供 Real MySQL Integration 使用。
 
 本报告替代 `DATABASE_AUDIT_REPORT_V1.md` 作为当前数据库说明。V1 保留为 2026-09-06 的历史快照。
 
@@ -18,7 +18,7 @@
 
 旧库升级顺序：`04_recommendation_refactor_r1.sql` → `05_recommendation_run_nullable_legacy.sql` → `06_recipe_tag_metadata_backfill.sql` → `07_remove_cuisine_tags.sql` → `08_tag_system_v1.sql` → `09_family-admin-role.sql` → `10_family-invite-code.sql`。后端 `npm run db:migrate` 目前负责家庭角色和邀请码列的幂等校正，不能替代 `04`～`08` 的历史迁移。
 
-## 2. `smart_meal` 当前行数
+## 2. `mealpilot` 当前行数
 
 以下数据来自只读脚本 [test/database-readonly-audit.js](/E:/Database_Design/test/database-readonly-audit.js)，本轮未执行删除、清空或更新。
 

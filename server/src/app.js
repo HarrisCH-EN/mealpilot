@@ -20,7 +20,7 @@ function createApp({ database, jwtSecret = 'local-development-secret-change-me',
   app.use('/uploads', express.static(uploadRoot))
 
   app.get('/api/health', async (_request, response) => {
-    response.json({ ok: true, data: { service: 'smart-meal-api' } })
+    response.json({ ok: true, data: { service: 'mealpilot-api' } })
   })
 
   if (database) {

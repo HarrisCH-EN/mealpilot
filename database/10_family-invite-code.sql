@@ -1,4 +1,4 @@
-USE smart_meal;
+USE mealpilot;
 
 -- Invite codes are six ASCII alphanumeric characters and must remain
 -- case-sensitive so codes that differ only by letter case are distinct.

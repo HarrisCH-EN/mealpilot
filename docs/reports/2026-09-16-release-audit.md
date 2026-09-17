@@ -4,7 +4,7 @@
 审计范围：后端接口、业务逻辑、数据库结构与业务数据、小程序页面与交互契约、测试体系、依赖安全、上线配置。  
 审计原则：本轮不删除旧代码、迁移、测试数据、业务数据或上传文件；所有清理项只做识别，等待审核。
 
-本报告是 2026-09-16 的交付审计快照；当前功能说明和后续文档同步以 [CURRENT_VERSION.md](/E:/Database_Design/docs/CURRENT_VERSION.md) 为准。本轮已确认业务数据库为 `smart_meal`，集成测试库为 `smart_meal_test`。
+本报告是 2026-09-16 的交付审计快照；当前功能说明和后续文档同步以 [CURRENT_VERSION.md](/E:/Database_Design/docs/CURRENT_VERSION.md) 为准。本轮已确认业务数据库为 `mealpilot`，集成测试库为 `mealpilot_test`。
 
 ## 1. 结论摘要
 
@@ -13,7 +13,7 @@
 已通过的部分：
 
 - Backend Direct：196/196 通过。
-- Real MySQL Integration：46/46 通过，使用独立的 `smart_meal_test`，没有写入业务库 `smart_meal`。
+- Real MySQL Integration：46/46 通过，使用独立的 `mealpilot_test`，没有写入业务库 `mealpilot`。
 - JavaScript 语法检查：后端与小程序共 119 个 JavaScript 文件通过。
 - 数据库只读完整性检查：外键孤儿、跨家庭关系、重复 active 家庭关系、空家庭名称均为 0。
 - `npm audit --registry=https://registry.npmjs.org --omit=dev --audit-level=moderate`：0 vulnerabilities。
@@ -46,17 +46,17 @@ npm test
 | 套件 | 数量 | 通过 | 失败 | 备注 |
 |---|---:|---:|---:|---|
 | Backend Direct | 196 | 196 | 0 | 不连接业务 MySQL，包含路由、服务、事务、并发、Schema、认证、配置、迁移入口和洞察范围测试 |
-| Backend Real MySQL Integration | 46 | 46 | 0 | 连接独立 `smart_meal_test`，真实执行约束、事务、并发、家庭隔离、推荐、标签、反馈、上传 |
+| Backend Real MySQL Integration | 46 | 46 | 0 | 连接独立 `mealpilot_test`，真实执行约束、事务、并发、家庭隔离、推荐、标签、反馈、上传 |
 
 真实集成测试执行时设置了：
 
 ```powershell
-$env:MYSQL_TEST_DATABASE = 'smart_meal_test'
+$env:MYSQL_TEST_DATABASE = 'mealpilot_test'
 $env:PHASE_1C_ALLOW_DB_WRITES = '1'
 npm run test:integration
 ```
 
-集成测试 runner 会 DROP/CREATE/清理 `smart_meal_test`。这是测试库范围内的预期行为，没有触碰 `MYSQL_DATABASE=smart_meal`。
+集成测试 runner 会 DROP/CREATE/清理 `mealpilot_test`。这是测试库范围内的预期行为，没有触碰 `MYSQL_DATABASE=mealpilot`。
 
 ### 2.2 小程序测试
 
@@ -125,7 +125,7 @@ node scripts/run-tests.js
 
 ### P0：迁移入口已串联完整历史迁移
 
-`server/src/scripts/migration-runner.js` 现在按 `04` 到 `10` 顺序执行，使用 `schema_migrations` 记录 checksum/status，并使用 MySQL advisory lock 防止并发迁移。对已使用新版 `recipe_tags(recipe_id, tag_id)` 的库，旧字段回填/删除迁移会记录为 skipped。首次和重复执行已在 `smart_meal_test` 验证。
+`server/src/scripts/migration-runner.js` 现在按 `04` 到 `10` 顺序执行，使用 `schema_migrations` 记录 checksum/status，并使用 MySQL advisory lock 防止并发迁移。对已使用新版 `recipe_tags(recipe_id, tag_id)` 的库，旧字段回填/删除迁移会记录为 skipped。首次和重复执行已在 `mealpilot_test` 验证。
 
 ### P1：上传请求 401 处理已统一
 
@@ -145,7 +145,7 @@ node scripts/run-tests.js
 
 ### 5.1 当前业务库计数
 
-当前连接到 `smart_meal`，结果如下：
+当前连接到 `mealpilot`，结果如下：
 
 | 表 | 行数 | 结论 |
 |---|---:|---|
@@ -241,7 +241,7 @@ node scripts/run-tests.js
 5. 已统一 `wx.request` 与 `wx.uploadFile` 的 401 处理。
 6. 已修复菜单/菜谱页普通请求失败后的旧数据展示风险。
 7. 在微信开发者工具中完成真实点击验收，并在真机完成登录、家庭、头像、封面上传、邀请、邀请码刷新、菜单、菜谱、推荐、评分、退出登录链路。
-8. 已在 `smart_meal_test` 完成 Direct + Integration 验证；依赖审计为 0 vulnerabilities。
+8. 已在 `mealpilot_test` 完成 Direct + Integration 验证；依赖审计为 0 vulnerabilities。
 
 ### 生产运维建议
 

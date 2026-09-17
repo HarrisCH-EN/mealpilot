@@ -50,6 +50,14 @@ page {
   letter-spacing: 1rpx;
 }
 
+.login-brand__name-zh {
+  margin-top: 4rpx;
+  color: #5f5f5f;
+  font-size: 28rpx;
+  font-weight: 600;
+  letter-spacing: 1rpx;
+}
+
 .login-brand__subtitle {
   margin-top: 10rpx;
   color: #9a9a9a;

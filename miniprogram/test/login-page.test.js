@@ -14,7 +14,9 @@ test('login page is registered and presents the app identity plus every configur
 
   assert.ok(appConfig.pages.includes('pages/login/index'))
   assert.match(template, /assets\/brand\/logo\.png/)
+  assert.match(template, /MealPilot/)
   assert.match(template, /饭有谱/)
+  assert.match(template, /Plan less\. Eat better\./)
   assert.match(template, /bindtap="loginWithWechat"/)
   assert.match(template, /wx:if="\{\{allowDevLogin\}\}"[^>]*bindtap="loginWithDev"/)
   assert.match(script, /wechatLogin/)

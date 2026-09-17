@@ -1,6 +1,6 @@
 -- Keep UTF-8 metadata literals safe when mysql.exe runs with a GBK default.
 SET NAMES utf8mb4;
-USE smart_meal;
+USE mealpilot;
 
 -- Tag System V1 converts the legacy recipe_tags metadata relation into a
 -- stable tag-definition catalog plus recipe/tag association.  All statements

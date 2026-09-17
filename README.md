@@ -1,6 +1,22 @@
-# 饭有谱——家庭智能配餐系统
+# MealPilot / 饭有谱
 
-饭有谱是一个基于微信小程序、Express REST API 和 MySQL 的家庭菜谱与菜单系统。系统围绕家庭数据边界，提供菜谱、菜单、规则推荐、成员忌口、口味偏好、用餐反馈和基础洞察。
+> Plan less. Eat better.
+
+## 0. 品牌与部署命名
+
+| 项目 | 统一命名 |
+| --- | --- |
+| 品牌名 | MealPilot |
+| 中文名 | 饭有谱 |
+| Slogan | Plan less. Eat better. |
+| Git 仓库 | mealpilot |
+| 微信小程序 | mealpilot-miniprogram |
+| 后端服务 | mealpilot-api |
+| CloudBase 服务 | mealpilot-api |
+| 数据库 | mealpilot |
+| 对象存储 | mealpilot-assets |
+
+MealPilot（饭有谱）是一个基于微信小程序、Express REST API 和 MySQL 的家庭菜谱与菜单系统。系统围绕家庭数据边界，提供菜谱、菜单、规则推荐、成员忌口、口味偏好、用餐反馈和基础洞察。
 
 推荐是规则和可解释评分模型，不是 AI、机器学习或协同过滤系统。
 
@@ -33,7 +49,7 @@
 Express REST API
     │ mysql2 connection pool / transaction / SQL
     ▼
-MySQL 8：smart_meal
+MySQL 8：mealpilot
 ~~~
 
 正式登录链路：
@@ -86,7 +102,7 @@ docs/
 ├─ CURRENT_VERSION.md
 ├─ FRONTEND_HANDOFF.md
 └─ superpowers/
-启动后端.bat
+start-mealpilot-api.bat
 ~~~
 
 ## 5. 环境要求
@@ -110,7 +126,7 @@ docs/
 | MYSQL_PORT | MySQL 端口 | 本地 Backend 必需 |
 | MYSQL_USER | 项目数据库用户 | 本地 Backend 必需 |
 | MYSQL_PASSWORD | 数据库密码 | 本地 Backend 必需 |
-| MYSQL_DATABASE | 业务数据库，通常为 smart_meal | 本地 Backend 必需 |
+| MYSQL_DATABASE | 业务数据库，通常为 mealpilot | 本地 Backend 必需 |
 | JWT_SECRET | JWT 签名密钥 | 必须配置为稳定随机值 |
 | DEV_AUTH_ENABLED | 是否启用 /api/auth/dev-login | 开发可为 true，生产建议 false |
 | NODE_ENV | 生产配置校验开关 | 生产部署建议设置为 production |
@@ -124,7 +140,7 @@ WECHAT_APP_SECRET 不得写入小程序、API response、日志或测试快照�
 
 ## 7. 数据库初始化
 
-业务数据库为 smart_meal。首次初始化时使用具有建库和授权权限的 MySQL 管理账号执行：
+业务数据库为 mealpilot。首次初始化时使用具有建库和授权权限的 MySQL 管理账号执行：
 
 ~~~powershell
 mysql -u root -p < database/00_create_user.sql
@@ -162,7 +178,7 @@ npm run db:seed
 npm run dev
 ~~~
 
-也可以双击根目录 启动后端.bat。健康检查：
+也可以双击根目录 start-mealpilot-api.bat。健康检查：
 
 ~~~text
 GET http://127.0.0.1:3000/api/health
@@ -284,7 +300,7 @@ POST /api/uploads/recipe-cover
 
 支持 JPG、JPEG、PNG、WebP，大小上限 5 MB。文件保存在本地 upload directory，服务端生成安全文件名；数据库只保存 `/uploads/recipes/<filename>` 或 `/uploads/avatars/<filename>` 相对 URL。头像属于全局用户资料，菜谱封面属于家庭菜谱资料。
 
-上传失败时 Recipe 不会假装保存成功。孤儿图片清理、云对象存储和 CDN 属于 Deferred。
+上传失败时 Recipe 不会假装保存成功。孤儿图片清理、云对象存储（生产对象存储命名为 `mealpilot-assets`）和 CDN 属于 Deferred。
 
 ## 15. 测试系统
 
@@ -295,18 +311,18 @@ cd E:\Database_Design\server
 npm test
 ~~~
 
-当前基线：196 passed，0 failed，0 skipped。Direct 测试不连接、不读取、不写入 smart_meal。
+当前基线：196 passed，0 failed，0 skipped。Direct 测试不连接、不读取、不写入 mealpilot。
 
 ### Backend Real MySQL Integration
 
 ~~~powershell
 cd E:\Database_Design\server
-$env:MYSQL_TEST_DATABASE = 'smart_meal_test'
+$env:MYSQL_TEST_DATABASE = 'mealpilot_test'
 $env:PHASE_1C_ALLOW_DB_WRITES = '1'
 npm run test:integration
 ~~~
 
-当前声明测试：46 passed，0 failed，0 skipped。安全门禁要求测试库名称包含 test，且不得等于 MYSQL_DATABASE。Integration 可以 DROP/CREATE 和清理测试库，但绝对不能使用 smart_meal。没有安全环境时命令会 fail-fast，不会 fallback 到业务库。
+当前声明测试：46 passed，0 failed，0 skipped。安全门禁要求测试库名称包含 test，且不得等于 MYSQL_DATABASE。Integration 可以 DROP/CREATE 和清理测试库，但绝对不能使用 mealpilot。没有安全环境时命令会 fail-fast，不会 fallback 到业务库。
 
 ### Frontend
 
@@ -327,16 +343,16 @@ npm run test:all
 
 ## 16. Real MySQL Integration 测试库
 
-建议使用独立的 smart_meal_test，不要复制或清空业务库。使用 MySQL 管理账号准备测试库和专用权限，例如：
+建议使用独立的 mealpilot_test，不要复制或清空业务库。使用 MySQL 管理账号准备测试库和专用权限，例如：
 
 ~~~sql
-CREATE DATABASE IF NOT EXISTS smart_meal_test CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-GRANT ALL PRIVILEGES ON smart_meal_test.* TO 'smart_meal_app'@'localhost';
-GRANT CREATE, DROP ON *.* TO 'smart_meal_app'@'localhost';
+CREATE DATABASE IF NOT EXISTS mealpilot_test CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+GRANT ALL PRIVILEGES ON mealpilot_test.* TO 'mealpilot_app'@'localhost';
+GRANT CREATE, DROP ON *.* TO 'mealpilot_app'@'localhost';
 FLUSH PRIVILEGES;
 ~~~
 
-测试 runner 会读取正式 database/01_schema.sql，在测试库中重建 Schema 和最小 fixture；不维护第二份 Schema，不复制 smart_meal 数据。
+测试 runner 会读取正式 database/01_schema.sql，在测试库中重建 Schema 和最小 fixture；不维护第二份 Schema，不复制 mealpilot 数据。
 
 ## 17. Course Design Scope
 
@@ -368,7 +384,7 @@ FLUSH PRIVILEGES;
 1. 配置真实 WECHAT_APP_ID 和 WECHAT_APP_SECRET。
 2. 将 miniprogram/config.js production API 替换为正式 HTTPS 地址。
 3. 在微信后台配置 request 合法域名。
-4. 部署 Express、MySQL、上传目录和备份策略。
+4. 部署 `mealpilot-api`、`mealpilot` 数据库、`mealpilot-assets` 对象存储和备份策略。
 5. 旧库按 04～08、09、10 的迁移顺序完成升级；新库按当前 schema 初始化。
 6. 重新执行安全的 Real MySQL Integration 和现场小程序验收。
 

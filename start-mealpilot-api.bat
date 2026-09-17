@@ -3,7 +3,7 @@ setlocal EnableExtensions
 
 rem Keep console output ASCII so cmd.exe never renders batch text as mojibake.
 chcp 65001 >nul
-title Smart Meal Backend
+title MealPilot API
 
 set "PROJECT_ROOT=%~dp0"
 set "SERVER_ROOT=%PROJECT_ROOT%server"

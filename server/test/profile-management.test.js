@@ -78,7 +78,7 @@ test('profile endpoint updates the authenticated display name and returns the fr
 
 test('avatar upload stores an authenticated user avatar without requiring a family', async () => {
   const database = makeProfileDatabase()
-  const uploadRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'smart-meal-avatar-'))
+  const uploadRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mealpilot-avatar-'))
   try {
     const app = express()
     app.use('/api', uploadsRouter({

@@ -12,8 +12,10 @@
   <scroll-view class="about-main" scroll-y enhanced show-scrollbar="{{false}}" style="{{contentStyle}}">
     <view class="about-hero">
       <image class="about-logo" src="/assets/brand/logo.png" mode="aspectFit" />
-      <view class="about-name">饭有谱</view>
-      <view class="about-tagline">让每一餐，都有谱。</view>
+      <view class="about-name">MealPilot</view>
+      <view class="about-name-zh">饭有谱</view>
+      <view class="about-tagline">Plan less. Eat better.</view>
+      <view class="about-tagline-zh">让每一餐，都有谱。</view>
       <view class="about-version">{{versionLabel}}</view>
     </view>
 

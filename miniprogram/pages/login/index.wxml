@@ -3,8 +3,9 @@
   <view wx:else class="login-shell">
     <view class="login-brand">
       <image class="login-brand__logo" src="/assets/brand/logo.png" mode="aspectFit" />
-      <view class="login-brand__name">饭有谱</view>
-      <view class="login-brand__subtitle">家庭智能配餐</view>
+      <view class="login-brand__name">MealPilot</view>
+      <view class="login-brand__name-zh">饭有谱</view>
+      <view class="login-brand__subtitle">Plan less. Eat better.</view>
     </view>
 
     <view class="login-card">
@@ -23,6 +24,6 @@
       <view wx:if="{{error}}" class="login-error">{{error}}</view>
     </view>
 
-    <view class="login-footer">登录即表示你同意使用饭有谱管理家庭信息</view>
+    <view class="login-footer">登录即表示你同意使用 MealPilot（饭有谱）管理家庭信息</view>
   </view>
 </view>

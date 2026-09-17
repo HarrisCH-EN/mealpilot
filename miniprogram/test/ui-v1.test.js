@@ -217,7 +217,7 @@ test('app config keeps four stable tabs with the Airbnb Rausch active state', ()
 test('sitemap has a valid allow rule for DevTools preview', () => {
   const root = path.join(__dirname, '..')
   const sitemap = JSON.parse(fs.readFileSync(path.join(root, 'sitemap.json'), 'utf8'))
-  assert.equal(sitemap.desc, '饭有谱')
+  assert.equal(sitemap.desc, 'MealPilot / 饭有谱')
   assert.deepEqual(sitemap.rules, [{ action: 'allow', page: '*' }])
 })
 

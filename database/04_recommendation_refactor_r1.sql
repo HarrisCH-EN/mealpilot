@@ -1,4 +1,4 @@
-USE smart_meal;
+USE mealpilot;
 
 -- MySQL 8.0.45 does not support the conditional ADD COLUMN form.  Build each
 -- ALTER statement only when its column is absent so this upgrade is safe to

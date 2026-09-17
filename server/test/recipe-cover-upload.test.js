@@ -42,7 +42,7 @@ const files = {
 }
 
 test('recipe cover upload requires authentication and an active Family', async () => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smart-meal-upload-'))
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'mealpilot-upload-'))
   try {
     for (const options of [{ authenticated: false }, { hasFamily: false }]) {
       await withServer(makeApp(root, options), async (baseUrl) => {
@@ -56,7 +56,7 @@ test('recipe cover upload requires authentication and an active Family', async (
 })
 
 test('recipe cover upload accepts jpg png and webp, stores safe generated files, and returns a relative URL', async () => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smart-meal-upload-'))
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'mealpilot-upload-'))
   try {
     await withServer(makeApp(root), async (baseUrl) => {
       for (const [extension, [mime, buffer]] of Object.entries({ jpg: ['image/jpeg', files.jpg], png: ['image/png', files.png], webp: ['image/webp', files.webp] })) {
@@ -75,7 +75,7 @@ test('recipe cover upload accepts jpg png and webp, stores safe generated files,
 })
 
 test('recipe cover upload rejects invalid extension, MIME, missing file, and oversized content', async () => {
-  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'smart-meal-upload-'))
+  const root = await fs.mkdtemp(path.join(os.tmpdir(), 'mealpilot-upload-'))
   try {
     await withServer(makeApp(root, { maxBytes: 10 }), async (baseUrl) => {
       const cases = [

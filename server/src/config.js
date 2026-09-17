@@ -35,9 +35,9 @@ function getConfig(env = process.env) {
     mysql: {
       host: env.MYSQL_HOST || '127.0.0.1',
       port: Number(env.MYSQL_PORT || 3306),
-      user: env.MYSQL_USER || 'smart_meal_app',
+      user: env.MYSQL_USER || 'mealpilot_app',
       password: env.MYSQL_PASSWORD || '',
-      database: env.MYSQL_DATABASE || 'smart_meal'
+      database: env.MYSQL_DATABASE || 'mealpilot'
     },
     required
   }

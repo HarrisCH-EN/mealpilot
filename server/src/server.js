@@ -18,7 +18,7 @@ function createRuntimeApp(config, database = createDatabase(config.mysql)) {
 function start(config = getConfig()) {
   const { app, database } = createRuntimeApp(config)
   const server = app.listen(config.port, () => {
-    console.log(`smart-meal API listening on http://127.0.0.1:${config.port}`)
+    console.log(`MealPilot API listening on http://127.0.0.1:${config.port}`)
   })
   return { server, database }
 }

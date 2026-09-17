@@ -205,7 +205,7 @@ async function runMenuAdd(recipeId, date = '2026-09-09') {
 
 if (safeDatabaseConfigured) {
   test.before(async () => {
-    uploadRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'smart-meal-phase-2e-uploads-'))
+    uploadRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mealpilot-phase-2e-uploads-'))
     const schema = await fs.readFile(path.join(__dirname, '../../../database/01_schema.sql'), 'utf8')
     const admin = await mysql.createConnection({ ...config.mysql, database: undefined, multipleStatements: true })
     try {
@@ -214,7 +214,7 @@ if (safeDatabaseConfigured) {
     } finally {
       await admin.end()
     }
-    const schemaForTest = schema.replace(/CREATE DATABASE IF NOT EXISTS smart_meal[^;]*;\s*USE smart_meal\s*;/i, `USE \`${testDatabase}\`;`)
+    const schemaForTest = schema.replace(/CREATE DATABASE IF NOT EXISTS mealpilot[^;]*;\s*USE mealpilot\s*;/i, `USE \`${testDatabase}\`;`)
     const schemaConnection = await mysql.createConnection({ ...config.mysql, database: testDatabase, multipleStatements: true })
     try {
       await schemaConnection.query(schemaForTest)

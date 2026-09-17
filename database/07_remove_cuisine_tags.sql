@@ -1,4 +1,4 @@
-USE smart_meal;
+USE mealpilot;
 
 -- Remove the obsolete cuisine classification before narrowing the controlled tag type.
 DELETE FROM recipe_tags WHERE tag_type = 'cuisine';

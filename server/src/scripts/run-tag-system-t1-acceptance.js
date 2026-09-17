@@ -22,7 +22,7 @@ async function readSql(fileName) {
 
 function forDatabase(sql, databaseName) {
   const useStatement = `USE \`${databaseName}\`;`
-  return sql.replace(/CREATE DATABASE IF NOT EXISTS smart_meal[^;]*;\s*/i, '').replace(/USE smart_meal\s*;/ig, useStatement)
+  return sql.replace(/CREATE DATABASE IF NOT EXISTS mealpilot[^;]*;\s*/i, '').replace(/USE mealpilot\s*;/ig, useStatement)
 }
 
 async function executeFile(connection, fileName, databaseName) {

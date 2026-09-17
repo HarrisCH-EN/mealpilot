@@ -3,7 +3,7 @@ const fs = require('node:fs/promises')
 const path = require('node:path')
 
 const HISTORY_TABLE = 'schema_migrations'
-const MIGRATION_LOCK = 'smart_meal_schema_migrate'
+const MIGRATION_LOCK = 'mealpilot_schema_migrate'
 const MIGRATION_FILES = [
   '04_recommendation_refactor_r1.sql',
   '05_recommendation_run_nullable_legacy.sql',
@@ -16,7 +16,7 @@ const MIGRATION_FILES = [
 
 function normalizeMigrationSql(sql) {
   return String(sql || '')
-    .replace(/^\s*USE\s+`?smart_meal`?\s*;\s*/gim, '')
+    .replace(/^\s*USE\s+`?mealpilot`?\s*;\s*/gim, '')
     .trim()
 }
 
