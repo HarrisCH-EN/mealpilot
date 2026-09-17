@@ -100,6 +100,26 @@ test('R4 uses a wheel time selector bound to maxPrepMinutes', () => {
   assert.doesNotMatch(script, /selectPrepTime/)
 })
 
+test('R4 places a selectable meal-type control between the sheet title and people count', () => {
+  assert.match(script, /mealOptions:\s*MEALS/)
+  assert.match(script, /selectMealType\(event\)/)
+  assert.match(script, /persistPreferences\(\{ mealType \}\)/)
+  assert.match(template, /recommend-meal-section/)
+  assert.match(template, /recommend-meal-option/)
+  assert.match(template, /data-meal-type="\{\{item\.mealType\}\}"/)
+  assert.match(template, /bindtap="selectMealType"/)
+  assert.match(template, /\{\{mealTypeLabel\}\}几个人吃饭/)
+  assert.match(template, /\{\{mealTypeLabel\}\}想吃什么/)
+  assert.match(template, /\{\{mealTypeLabel\}\}可以这样吃/)
+  assert.match(template, /已加入\{\{mealTypeLabel\}\}菜单/)
+})
+
+test('R4 keeps the selected meal option visibly aligned with the existing brand treatment', () => {
+  assert.match(template, /item\.mealType === mealType \? 'recommend-meal-option--selected'/)
+  assert.match(styles, /\.recommend-meal-option--selected\s*\{[^}]*background:\s*#ff385c/s)
+  assert.match(styles, /\.recommend-meal-option--selected\s*\{[^}]*color:\s*#ffffff/s)
+})
+
 test('R4 wheel values stay within the legal preparation range and keep the canonical payload', () => {
   const values = preferenceState.PREP_TIME_OPTIONS.map((option) => option.value)
   assert.equal(values[0], preferenceState.MIN_PREP_MINUTES)

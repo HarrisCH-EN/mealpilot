@@ -1,6 +1,6 @@
 const { request, ensureAuthenticated, resolveCoverUrl, isNoActiveFamilyError, requireAuthentication } = require('../../utils/api')
 const app = getApp()
-const { difficultyStars, getGreeting, toLocalISODate } = require('../../utils/ui')
+const { difficultyStars, getGreeting, MEALS, toLocalISODate } = require('../../utils/ui')
 const { displayTags, flattenTagCatalog } = require('../../utils/tags')
 const {
   DEFAULT_STRUCTURE,
@@ -10,6 +10,7 @@ const {
   STRUCTURE_LABELS,
   buildCanonicalRequest,
   buildPersistedPreferences,
+  normalizeMealType,
   normalizePeopleCount,
   normalizeStructure,
   prepRulerGeometry,
@@ -87,6 +88,7 @@ Page({
     greeting: getGreeting(new Date().getHours()),
     mealType: 'dinner',
     mealTypeLabel: '晚餐',
+    mealOptions: MEALS,
     peopleCount: 2,
     maxPrepMinutes: 60,
     prepOptions: PREP_TIME_OPTIONS,
@@ -135,6 +137,8 @@ Page({
     const saved = restorePersistedPreferences(storedPreferences)
     const validation = validateStructure(saved.structure)
     this.setData({
+      mealType: saved.mealType,
+      mealTypeLabel: MEALS.find(({ mealType }) => mealType === saved.mealType).mealTypeLabel,
       peopleCount: saved.peopleCount,
       maxPrepMinutes: saved.maxPrepMinutes,
       structure: saved.structure,
@@ -149,6 +153,7 @@ Page({
   persistPreferences(overrides = {}) {
     try {
       wx.setStorageSync(PREFERENCE_STORAGE_KEY, buildPersistedPreferences({
+        mealType: this.data.mealType,
         peopleCount: this.data.peopleCount,
         maxPrepMinutes: this.data.maxPrepMinutes,
         structure: this.data.structure,
@@ -266,6 +271,14 @@ Page({
     const peopleCount = normalizePeopleCount(this.data.peopleCount + delta)
     this.setData({ peopleCount })
     this.persistPreferences({ peopleCount })
+  },
+
+  selectMealType(event) {
+    const mealType = normalizeMealType(event.currentTarget.dataset.mealType)
+    const selectedMeal = MEALS.find((item) => item.mealType === mealType)
+    if (!selectedMeal || mealType === this.data.mealType) return
+    this.setData({ mealType, mealTypeLabel: selectedMeal.mealTypeLabel })
+    this.persistPreferences({ mealType })
   },
 
   syncPrepRuler() {

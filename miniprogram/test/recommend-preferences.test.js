@@ -9,6 +9,7 @@ const {
   buildPersistedPreferences,
   buildCanonicalRequest,
   normalizeSelectedTagIds,
+  normalizeMealType,
   normalizePeopleCount,
   normalizeStructure,
   prepRulerGeometry,
@@ -74,8 +75,17 @@ test('T4 keeps unified tag preferences session-scoped and toggleable', () => {
   assert.deepEqual(toggleTagId([8, 8], 3), [8, 3])
 })
 
+test('recommendation meal types stay within the supported breakfast, lunch, and dinner options', () => {
+  assert.equal(normalizeMealType('breakfast'), 'breakfast')
+  assert.equal(normalizeMealType('lunch'), 'lunch')
+  assert.equal(normalizeMealType('dinner'), 'dinner')
+  assert.equal(normalizeMealType('brunch'), 'dinner')
+  assert.equal(normalizeMealType(null), 'dinner')
+})
+
 test('persistent recommendation preferences restore the last valid custom choices', () => {
   const saved = buildPersistedPreferences({
+    mealType: 'lunch',
     peopleCount: 3,
     maxPrepMinutes: 80,
     structure: { meat: 2, vegetable: 1, soup: 1, staple: 1 },
@@ -85,6 +95,7 @@ test('persistent recommendation preferences restore the last valid custom choice
   assert.equal(PREFERENCE_STORAGE_KEY, 'recommendation-preferences-v1')
   assert.deepEqual(saved, {
     version: 1,
+    mealType: 'lunch',
     peopleCount: 3,
     maxPrepMinutes: 80,
     structure: { meat: 2, vegetable: 1, soup: 1, staple: 1 },
@@ -96,18 +107,34 @@ test('persistent recommendation preferences restore the last valid custom choice
 test('persistent recommendation preferences fall back safely for missing or invalid storage', () => {
   assert.deepEqual(restorePersistedPreferences(null), {
     version: 1,
+    mealType: 'dinner',
     peopleCount: 2,
     maxPrepMinutes: 60,
     structure: { meat: 1, vegetable: 2, soup: 1, staple: 0 },
     preferences: { selectedTagIds: [] }
   })
-  assert.deepEqual(restorePersistedPreferences({ peopleCount: 99, maxPrepMinutes: 999, preferences: { selectedTagIds: ['7'] } }), {
+  assert.deepEqual(restorePersistedPreferences({ mealType: 'brunch', peopleCount: 99, maxPrepMinutes: 999, preferences: { selectedTagIds: ['7'] } }), {
     version: 1,
+    mealType: 'dinner',
     peopleCount: 12,
     maxPrepMinutes: 480,
     structure: { meat: 1, vegetable: 2, soup: 1, staple: 0 },
     preferences: { selectedTagIds: [7] }
   })
+})
+
+test('canonical recommendation requests preserve the selected meal type', () => {
+  for (const mealType of ['breakfast', 'lunch', 'dinner']) {
+    const request = buildCanonicalRequest({
+      menuDate: '2026-09-17',
+      mealType,
+      peopleCount: 2,
+      maxPrepMinutes: 60,
+      structure: DEFAULT_STRUCTURE,
+      preferences: {}
+    })
+    assert.equal(request.mealType, mealType)
+  }
 })
 
 test('preparation ruler centers its selected tick directly under the pointer', () => {

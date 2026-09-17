@@ -61,8 +61,21 @@
         <view class="preference-sheet__title">自定义这一餐</view>
       </view>
       <scroll-view class="preference-sheet__body" scroll-y>
+        <view class="recommend-form-section recommend-meal-section">
+          <view class="recommend-section-heading">选择餐次</view>
+          <view class="recommend-meal-picker">
+            <view
+              wx:for="{{mealOptions}}"
+              wx:key="mealType"
+              class="recommend-meal-option {{item.mealType === mealType ? 'recommend-meal-option--selected' : ''}}"
+              data-meal-type="{{item.mealType}}"
+              bindtap="selectMealType"
+            >{{item.mealTypeLabel}}</view>
+          </view>
+        </view>
+
         <view class="recommend-form-section">
-          <view class="recommend-section-heading">今晚几个人吃饭</view>
+          <view class="recommend-section-heading">{{mealTypeLabel}}几个人吃饭</view>
           <view class="recommend-stepper">
             <button class="recommend-stepper__button" data-delta="-1" bindtap="changePeople">−</button>
             <text class="recommend-stepper__value">{{peopleCount}} 人</text>
@@ -109,7 +122,7 @@
         </view>
 
         <view class="recommend-form-section">
-          <view class="recommend-section-heading">今晚想吃什么</view>
+          <view class="recommend-section-heading">{{mealTypeLabel}}想吃什么</view>
           <view wx:if="{{tagLoading || !tagReady}}" class="recommend-tag-state">正在加载标签…</view>
           <view wx:elif="{{tagError}}" class="recommend-tag-state recommend-tag-state--error">{{tagError}}<text class="recommend-tag-retry" bindtap="retryTags">重试</text></view>
           <view wx:elif="{{tagOptions.length}}" class="recommend-tag-row">
@@ -126,7 +139,7 @@
   <view wx:if="{{screen === 'result' && currentCandidate}}" class="recommend-result">
     <view class="recommend-result__header">
       <view class="recommend-eyebrow">第 {{rank}} / {{candidatesCount}} 组搭配</view>
-      <view class="recommend-result__title">今晚可以这样吃</view>
+      <view class="recommend-result__title">{{mealTypeLabel}}可以这样吃</view>
       <view class="recommend-result__summary">{{structureSummary}} · {{peopleCount}} 人 · 预计 {{currentCandidate.estimatedPrepMinutes}} 分钟</view>
     </view>
 
@@ -159,7 +172,7 @@
 
   <view wx:if="{{screen === 'confirmed'}}" class="recommend-confirmed">
     <view class="recommend-confirmed__mark">✓</view>
-    <view class="recommend-confirmed__title">已加入今晚菜单</view>
+    <view class="recommend-confirmed__title">已加入{{mealTypeLabel}}菜单</view>
     <view class="recommend-confirmed__text">这组搭配已经保存到 {{dateCaption}} 的{{mealTypeLabel}}。</view>
     <button class="recommend-primary-cta" bindtap="viewMenu">查看菜单</button>
     <button class="recommend-reset-cta" bindtap="backToSetup">重新设置</button>

@@ -86,7 +86,7 @@ test('restriction groups use the compact numbered-list presentation', () => {
 })
 
 test('recommendation only presents the persisted family restriction source', () => {
-  assert.match(recommendTemplate, /今晚想吃什么/)
+  assert.match(recommendTemplate, /\{\{mealTypeLabel\}\}想吃什么/)
   assert.doesNotMatch(recommendTemplate, /toggleRestriction|家庭忌口|draftRestrictionOptions/)
   assert.doesNotMatch(recommendScript, /draftRestrictionOptions|toggleRestriction\(|familyRestrictions/)
 })

@@ -59,5 +59,5 @@ test('recommendation presentation keeps the backend explanation instead of repla
 test('recommendation copy does not claim unsupported recent-menu personalization', () => {
   const recommendTemplate = read('pages', 'recommend', 'index.wxml')
   assert.doesNotMatch(recommendTemplate, /最近的菜单|根据最近的菜单/)
-  assert.match(recommendTemplate, /今晚想吃什么|这些选择只影响本次推荐/)
+  assert.match(recommendTemplate, /\{\{mealTypeLabel\}\}想吃什么|这些选择只影响本次推荐/)
 })

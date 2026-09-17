@@ -1,0 +1,394 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "饭有谱：家庭智能配餐系统架构",
+    "locale": "zh-CN",
+    "subtitle": "原生微信小程序 + Express REST API + MySQL 8 的家庭数据闭环",
+    "output": "系统架构.archify.html",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "auto"
+    },
+    "views": [
+      {
+        "id": "request-path",
+        "label": "请求主链路",
+        "focus": [
+          "miniapp",
+          "api",
+          "domain",
+          "recommendation",
+          "mysql"
+        ],
+        "note": "沿着小程序、REST 路由、领域服务、规则推荐和 MySQL 的主路径阅读。"
+      },
+      {
+        "id": "wechat-auth",
+        "label": "微信认证链路",
+        "focus": [
+          "wechat",
+          "auth",
+          "api",
+          "mysql"
+        ],
+        "note": "wx.login 换取 code，服务端调用 code2Session 后签发 JWT。"
+      },
+      {
+        "id": "family-data",
+        "label": "家庭数据边界",
+        "focus": [
+          "auth",
+          "domain",
+          "recommendation",
+          "mysql"
+        ],
+        "note": "认证、active Family、成员角色和推荐约束共同形成家庭数据边界。"
+      },
+      {
+        "id": "storage-and-evolution",
+        "label": "存储与演进",
+        "focus": [
+          "domain",
+          "uploads",
+          "scripts",
+          "mysql"
+        ],
+        "note": "业务数据进入关系库，图片进入 uploads，数据库脚本负责初始化和演进。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "wechat",
+      "type": "external",
+      "label": "微信平台",
+      "sublabel": "wx.login / code2Session",
+      "tag": "external",
+      "pos": [
+        40,
+        120
+      ],
+      "size": [
+        170,
+        78
+      ]
+    },
+    {
+      "id": "miniapp",
+      "type": "frontend",
+      "label": "微信小程序",
+      "sublabel": "WXML / WXSS / JavaScript",
+      "tag": "miniprogram",
+      "pos": [
+        40,
+        360
+      ],
+      "size": [
+        170,
+        78
+      ]
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "Express REST API",
+      "sublabel": "Express 5 / JSON / CORS",
+      "tag": "server",
+      "pos": [
+        280,
+        360
+      ],
+      "size": [
+        190,
+        78
+      ]
+    },
+    {
+      "id": "auth",
+      "type": "security",
+      "label": "认证与家庭闸门",
+      "sublabel": "JWT / active Family / Owner-Admin",
+      "tag": "middleware",
+      "pos": [
+        500,
+        120
+      ],
+      "size": [
+        190,
+        78
+      ]
+    },
+    {
+      "id": "domain",
+      "type": "backend",
+      "label": "领域路由与服务",
+      "sublabel": "Recipe / Menu / Family / Tag / Feedback",
+      "tag": "domain",
+      "pos": [
+        500,
+        360
+      ],
+      "size": [
+        210,
+        78
+      ]
+    },
+    {
+      "id": "recommendation",
+      "type": "backend",
+      "label": "规则推荐引擎",
+      "sublabel": "过滤 / 偏好评分 / 菜单生成 / Apply",
+      "tag": "recommendation",
+      "pos": [
+        750,
+        360
+      ],
+      "size": [
+        210,
+        78
+      ]
+    },
+    {
+      "id": "mysql",
+      "type": "database",
+      "label": "MySQL 8：smart_meal",
+      "sublabel": "19 张表 / InnoDB / utf8mb4",
+      "tag": "database",
+      "pos": [
+        1030,
+        360
+      ],
+      "size": [
+        210,
+        78
+      ]
+    },
+    {
+      "id": "uploads",
+      "type": "cloud",
+      "label": "本地文件存储",
+      "sublabel": "头像 / 菜谱封面 / /uploads",
+      "tag": "uploads",
+      "pos": [
+        1030,
+        120
+      ],
+      "size": [
+        210,
+        78
+      ]
+    },
+    {
+      "id": "scripts",
+      "type": "cloud",
+      "label": "数据库演进工具链",
+      "sublabel": "schema / seed / migrate / acceptance",
+      "tag": "database scripts",
+      "pos": [
+        750,
+        600
+      ],
+      "size": [
+        210,
+        78
+      ]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "security-group",
+      "label": "后端 API 信任边界",
+      "wraps": [
+        "api",
+        "auth",
+        "domain",
+        "recommendation"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "本地服务运行区",
+      "wraps": [
+        "api",
+        "auth",
+        "domain",
+        "recommendation",
+        "mysql",
+        "uploads",
+        "scripts"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "wechat-to-miniapp",
+      "from": "wechat",
+      "to": "miniapp",
+      "label": "运行环境",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        125,
+        230
+      ],
+      "variant": "security"
+    },
+    {
+      "id": "miniapp-to-api",
+      "from": "miniapp",
+      "to": "api",
+      "label": "HTTP JSON / Bearer JWT",
+      "variant": "emphasis",
+      "labelAt": [
+        245,
+        452
+      ]
+    },
+    {
+      "id": "api-to-auth",
+      "from": "api",
+      "to": "auth",
+      "label": "认证与家庭闸门",
+      "fromSide": "top",
+      "toSide": "bottom",
+      "via": [
+        [
+          375,
+          290
+        ],
+        [
+          595,
+          290
+        ]
+      ],
+      "labelAt": [
+        485,
+        274
+      ],
+      "variant": "security"
+    },
+    {
+      "id": "auth-to-wechat",
+      "from": "auth",
+      "to": "wechat",
+      "label": "code2Session",
+      "variant": "security"
+    },
+    {
+      "id": "api-to-domain",
+      "from": "api",
+      "to": "domain",
+      "label": "REST 路由分发",
+      "labelAt": [
+        485,
+        452
+      ]
+    },
+    {
+      "id": "domain-to-recommendation",
+      "from": "domain",
+      "to": "recommendation",
+      "label": "生成家庭推荐",
+      "labelAt": [
+        730,
+        452
+      ]
+    },
+    {
+      "id": "recommendation-to-mysql",
+      "from": "recommendation",
+      "to": "mysql",
+      "label": "候选 / 评分 / 推荐运行",
+      "labelAt": [
+        995,
+        452
+      ]
+    },
+    {
+      "id": "domain-to-uploads",
+      "from": "domain",
+      "to": "uploads",
+      "label": "头像 / 菜谱封面",
+      "fromSide": "top",
+      "toSide": "left",
+      "via": [
+        [
+          605,
+          240
+        ],
+        [
+          720,
+          240
+        ],
+        [
+          720,
+          80
+        ],
+        [
+          1000,
+          80
+        ],
+        [
+          1000,
+          159
+        ]
+      ],
+      "labelAt": [
+        760,
+        145
+      ],
+      "variant": "dashed"
+    },
+    {
+      "id": "scripts-to-mysql",
+      "from": "scripts",
+      "to": "mysql",
+      "label": "schema / migrate / seed",
+      "fromSide": "right",
+      "toSide": "bottom",
+      "via": [
+        [
+          990,
+          639
+        ],
+        [
+          990,
+          480
+        ],
+        [
+          1135,
+          480
+        ]
+      ],
+      "labelAt": [
+        1040,
+        464
+      ],
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "入口与认证",
+      "items": [
+        "正式登录：wx.login → code2Session → OpenID → JWT；active Family + 角色闸门"
+      ]
+    },
+    {
+      "dot": "violet",
+      "title": "业务与推荐",
+      "items": [
+        "领域路由 → 规则过滤/评分 → 菜单生成 → MySQL Apply"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "数据与验证",
+      "items": [
+        "19 表 + /uploads + schema/migrate；196/196、46/46、147/147；微信点击 E2E 待补"
+      ]
+    }
+  ]
+}

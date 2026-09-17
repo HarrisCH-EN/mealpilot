@@ -13,6 +13,8 @@ const PREP_TIME_OPTIONS = Array.from(
 )
 const MIN_STRUCTURE_DISHES = 1
 const MAX_STRUCTURE_DISHES = 12
+const { MEALS } = require('../../utils/ui')
+const SUPPORTED_MEAL_TYPES = new Set(MEALS.map(({ mealType }) => mealType))
 
 const DEFAULT_STRUCTURE = Object.freeze({ meat: 1, vegetable: 2, soup: 1, staple: 0 })
 const STRUCTURE_LABELS = Object.freeze([
@@ -42,6 +44,11 @@ function prepTimeIndex(value) {
     PREP_TIME_OPTIONS.length - 1,
     Math.max(0, Math.round((clamped - MIN_PREP_MINUTES) / PREP_TIME_STEP))
   )
+}
+
+function normalizeMealType(value) {
+  const mealType = String(value || '').trim()
+  return SUPPORTED_MEAL_TYPES.has(mealType) ? mealType : 'dinner'
 }
 
 function prepRulerGeometry(windowWidth) {
@@ -103,6 +110,7 @@ function buildPersistedPreferences(value = {}) {
   const structure = value && typeof value.structure === 'object' && !Array.isArray(value.structure) ? value.structure : {}
   return {
     version: 1,
+    mealType: normalizeMealType(value.mealType),
     peopleCount: normalizePeopleCount(value.peopleCount),
     maxPrepMinutes: clampPrepMinutes(value.maxPrepMinutes),
     structure: normalizeStructure({ ...DEFAULT_STRUCTURE, ...structure }),
@@ -113,6 +121,7 @@ function buildPersistedPreferences(value = {}) {
 function restorePersistedPreferences(value) {
   const stored = value && typeof value === 'object' && !Array.isArray(value) ? value : {}
   return buildPersistedPreferences({
+    mealType: stored.mealType === undefined ? 'dinner' : stored.mealType,
     peopleCount: stored.peopleCount === undefined ? 2 : stored.peopleCount,
     maxPrepMinutes: stored.maxPrepMinutes === undefined ? 60 : stored.maxPrepMinutes,
     structure: stored.structure === undefined ? DEFAULT_STRUCTURE : stored.structure,
@@ -123,7 +132,7 @@ function restorePersistedPreferences(value) {
 function buildCanonicalRequest({ menuDate, mealType = 'dinner', peopleCount, maxPrepMinutes, structure, preferences = {} }) {
   return {
     menuDate: String(menuDate),
-    mealType: String(mealType),
+    mealType: normalizeMealType(mealType),
     peopleCount: normalizePeopleCount(peopleCount),
     maxPrepMinutes: clampPrepMinutes(maxPrepMinutes),
     structure: normalizeStructure(structure),
@@ -153,6 +162,7 @@ module.exports = {
   buildCanonicalRequest,
   buildPersistedPreferences,
   clampPrepMinutes,
+  normalizeMealType,
   normalizePeopleCount,
   normalizeStructure,
   normalizeSelectedTagIds: normalizeTagIds,
