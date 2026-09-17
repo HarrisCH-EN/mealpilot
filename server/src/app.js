@@ -39,14 +39,25 @@ function createApp({ database, jwtSecret = 'local-development-secret-change-me',
   }
 
   app.use((error, _request, response, _next) => {
-    if (error && error.type === 'entity.parse.failed') {
-      return response.status(400).json({ ok: false, message: '请求 JSON 格式不正确' })
-    }
-    if (error instanceof HttpError) {
-      return response.status(error.status).json({ ok: false, message: error.message })
-    }
-    response.status(500).json({ ok: false, message: '服务器发生错误' })
+  if (error && error.type === 'entity.parse.failed') {
+    return response.status(400).json({ ok: false, message: '请求 JSON 格式不正确' })
+  }
+
+  if (error instanceof HttpError) {
+    return response.status(error.status).json({ ok: false, message: error.message })
+  }
+
+  console.error('[MealPilot API Error]', {
+    message: error && error.message,
+    code: error && error.code,
+    errno: error && error.errno,
+    sqlState: error && error.sqlState,
+    sqlMessage: error && error.sqlMessage,
+    stack: error && error.stack
   })
+
+  response.status(500).json({ ok: false, message: '服务器发生错误' })
+})
 
   return app
 }
