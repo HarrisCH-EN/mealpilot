@@ -20,7 +20,7 @@ MealPilot（饭有谱）是一个基于微信小程序、Express REST API 和 My
 
 推荐是规则和可解释评分模型，不是 AI、机器学习或协同过滤系统。
 
-当前实现基线、数据库边界和交付状态见 [docs/CURRENT_VERSION.md](/E:/Database_Design/docs/CURRENT_VERSION.md)。
+当前实现基线、数据库边界和交付状态见 [docs/CURRENT_VERSION.md](docs/CURRENT_VERSION.md)。
 
 ## 1. 当前功能
 
