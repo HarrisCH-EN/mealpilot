@@ -13,7 +13,7 @@ const tags = require('./routes/tags')
 const { HttpError } = require('./http')
 const { createWechatAuthService } = require('./services/wechat-auth-service')
 
-function createApp({ database, jwtSecret = 'local-development-secret-change-me', devAuthEnabled = true, wechatAppId = '', wechatAppSecret = '', wechatAuthService, uploadRoot = path.join(__dirname, '../uploads'), maxUploadBytes }) {
+function createApp({ database, jwtSecret = 'local-development-secret-change-me', devAuthEnabled = true, wechatAppId = '', wechatAppSecret = '', wechatAuthService, cloudStorageService, uploadRoot = path.join(__dirname, '../uploads'), maxUploadBytes }) {
   const app = express()
   app.use(cors())
   app.use(express.json({ limit: '1mb' }))
@@ -21,6 +21,15 @@ function createApp({ database, jwtSecret = 'local-development-secret-change-me',
 
   app.get('/api/health', async (_request, response) => {
     response.json({ ok: true, data: { service: 'mealpilot-api' } })
+  })
+
+  app.get('/api/health/storage', async (_request, response, next) => {
+    try {
+      const bytes = await cloudStorageService.readProbe()
+      response.json({ ok: true, data: { storage: 'cloudbase', readable: true, bytes } })
+    } catch (error) {
+      next(error)
+    }
   })
 
   if (database) {

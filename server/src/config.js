@@ -31,6 +31,8 @@ function getConfig(env = process.env) {
     devAuthEnabled: env.DEV_AUTH_ENABLED === 'true',
     wechatAppId: env.WECHAT_APP_ID || '',
     wechatAppSecret: env.WECHAT_APP_SECRET || '',
+    cloudbaseEnvId: env.CLOUDBASE_ENV_ID || '',
+    cloudbaseStorageProbeFileId: env.CLOUDBASE_STORAGE_PROBE_FILE_ID || '',
     uploadRoot: env.RECIPE_UPLOAD_ROOT || path.join(__dirname, '../uploads'),
     mysql: {
       host: env.MYSQL_HOST || '127.0.0.1',

@@ -1,6 +1,7 @@
 const { getConfig } = require('./config')
 const { createDatabase } = require('./db')
 const { createApp } = require('./app')
+const { createCloudStorageService } = require('./services/cloud-storage-service')
 
 function createRuntimeApp(config, database = createDatabase(config.mysql)) {
   const app = createApp({
@@ -10,6 +11,7 @@ function createRuntimeApp(config, database = createDatabase(config.mysql)) {
     wechatAppId: config.wechatAppId,
     wechatAppSecret: config.wechatAppSecret,
     wechatAuthService: config.wechatAuthService,
+    cloudStorageService: config.cloudStorageService || createCloudStorageService({ envId: config.cloudbaseEnvId, probeFileId: config.cloudbaseStorageProbeFileId }),
     uploadRoot: config.uploadRoot
   })
   return { app, database }

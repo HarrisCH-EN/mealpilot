@@ -17,6 +17,7 @@
     "db:seed": "node src/scripts/seed-database.js"
   },
   "dependencies": {
+    "@cloudbase/node-sdk": "^3.18.3",
     "cors": "^2.8.5",
     "dotenv": "^16.6.1",
     "express": "^5.1.0",
