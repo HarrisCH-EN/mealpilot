@@ -4,6 +4,7 @@ const { createToken } = require('../auth')
 const { HttpError, requireFields, requireEnum, requirePositiveInteger } = require('../http')
 const { currentMembership, requireFamilyAdmin } = require('../middleware/authenticate')
 const { WechatAuthError } = require('../services/wechat-auth-service')
+const { seedStarterRecipes: defaultSeedStarterRecipes } = require('../services/starter-recipe-service')
 
 const asyncRoute = (handler) => (request, response, next) => Promise.resolve(handler(request, response, next)).catch(next)
 const INVITE_CODE_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
@@ -40,7 +41,7 @@ function mapWechatAuthError(error) {
   return new HttpError(500, '微信登录配置不可用')
 }
 
-function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, family, familyAdmin = requireFamilyAdmin(database) }) {
+function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, family, familyAdmin = requireFamilyAdmin(database), seedStarterRecipes = defaultSeedStarterRecipes }) {
   const result = express.Router()
 
   result.post('/auth/wechat-login', asyncRoute(async (request, response) => {
@@ -103,7 +104,8 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
           }
         }
       }
-      await connection.execute(`INSERT INTO family_members (family_id, user_id, role, nickname) VALUES (?, ?, 'owner', ?)`, [created.insertId, request.user.id, request.user.display_name])
+      const [ownerMember] = await connection.execute("INSERT INTO family_members (family_id, user_id, role, nickname) VALUES (?, ?, 'owner', ?)", [created.insertId, request.user.id, request.user.display_name])
+      await seedStarterRecipes(connection, { familyId: created.insertId, ownerMemberId: ownerMember.insertId })
       await connection.commit()
       const [rows] = await database.execute('SELECT id, name, invite_code, owner_user_id FROM families WHERE id = ?', [created.insertId])
       response.status(201).json({ ok: true, data: rows[0] })

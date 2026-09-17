@@ -9,6 +9,7 @@ const { createDatabase } = require('../../src/db')
 const { getConfig } = require('../../src/config')
 const { createApp } = require('../../src/app')
 const { addMenuItem } = require('../../src/services/menu-item-service')
+const starterRecipes = require('../../src/data/starter-recipes')
 
 const config = getConfig()
 const testDatabase = process.env.MYSQL_TEST_DATABASE
@@ -81,6 +82,20 @@ async function seedSystemTags(connection) {
   }
 }
 
+
+async function seedStarterIngredients() {
+  const seedSql = await fs.readFile(path.join(__dirname, '../../../database/02_seed.sql'), 'utf8')
+  const start = seedSql.indexOf('INSERT INTO ingredients')
+  const end = seedSql.indexOf('\n\nINSERT INTO ingredient_seasons', start)
+  if (start < 0 || end < 0) throw new Error('无法从 02_seed.sql 提取 Ingredient Seed')
+  const connection = await database.getConnection()
+  try {
+    await connection.execute('ALTER TABLE ingredients AUTO_INCREMENT = 1')
+    await connection.query(seedSql.slice(start, end).trim())
+  } finally {
+    connection.release()
+  }
+}
 async function insertRecipe(connection, { familyId, memberId, title, category, cookMinutes = 20, ingredientIds, status = 'active' }) {
   const [result] = await connection.execute(
     `INSERT INTO recipes (family_id, created_by_member_id, title, category, description, steps, cook_minutes, difficulty, servings, status)
@@ -234,10 +249,13 @@ if (safeDatabaseConfigured) {
     fixture = await seedFixture()
   })
   test.after(async () => {
-    await cleanup()
-    await new Promise((resolve) => server.close(resolve))
-    await database.end()
-    await fs.rm(uploadRoot, { recursive: true, force: true })
+    if (server) await new Promise((resolve) => server.close(resolve))
+    if (database) {
+      await cleanup()
+      await database.end()
+      database = null
+    }
+    if (uploadRoot) await fs.rm(uploadRoot, { recursive: true, force: true })
   })
 }
 
@@ -1037,4 +1055,96 @@ integrationTest('R1 legacy recommendation_items remains present and unchanged', 
   const names = columns[0].map((row) => row.column_name)
   assert.deepEqual(names.sort(), ['dish_score', 'id', 'reason_text', 'recipe_id', 'recommendation_run_id'].sort())
   assert.equal((await queryOne('SELECT COUNT(*) AS count FROM recommendation_items WHERE recommendation_run_id = ?', [fixture.runs.runA])).count, 3)
+})
+integrationTest('real new-family Starter Recipe initialization is isolated, referentially complete, and transactional', async () => {
+  await cleanup()
+  await seedStarterIngredients()
+
+  const connection = await database.getConnection()
+  let missingIngredientSnapshot
+  let failedUser
+  try {
+    missingIngredientSnapshot = await queryOne('SELECT id, name, calories_per_100g, protein_per_100g, fat_per_100g, carbohydrate_per_100g FROM ingredients WHERE id = 51')
+    assert.equal(missingIngredientSnapshot.name, '白菜')
+    await connection.execute('DELETE FROM ingredients WHERE id = 51')
+    failedUser = await insertUser(connection, 'starter-rollback-user', 'Starter 回滚用户')
+  } finally {
+    connection.release()
+  }
+
+  const failedCreate = await requestAs(failedUser, '/api/families', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ name: 'Starter 应回滚家庭' })
+  })
+  assert.equal(failedCreate.status, 500)
+  assert.equal((await queryOne('SELECT COUNT(*) AS count FROM families WHERE name = ?', ['Starter 应回滚家庭'])).count, 0)
+  assert.equal((await queryOne('SELECT COUNT(*) AS count FROM family_members WHERE user_id = ?', [failedUser])).count, 0)
+  assert.equal((await queryOne('SELECT COUNT(*) AS count FROM recipes WHERE family_id NOT IN (SELECT id FROM families)')).count, 0)
+  assert.equal((await queryOne('SELECT COUNT(*) AS count FROM recipe_ingredients WHERE recipe_id NOT IN (SELECT id FROM recipes)')).count, 0)
+  assert.equal((await queryOne('SELECT COUNT(*) AS count FROM recipe_tags WHERE recipe_id NOT IN (SELECT id FROM recipes)')).count, 0)
+
+  await database.execute(
+    'INSERT INTO ingredients (id, name, calories_per_100g, protein_per_100g, fat_per_100g, carbohydrate_per_100g) VALUES (?, ?, ?, ?, ?, ?)',
+    [missingIngredientSnapshot.id, missingIngredientSnapshot.name, missingIngredientSnapshot.calories_per_100g, missingIngredientSnapshot.protein_per_100g, missingIngredientSnapshot.fat_per_100g, missingIngredientSnapshot.carbohydrate_per_100g]
+  )
+
+  const userAConnection = await database.getConnection()
+  const userA = await insertUser(userAConnection, 'starter-family-user-a', 'Starter 家庭 A 用户')
+  userAConnection.release()
+  const userBConnection = await database.getConnection()
+  const userB = await insertUser(userBConnection, 'starter-family-user-b', 'Starter 家庭 B 用户')
+  userBConnection.release()
+  const joinConnection = await database.getConnection()
+  const joinUser = await insertUser(joinConnection, 'starter-family-join-user', 'Starter 加入用户')
+  joinConnection.release()
+
+  const createFamily = async (userId, name) => {
+    const response = await requestAs(userId, '/api/families', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ name })
+    })
+    assert.equal(response.status, 201)
+    return (await response.json()).data
+  }
+
+  const familyA = await createFamily(userA, 'Starter 家庭 A')
+  const familyB = await createFamily(userB, 'Starter 家庭 B')
+  const ownerA = await queryOne('SELECT id FROM family_members WHERE family_id = ? AND user_id = ?', [familyA.id, userA])
+  const ownerB = await queryOne('SELECT id FROM family_members WHERE family_id = ? AND user_id = ?', [familyB.id, userB])
+
+  for (const [familyId, ownerMemberId] of [[familyA.id, ownerA.id], [familyB.id, ownerB.id]]) {
+    assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM recipes WHERE family_id = ?', [familyId])).count), 48)
+    assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM recipe_ingredients ri JOIN recipes r ON r.id = ri.recipe_id WHERE r.family_id = ?', [familyId])).count), 103)
+    assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM recipe_tags rt JOIN recipes r ON r.id = rt.recipe_id WHERE r.family_id = ?', [familyId])).count), 28)
+    assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM recipes WHERE family_id = ? AND created_by_member_id <> ?', [familyId, ownerMemberId])).count), 0)
+    assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM recipe_ingredients ri JOIN recipes r ON r.id = ri.recipe_id LEFT JOIN ingredients i ON i.id = ri.ingredient_id WHERE r.family_id = ? AND (r.id IS NULL OR i.id IS NULL)', [familyId])).count), 0)
+    assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM recipe_tags rt JOIN recipes r ON r.id = rt.recipe_id LEFT JOIN tag_definitions td ON td.id = rt.tag_id WHERE r.family_id = ? AND (r.id IS NULL OR td.id IS NULL OR td.kind <> \'system\')', [familyId])).count), 0)
+  }
+
+  const cabbageIngredients = await queryRows(
+    `SELECT ri.ingredient_id AS ingredientId, i.name
+     FROM recipes r
+     JOIN recipe_ingredients ri ON ri.recipe_id = r.id
+     JOIN ingredients i ON i.id = ri.ingredient_id
+     WHERE r.family_id = ? AND r.title = '醋溜白菜'
+     ORDER BY ri.ingredient_id`,
+    [familyA.id]
+  )
+  assert.deepEqual(cabbageIngredients, [{ ingredientId: 13, name: '大蒜' }, { ingredientId: 51, name: '白菜' }])
+  assert.equal(cabbageIngredients.some((row) => row.ingredientId === 53), false)
+
+  const recipeIdsA = new Set((await queryRows('SELECT id FROM recipes WHERE family_id = ?', [familyA.id])).map((row) => Number(row.id)))
+  const recipeIdsB = new Set((await queryRows('SELECT id FROM recipes WHERE family_id = ?', [familyB.id])).map((row) => Number(row.id)))
+  assert.equal([...recipeIdsA].some((recipeId) => recipeIdsB.has(recipeId)), false)
+
+  const joinResponse = await requestAs(joinUser, '/api/families/join', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ inviteCode: familyA.invite_code })
+  })
+  assert.equal(joinResponse.status, 201)
+  assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM recipes WHERE family_id = ?', [familyA.id])).count), 48)
+  assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM family_members WHERE family_id = ? AND user_id = ?', [familyA.id, joinUser])).count), 1)
 })

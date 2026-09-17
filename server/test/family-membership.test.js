@@ -133,7 +133,7 @@ function makeDatabase({ memberships = [], families = [] } = {}) {
   }
 }
 
-function makeApp(database) {
+function makeApp(database, seedStarterRecipes = async () => {}) {
   const app = express()
   app.use(express.json())
   app.use('/api', router({
@@ -144,7 +144,8 @@ function makeApp(database) {
       request.user = user
       next()
     },
-    family: (_request, _response, next) => next()
+    family: (_request, _response, next) => next(),
+    seedStarterRecipes
   }))
   app.use((error, _request, response, _next) => response.status(error.status || 500).json({ message: error.message }))
   return app
