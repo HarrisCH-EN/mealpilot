@@ -57,9 +57,9 @@ test('required bundled recipe images are readable JPEGs while the media director
   }
 })
 
-test('recipe API exposes coverUrl in list and detail queries', () => {
+test('recipe API exposes stable coverFileId in list and detail queries', () => {
   const routes = fs.readFileSync(path.join(projectRoot, 'server', 'src', 'routes', 'recipes.js'), 'utf8')
-  assert.equal((routes.match(/cover_url AS coverUrl/g) || []).length, 3)
+  assert.equal((routes.match(/cover_url AS coverFileId/g) || []).length, 3)
 })
 
 test('local MiniProgram image paths follow the existing bundle-relative convention', () => {

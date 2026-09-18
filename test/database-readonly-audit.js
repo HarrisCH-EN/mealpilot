@@ -1,5 +1,3 @@
-const fs = require('node:fs/promises')
-const path = require('node:path')
 const mysql = require('../server/node_modules/mysql2/promise')
 const { getConfig } = require('../server/src/config')
 
@@ -142,29 +140,14 @@ async function main() {
 
     const [userAvatarRows] = await connection.execute("SELECT avatar_url AS url FROM users WHERE avatar_url <> ''")
     const [recipeCoverRows] = await connection.execute("SELECT cover_url AS url FROM recipes WHERE cover_url <> ''")
-    const referencedUploadUrls = new Set(
+    const referencedStorageIds = new Set(
       [...userAvatarRows, ...recipeCoverRows]
         .map((row) => String(row.url || ''))
-        .filter((url) => url.startsWith('/uploads/'))
+        .filter((url) => url.startsWith('cloud://'))
     )
-    const uploadRoot = config.uploadRoot
-    const uploadFiles = []
-    async function collectFiles(directory) {
-      let entries = []
-      try { entries = await fs.readdir(directory, { withFileTypes: true }) } catch (_error) { return }
-      for (const entry of entries) {
-        const fullPath = path.join(directory, entry.name)
-        if (entry.isDirectory()) await collectFiles(fullPath)
-        else if (entry.isFile()) uploadFiles.push(fullPath)
-      }
-    }
-    await collectFiles(uploadRoot)
-    const storedUploadUrls = new Set(uploadFiles.map((filePath) => {
-      const relative = path.relative(uploadRoot, filePath).split(path.sep).join('/')
-      return `/uploads/${relative}`
-    }))
-    const missingReferencedUploads = [...referencedUploadUrls].filter((url) => !storedUploadUrls.has(url))
-    const orphanUploadFiles = [...storedUploadUrls].filter((url) => !referencedUploadUrls.has(url))
+    const legacyStorageReferences = [...userAvatarRows, ...recipeCoverRows]
+      .map((row) => String(row.url || ''))
+      .filter((url) => url && !url.startsWith('cloud://'))
 
     const [schemaRows] = await connection.execute(
       `SELECT TABLE_NAME, ENGINE, TABLE_COLLATION
@@ -178,12 +161,10 @@ async function main() {
       tables: schemaRows,
       counts,
       integrity,
-      uploads: {
-        files: storedUploadUrls.size,
-        referenced: referencedUploadUrls.size,
-        missingReferenced: missingReferencedUploads.length,
-        orphanFiles: orphanUploadFiles.length,
-        orphanPaths: orphanUploadFiles.sort()
+      storage: {
+        stableReferences: referencedStorageIds.size,
+        legacyReferences: legacyStorageReferences.length,
+        legacyPaths: legacyStorageReferences.sort()
       },
       readOnly: true
     }, null, 2))

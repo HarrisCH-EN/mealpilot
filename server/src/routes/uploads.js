@@ -1,5 +1,4 @@
 const crypto = require('node:crypto')
-const fs = require('node:fs/promises')
 const path = require('node:path')
 const express = require('express')
 const { HttpError } = require('../http')
@@ -11,30 +10,68 @@ const ALLOWED_TYPES = new Map([
   ['image/webp', new Set(['.webp'])]
 ])
 
-function router({ uploadRoot, maxBytes = DEFAULT_MAX_BYTES, auth, family, database }) {
+function router({ cloudStorageService, mediaUrlService, storageFileIdPrefix = '', maxBytes = DEFAULT_MAX_BYTES, auth, family, database }) {
   const result = express.Router()
+
   result.post('/uploads/recipe-cover', auth, family, asyncRoute(async (request, response) => {
+    requireStorage(cloudStorageService)
     const file = await readMultipartFile(request, maxBytes)
-    validateImage(file, maxBytes)
-    const stored = await storeImage(uploadRoot, 'recipes', file)
-    response.status(201).json({ ok: true, data: { coverUrl: stored.url } })
-  }))
-  result.post('/uploads/avatar', auth, asyncRoute(async (request, response) => {
-    if (!database) throw new HttpError(500, '头像服务未配置')
-    const file = await readMultipartFile(request, maxBytes)
-    validateImage(file, maxBytes)
-    const stored = await storeImage(uploadRoot, 'avatars', file)
+    const extension = validateImage(file, maxBytes)
+    const cloudPath = `families/${request.membership.family_id}/recipes/${crypto.randomUUID()}${extension}`
+    const stored = await cloudStorageService.uploadBuffer({ cloudPath, buffer: file.buffer })
     try {
-      await database.execute('UPDATE users SET avatar_url = ? WHERE id = ?', [stored.url, request.user.id])
-      const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE id = ?', [request.user.id])
-      if (!rows[0]) throw new HttpError(401, '登录已失效')
-      response.status(201).json({ ok: true, data: { user: rows[0] } })
+      const coverUrl = await cloudStorageService.getTemporaryUrl(stored.fileId)
+      response.status(201).json({ ok: true, data: { coverFileId: stored.fileId, coverUrl } })
     } catch (error) {
-      await fs.rm(stored.filePath, { force: true })
+      await bestEffortDelete(cloudStorageService, stored.fileId)
       throw error
     }
   }))
+
+  result.post('/uploads/avatar', auth, asyncRoute(async (request, response) => {
+    if (!database) throw new HttpError(500, '头像服务未配置')
+    requireStorage(cloudStorageService)
+    const [oldRows] = await database.execute('SELECT avatar_url FROM users WHERE id = ?', [request.user.id])
+    if (!oldRows[0]) throw new HttpError(401, '登录已失效')
+    const oldFileId = String(oldRows[0].avatar_url || '').trim()
+    const file = await readMultipartFile(request, maxBytes)
+    const extension = validateImage(file, maxBytes)
+    const cloudPath = `users/${request.user.id}/avatars/${crypto.randomUUID()}${extension}`
+    const stored = await cloudStorageService.uploadBuffer({ cloudPath, buffer: file.buffer })
+    let displayUrl
+    try {
+      displayUrl = await cloudStorageService.getTemporaryUrl(stored.fileId)
+      await database.execute('UPDATE users SET avatar_url = ? WHERE id = ?', [stored.fileId, request.user.id])
+    } catch (error) {
+      await bestEffortDelete(cloudStorageService, stored.fileId)
+      throw error
+    }
+    const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE id = ?', [request.user.id])
+    if (!rows[0]) throw new HttpError(401, '登录已失效')
+    await deleteOldAvatar(cloudStorageService, oldFileId, storageFileIdPrefix, request.user.id)
+    const user = { ...rows[0], avatarFileId: stored.fileId, avatar_url: displayUrl, avatarUrl: displayUrl }
+    response.status(201).json({ ok: true, data: { user } })
+  }))
   return result
+}
+
+function requireStorage(cloudStorageService) {
+  if (!cloudStorageService || typeof cloudStorageService.uploadBuffer !== 'function') throw new HttpError(503, '图片存储服务未配置')
+}
+
+async function deleteOldAvatar(cloudStorageService, fileId, prefix, userId) {
+  const normalizedPrefix = String(prefix || '').replace(/\/+$/, '')
+  const expectedPrefix = `${normalizedPrefix}/users/${userId}/avatars/`
+  if (!normalizedPrefix || !fileId.startsWith(expectedPrefix) || fileId.slice(expectedPrefix.length).includes('/')) return
+  try {
+    await cloudStorageService.deleteFile(fileId)
+  } catch (error) {
+    console.warn('[MealPilot Storage Warning]', { operation: 'delete-old-avatar', errorCode: error && error.code || 'CLOUDBASE_STORAGE_DELETE_FAILED' })
+  }
+}
+
+async function bestEffortDelete(cloudStorageService, fileId) {
+  try { await cloudStorageService.deleteFile(fileId) } catch (_error) {}
 }
 
 function asyncRoute(handler) {
@@ -82,39 +119,17 @@ function readRequestBody(request, maxBytes) {
       }
       chunks.push(chunk)
     })
-    request.on('end', () => {
-      if (!settled) resolve(Buffer.concat(chunks))
-    })
-    request.on('error', (error) => {
-      if (!settled) {
-        settled = true
-        reject(error)
-      }
-    })
+    request.on('end', () => { if (!settled) resolve(Buffer.concat(chunks)) })
+    request.on('error', (error) => { if (!settled) { settled = true; reject(error) } })
   })
 }
 
 function validateImage(file, maxBytes) {
   const extension = path.extname(file.filename).toLowerCase()
   const allowedExtensions = ALLOWED_TYPES.get(file.mime)
-  if (!allowedExtensions || !allowedExtensions.has(extension) || !hasValidSignature(file.buffer, file.mime)) {
-    throw new HttpError(400, '仅支持 JPG、PNG 或 WebP 图片')
-  }
+  if (!allowedExtensions || !allowedExtensions.has(extension) || !hasValidSignature(file.buffer, file.mime)) throw new HttpError(400, '仅支持 JPG、PNG 或 WebP 图片')
   if (file.buffer.length > maxBytes) throw new HttpError(413, '图片不能超过 5MB')
-}
-
-async function storeImage(uploadRoot, relativeDirectory, file) {
-  const extension = path.extname(file.filename).toLowerCase()
-  const filename = `${crypto.randomUUID()}${extension}`
-  const directory = path.join(uploadRoot, relativeDirectory)
-  const filePath = path.join(directory, filename)
-  await fs.mkdir(directory, { recursive: true })
-  try {
-    await fs.writeFile(filePath, file.buffer, { flag: 'wx' })
-  } catch (_error) {
-    throw new HttpError(500, '图片保存失败')
-  }
-  return { filePath, url: `/uploads/${relativeDirectory}/${filename}` }
+  return extension
 }
 
 function parsePartHeaders(value) {
@@ -137,4 +152,4 @@ function hasValidSignature(buffer, mime) {
   return false
 }
 
-module.exports = { router, DEFAULT_MAX_BYTES }
+module.exports = { router, DEFAULT_MAX_BYTES, validateImage, deleteOldAvatar }

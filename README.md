@@ -132,7 +132,9 @@ start-mealpilot-api.bat
 | NODE_ENV | 生产配置校验开关 | 生产部署建议设置为 production |
 | WECHAT_APP_ID | 微信小程序 AppID | 正式微信登录必需 |
 | WECHAT_APP_SECRET | 微信小程序 AppSecret | 仅 Backend，正式微信登录必需 |
-| RECIPE_UPLOAD_ROOT | 菜谱封面上传目录 | 可选 |
+| CLOUDBASE_ENV_ID | CloudBase 环境 ID | 正式 Backend 必需 |
+| CLOUDBASE_STORAGE_FILE_ID_PREFIX | CloudBase Storage 文件 ID 前缀，例如 `cloud://env.bucket` | 正式 Backend 必需 |
+| CLOUDBASE_APIKEY | CloudBase 服务端 API Key | 正式 Backend 必需，仅服务端 |
 | MYSQL_TEST_DATABASE | Real MySQL Integration 测试库 | 仅 Integration |
 | PHASE_1C_ALLOW_DB_WRITES | 显式允许测试库写入，必须为 1 | 仅 Integration |
 
@@ -298,9 +300,11 @@ persisted candidates with score/reason snapshots
 POST /api/uploads/recipe-cover
 ~~~
 
-支持 JPG、JPEG、PNG、WebP，大小上限 5 MB。文件保存在本地 upload directory，服务端生成安全文件名；数据库只保存 `/uploads/recipes/<filename>` 或 `/uploads/avatars/<filename>` 相对 URL。头像属于全局用户资料，菜谱封面属于家庭菜谱资料。
+支持 JPG、JPEG、PNG、WebP，大小上限 5 MB。文件上传至 CloudBase Storage，数据库只保存稳定的 `cloud://...` 文件 ID；API 和小程序使用临时 HTTPS URL 展示。头像属于全局用户资料，菜谱封面属于家庭菜谱资料。
 
-上传失败时 Recipe 不会假装保存成功。孤儿图片清理、云对象存储（生产对象存储命名为 `mealpilot-assets`）和 CDN 属于 Deferred。
+上传接口返回 `coverFileId`（稳定 ID）和 `coverUrl`（临时展示 URL）。Recipe 创建/编辑优先接收 `coverFileId`，读取接口同时返回稳定 ID 与临时 URL。上传失败时 Recipe 不会假装保存成功；数据库更新失败会清理本次新上传对象，旧头像删除失败只记录安全告警，不影响主请求。
+
+历史菜谱封面迁移默认只做 dry-run；确认摘要并完成备份后执行 `npm run storage:migrate-recipe-covers -- --apply`。迁移不会自动上传本地图片，也不会在应用启动时执行。
 
 ## 15. 测试系统
 
@@ -311,7 +315,7 @@ cd E:\Database_Design\server
 npm test
 ~~~
 
-当前基线：196 passed，0 failed，0 skipped。Direct 测试不连接、不读取、不写入 mealpilot。
+Direct 测试不连接、不读取、不写入 mealpilot。
 
 ### Backend Real MySQL Integration
 

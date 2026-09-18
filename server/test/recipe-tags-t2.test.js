@@ -27,7 +27,7 @@ function makeDatabase({ failOnTagId = null } = {}) {
     if (/FROM ingredients WHERE id IN/i.test(sql)) return [target.ingredients.filter((item) => params.includes(item.id))]
     if (/SELECT created_by_member_id AS author/i.test(sql)) {
       const recipe = target.recipes.find((item) => item.id === Number(params[0]) && item.family_id === params[1] && item.status === 'active')
-      return [recipe ? [{ author: recipe.created_by_member_id, coverUrl: recipe.cover_url }] : []]
+      return [recipe ? [{ author: recipe.created_by_member_id, coverFileId: recipe.cover_url, coverUrl: recipe.cover_url }] : []]
     }
     if (/UPDATE recipes SET title/i.test(sql)) return [{ affectedRows: 1 }]
     if (/DELETE FROM recipe_ingredients/i.test(sql)) { target.recipeIngredients = target.recipeIngredients.filter((item) => item.recipe_id !== Number(params[0])); return [{ affectedRows: 1 }] }

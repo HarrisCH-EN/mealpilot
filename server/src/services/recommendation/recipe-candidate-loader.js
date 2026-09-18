@@ -10,7 +10,7 @@ function baseRecipe(row) {
     title: row.title,
     description: row.description,
     steps: row.steps,
-    coverUrl: row.coverUrl ?? row.cover_url ?? null,
+    coverUrl: row.coverFileId ?? row.coverUrl ?? row.cover_url ?? null,
     category: row.category,
     cookMinutes: Number(row.cookMinutes ?? row.cook_minutes ?? 0),
     difficulty: Number(row.difficulty ?? 1),
@@ -25,7 +25,7 @@ function baseRecipe(row) {
 async function loadRecipeDomainData(connection, { familyId }) {
   const recipeRows = rowsFrom(await connection.execute(`
     SELECT r.id, r.family_id AS familyId, r.status, r.title, r.description, r.steps,
-           r.cover_url AS coverUrl, r.category, r.cook_minutes AS cookMinutes,
+           r.cover_url AS coverFileId, r.category, r.cook_minutes AS cookMinutes,
            r.difficulty, r.servings
     FROM recipes r
     WHERE r.family_id = ? AND r.status = 'active'

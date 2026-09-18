@@ -83,7 +83,7 @@ async function loadPersistedCandidate({ connection, familyId, runId, rank }) {
       c.score_breakdown AS scoreBreakdown, c.reason_text AS reasonText,
       ci.slot_no AS slotNo, ci.recipe_id AS recipeId,
       ci.dish_score AS dishScore, ci.reason_text AS itemReason,
-      r.title, r.category, r.cook_minutes AS cookMinutes, r.difficulty AS difficulty, r.cover_url AS coverUrl,
+      r.title, r.category, r.cook_minutes AS cookMinutes, r.difficulty AS difficulty, r.cover_url AS coverFileId,
       COALESCE((
         SELECT JSON_ARRAYAGG(JSON_OBJECT(
           'id', td.id,
@@ -113,7 +113,7 @@ async function loadPersistedCandidate({ connection, familyId, runId, rank }) {
     category: row.category,
     cookMinutes: Number(row.cookMinutes),
     difficulty: Number(row.difficulty || 1),
-    coverUrl: row.coverUrl || null,
+    coverUrl: row.coverFileId ?? row.coverUrl ?? null,
     tags: parseJson(row.tags, []),
     dishScore: Number(row.dishScore),
     reason: row.itemReason || ''

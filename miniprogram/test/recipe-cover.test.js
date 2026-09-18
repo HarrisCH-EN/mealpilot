@@ -8,10 +8,11 @@ const formScript = fs.readFileSync(path.join(root, 'pages', 'recipe-form', 'inde
 const formTemplate = fs.readFileSync(path.join(root, 'pages', 'recipe-form', 'index.wxml'), 'utf8')
 const apiScript = fs.readFileSync(path.join(root, 'utils', 'api.js'), 'utf8')
 
-test('recipe form uploads a chosen image before saving and sends the returned coverUrl', () => {
+test('recipe form keeps the returned coverFileId for saving and coverUrl for display', () => {
   assert.match(formScript, /uploadFile/)
   assert.match(formScript, /uploadRecipeCover|uploadCover/)
-  assert.match(formScript, /coverUrl.*payload|payload.*coverUrl/s)
+  assert.match(formScript, /coverFileId/)
+  assert.match(formScript, /coverUrl.*coverFileId|coverFileId.*coverUrl/s)
   assert.match(formScript, /uploadingCover/)
   assert.match(formTemplate, /uploadingCover|上传|编辑图片/)
   assert.match(apiScript, /uploadFile/)

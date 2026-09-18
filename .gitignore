@@ -1,6 +1,7 @@
 node_modules/
 server/node_modules/
 server/.env
+server/apikey.txt
 server/coverage/
 server/uploads/
 *.log

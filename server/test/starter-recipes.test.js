@@ -4,6 +4,7 @@ const express = require('express')
 const { router } = require('../src/routes/auth-family')
 const starterRecipes = require('../src/data/starter-recipes')
 const { seedStarterRecipes } = require('../src/services/starter-recipe-service')
+const { systemRecipeCovers } = require('../src/data/system-recipe-covers')
 
 const owner = { id: 42, openid: 'wechat-owner', display_name: '真实微信用户', avatar_url: '' }
 const systemTagDefinitions = [
@@ -150,7 +151,7 @@ function makeApp(database, { seed = seedStarterRecipes, actor = owner } = {}) {
     auth: (request, _response, next) => { request.user = actor; next() },
     family: (_request, _response, next) => next(),
     familyAdmin: (_request, _response, next) => next(),
-    seedStarterRecipes: seed
+    seedStarterRecipes: async (connection, params) => seed(connection, { ...params, fileIdForPath: (cloudPath) => `cloud://test.bucket/${cloudPath}` })
   }))
   app.use((error, _request, response, _next) => response.status(error.status || 500).json({ message: error.message }))
   return app
@@ -214,7 +215,7 @@ test('new family receives 48 independent starter recipes with exact seed relatio
       cook_minutes: template.cookMinutes,
       difficulty: template.difficulty,
       servings: template.servings,
-      cover_url: template.coverUrl,
+      cover_url: systemRecipeCovers[template.title] ? `cloud://test.bucket/${systemRecipeCovers[template.title]}` : '',
       status: 'active'
     })
 

@@ -2,7 +2,6 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs/promises')
 const path = require('node:path')
-const os = require('node:os')
 const mysql = require('mysql2/promise')
 const { createToken } = require('../../src/auth')
 const { createDatabase } = require('../../src/db')
@@ -26,8 +25,13 @@ let database
 let server
 let baseUrl
 let fixture
-let uploadRoot
 const jwtSecret = 'phase-1c-integration-secret'
+const integrationStorage = {
+  async uploadBuffer({ cloudPath }) { return { fileId: `cloud://test.bucket/${cloudPath}` } },
+  async getTemporaryUrl(fileId) { return `https://temp.test/${encodeURIComponent(fileId)}` },
+  async getTemporaryUrls(fileIds) { return Object.fromEntries(fileIds.map((fileId) => [fileId, `https://temp.test/${encodeURIComponent(fileId)}`])) },
+  async deleteFile() {}
+}
 
 function integrationTest(name, fn) {
   test(name, { skip: safeDatabaseConfigured ? false : skipReason }, fn)
@@ -220,7 +224,6 @@ async function runMenuAdd(recipeId, date = '2026-09-09') {
 
 if (safeDatabaseConfigured) {
   test.before(async () => {
-    uploadRoot = await fs.mkdtemp(path.join(os.tmpdir(), 'mealpilot-phase-2e-uploads-'))
     const schema = await fs.readFile(path.join(__dirname, '../../../database/01_schema.sql'), 'utf8')
     const admin = await mysql.createConnection({ ...config.mysql, database: undefined, multipleStatements: true })
     try {
@@ -240,7 +243,7 @@ if (safeDatabaseConfigured) {
     const tagConnection = await database.getConnection()
     try { await seedSystemTags(tagConnection) } finally { tagConnection.release() }
     fixture = await seedFixture()
-    const app = createApp({ database, jwtSecret, devAuthEnabled: false, uploadRoot })
+    const app = createApp({ database, jwtSecret, devAuthEnabled: false, cloudStorageService: integrationStorage, cloudbaseStorageFileIdPrefix: 'cloud://test.bucket' })
     server = await new Promise((resolve) => { const instance = app.listen(0, () => resolve(instance)) })
     baseUrl = `http://127.0.0.1:${server.address().port}`
   })
@@ -255,7 +258,6 @@ if (safeDatabaseConfigured) {
       await database.end()
       database = null
     }
-    if (uploadRoot) await fs.rm(uploadRoot, { recursive: true, force: true })
   })
 }
 
@@ -584,7 +586,7 @@ integrationTest('real Restriction remains a hard override over a high category p
   assert.equal((await response.json()).data.items.some((item) => item.id === highlyPreferredButRestricted), false)
 })
 
-integrationTest('real Recipe cover upload persists isolated files and survives Recipe create/edit reads', async () => {
+integrationTest('real Recipe cover upload persists CloudBase IDs and survives Recipe create/edit reads', async () => {
   const jpeg = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 0xd9])
   const upload = async (buffer, filename) => {
     const form = new FormData()
@@ -593,28 +595,32 @@ integrationTest('real Recipe cover upload persists isolated files and survives R
   }
   const firstUpload = await upload(jpeg, 'first.jpg')
   assert.equal(firstUpload.status, 201)
-  const firstCover = (await firstUpload.json()).data.coverUrl
-  assert.match(firstCover, /^\/uploads\/recipes\/[a-f0-9-]+\.jpg$/)
-  assert.equal(/^[a-zA-Z]:[\\/]/.test(firstCover), false)
-  await fs.access(path.join(uploadRoot, firstCover.replace(/^\/uploads\//, '')))
-  assert.equal((await fetch(`${baseUrl}${firstCover}`)).status, 200)
+  const firstUploadData = (await firstUpload.json()).data
+  const firstCoverFileId = firstUploadData.coverFileId
+  assert.match(firstCoverFileId, /^cloud:\/\/test\.bucket\/families\/\d+\/recipes\/[a-f0-9-]+\.jpg$/)
+  assert.match(firstUploadData.coverUrl, /^https:\/\/temp\.test\//)
 
-  const createResponse = await requestAs(fixture.users.userA, '/api/recipes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: '持久化封面菜谱', category: '荤菜', steps: '上传封面并保存', cookMinutes: 20, difficulty: 2, ingredients: [{ ingredientId: fixture.ingredients.ingredientZ, amountGrams: 100 }], coverUrl: firstCover }) })
+  const createResponse = await requestAs(fixture.users.userA, '/api/recipes', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: '持久化封面菜谱', category: '荤菜', steps: '上传封面并保存', cookMinutes: 20, difficulty: 2, ingredients: [{ ingredientId: fixture.ingredients.ingredientZ, amountGrams: 100 }], coverFileId: firstCoverFileId, coverUrl: firstUploadData.coverUrl }) })
   assert.equal(createResponse.status, 201)
   const recipeId = (await createResponse.json()).data.id
-  assert.equal((await queryOne('SELECT cover_url FROM recipes WHERE id = ?', [recipeId])).cover_url, firstCover)
+  assert.equal((await queryOne('SELECT cover_url FROM recipes WHERE id = ?', [recipeId])).cover_url, firstCoverFileId)
   assert.equal((await requestAs(fixture.users.userA, `/api/recipes/${recipeId}`)).status, 200)
-  assert.equal((await (await requestAs(fixture.users.userA, `/api/recipes/${recipeId}`)).json()).data.coverUrl, firstCover)
+  const firstRecipe = (await (await requestAs(fixture.users.userA, `/api/recipes/${recipeId}`)).json()).data
+  assert.equal(firstRecipe.coverFileId, firstCoverFileId)
+  assert.equal(firstRecipe.coverUrl, firstUploadData.coverUrl)
 
   const secondUpload = await upload(jpeg, 'second.jpg')
   assert.equal(secondUpload.status, 201)
-  const secondCover = (await secondUpload.json()).data.coverUrl
-  const editResponse = await requestAs(fixture.users.userA, `/api/recipes/${recipeId}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: '持久化封面菜谱（更新）', category: '荤菜', steps: '更新后的步骤', cookMinutes: 25, difficulty: 2, ingredients: [{ ingredientId: fixture.ingredients.ingredientZ, amountGrams: 100 }], coverUrl: secondCover }) })
+  const secondUploadData = (await secondUpload.json()).data
+  const editResponse = await requestAs(fixture.users.userA, `/api/recipes/${recipeId}`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ title: '持久化封面菜谱（更新）', category: '荤菜', steps: '更新后的步骤', cookMinutes: 25, difficulty: 2, ingredients: [{ ingredientId: fixture.ingredients.ingredientZ, amountGrams: 100 }], coverFileId: secondUploadData.coverFileId, coverUrl: secondUploadData.coverUrl }) })
   assert.equal(editResponse.status, 200)
-  assert.equal((await queryOne('SELECT cover_url FROM recipes WHERE id = ?', [recipeId])).cover_url, secondCover)
+  assert.equal((await queryOne('SELECT cover_url FROM recipes WHERE id = ?', [recipeId])).cover_url, secondUploadData.coverFileId)
   const list = await (await requestAs(fixture.users.userA, '/api/recipes')).json()
-  assert.equal(list.data.find((recipe) => recipe.id === recipeId).coverUrl, secondCover)
-  assert.equal((await (await requestAs(fixture.users.userA, `/api/recipes/${recipeId}`)).json()).data.coverUrl, secondCover)
+  assert.equal(list.data.find((recipe) => recipe.id === recipeId).coverFileId, secondUploadData.coverFileId)
+  assert.equal(list.data.find((recipe) => recipe.id === recipeId).coverUrl, secondUploadData.coverUrl)
+  const secondRecipe = (await (await requestAs(fixture.users.userA, `/api/recipes/${recipeId}`)).json()).data
+  assert.equal(secondRecipe.coverFileId, secondUploadData.coverFileId)
+  assert.equal(secondRecipe.coverUrl, secondUploadData.coverUrl)
 })
 
 integrationTest('real Feedback persists idempotently, updates Insights, respects Family and member boundaries, and follows history FK behavior', async () => {

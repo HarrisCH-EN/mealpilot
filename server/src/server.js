@@ -2,8 +2,10 @@ const { getConfig } = require('./config')
 const { createDatabase } = require('./db')
 const { createApp } = require('./app')
 const { createCloudStorageService } = require('./services/cloud-storage-service')
+const { createMediaUrlService } = require('./services/media-url-service')
 
 function createRuntimeApp(config, database = createDatabase(config.mysql)) {
+  const cloudStorageService = config.cloudStorageService || createCloudStorageService({ envId: config.cloudbaseEnvId, fileIdPrefix: config.cloudbaseStorageFileIdPrefix })
   const app = createApp({
     database,
     jwtSecret: config.jwtSecret,
@@ -11,8 +13,10 @@ function createRuntimeApp(config, database = createDatabase(config.mysql)) {
     wechatAppId: config.wechatAppId,
     wechatAppSecret: config.wechatAppSecret,
     wechatAuthService: config.wechatAuthService,
-    cloudStorageService: config.cloudStorageService || createCloudStorageService({ envId: config.cloudbaseEnvId, probeFileId: config.cloudbaseStorageProbeFileId }),
-    uploadRoot: config.uploadRoot
+    cloudStorageService,
+    mediaUrlService: config.mediaUrlService || createMediaUrlService({ storage: cloudStorageService }),
+    cloudbaseStorageFileIdPrefix: config.cloudbaseStorageFileIdPrefix,
+    maxUploadBytes: config.maxUploadBytes
   })
   return { app, database }
 }

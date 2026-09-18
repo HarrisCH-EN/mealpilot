@@ -4,26 +4,35 @@ const { normalizeTagIds, readRecipeTagIds, validateRecipeTagIds, replaceRecipeTa
 const asyncRoute = (handler) => (request, response, next) => Promise.resolve(handler(request, response, next)).catch(next)
 const MAX_RECIPE_TAGS = 3
 
-function router({ database, auth, family }) {
+function router({ database, auth, family, mediaUrlService, cloudbaseStorageFileIdPrefix = '' }) {
+  const resolveRecipeRows = async (rows) => {
+    const normalized = rows.map((row) => ({
+      ...row,
+      coverFileId: String(row.coverFileId !== undefined ? row.coverFileId : row.coverUrl || '').trim()
+    }))
+    if (!mediaUrlService) return normalized.map((row) => ({ ...row, coverUrl: row.coverFileId }))
+    return mediaUrlService.resolveRecords(normalized, { stableField: 'coverFileId', displayField: 'coverUrl' })
+  }
   const result = express.Router()
   result.get('/recipes', auth, family, asyncRoute(async (request, response) => {
     const params = [request.membership.family_id]
-    let sql = `SELECT id, title, category, description, steps, cook_minutes AS cookMinutes, difficulty, servings, cover_url AS coverUrl, created_by_member_id AS createdByMemberId FROM recipes WHERE family_id = ? AND status = 'active'`
+    let sql = `SELECT id, title, category, description, steps, cook_minutes AS cookMinutes, difficulty, servings, cover_url AS coverFileId, created_by_member_id AS createdByMemberId FROM recipes WHERE family_id = ? AND status = 'active'`
     if (request.query.category) { sql += ' AND category = ?'; params.push(request.query.category) }
     if (request.query.keyword) { sql += ' AND title LIKE ?'; params.push(`%${request.query.keyword}%`) }
     sql += ' ORDER BY updated_at DESC'
     const [rows] = await database.execute(sql, params)
     const tagRows = await loadRecipeTags(database, rows.map((row) => row.id), request.membership.family_id)
-    response.json({ ok: true, data: attachRecipeTags(rows, tagRows) })
+    response.json({ ok: true, data: await resolveRecipeRows(attachRecipeTags(rows, tagRows)) })
   }))
 
   result.get('/recipes/:id', auth, family, asyncRoute(async (request, response) => {
     requirePositiveInteger(request.params.id, '菜谱ID')
-    const [rows] = await database.execute(`SELECT id, title, category, description, steps, cook_minutes AS cookMinutes, difficulty, servings, cover_url AS coverUrl, created_by_member_id AS createdByMemberId FROM recipes WHERE id = ? AND family_id = ? AND status = 'active'`, [request.params.id, request.membership.family_id])
+    const [rows] = await database.execute(`SELECT id, title, category, description, steps, cook_minutes AS cookMinutes, difficulty, servings, cover_url AS coverFileId, created_by_member_id AS createdByMemberId FROM recipes WHERE id = ? AND family_id = ? AND status = 'active'`, [request.params.id, request.membership.family_id])
     if (!rows[0]) throw new HttpError(404, '菜谱不存在')
     const [ingredients] = await database.execute(`SELECT ri.ingredient_id AS ingredientId, i.name, ri.amount_grams AS amountGrams, ri.note FROM recipe_ingredients ri JOIN ingredients i ON i.id = ri.ingredient_id WHERE ri.recipe_id = ? ORDER BY i.name`, [request.params.id])
     const tagRows = await loadRecipeTags(database, [rows[0].id], request.membership.family_id)
-    response.json({ ok: true, data: { ...attachRecipeTags(rows, tagRows)[0], ingredients } })
+    const [recipe] = await resolveRecipeRows(attachRecipeTags(rows, tagRows))
+    response.json({ ok: true, data: { ...recipe, ingredients } })
   }))
 
   result.post('/recipes', auth, family, asyncRoute(async (request, response) => {
@@ -31,12 +40,12 @@ function router({ database, auth, family }) {
     validateRecipeContent(request.body)
     const allowed = ['荤菜', '素菜', '汤', '主食']
     if (!allowed.includes(request.body.category)) throw new HttpError(400, '分类不合法')
-    validateCoverUrl(request.body.coverUrl)
+    const coverFileId = readCoverReference(request.body, '', request.membership.family_id, cloudbaseStorageFileIdPrefix)
     const tagIds = normalizeTagIds(request.body.tagIds)
     validateRecipeTagCount(tagIds)
     const created = await withTransaction(database, async (connection) => {
       await validateIngredientsExist(connection, request.body.ingredients)
-      const [inserted] = await connection.execute(`INSERT INTO recipes (family_id, created_by_member_id, title, category, description, steps, cook_minutes, difficulty, servings, cover_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [request.membership.family_id, request.membership.member_id, String(request.body.title).trim(), request.body.category, request.body.description || '', request.body.steps || '', Number(request.body.cookMinutes), Number(request.body.difficulty), Number(request.body.servings || 2), request.body.coverUrl || ''])
+      const [inserted] = await connection.execute(`INSERT INTO recipes (family_id, created_by_member_id, title, category, description, steps, cook_minutes, difficulty, servings, cover_url) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`, [request.membership.family_id, request.membership.member_id, String(request.body.title).trim(), request.body.category, request.body.description || '', request.body.steps || '', Number(request.body.cookMinutes), Number(request.body.difficulty), Number(request.body.servings || 2), coverFileId])
       await saveIngredients(connection, inserted.insertId, request.body.ingredients)
       if (tagIds && tagIds.length) {
         await validateRecipeTagIds(connection, request.membership.family_id, tagIds)
@@ -49,18 +58,17 @@ function router({ database, auth, family }) {
 
   result.put('/recipes/:id', auth, family, asyncRoute(async (request, response) => {
     requirePositiveInteger(request.params.id, '菜谱ID')
-    const [rows] = await database.execute(`SELECT created_by_member_id AS author, cover_url AS coverUrl FROM recipes WHERE id = ? AND family_id = ? AND status = 'active'`, [request.params.id, request.membership.family_id])
+    const [rows] = await database.execute(`SELECT created_by_member_id AS author, cover_url AS coverFileId FROM recipes WHERE id = ? AND family_id = ? AND status = 'active'`, [request.params.id, request.membership.family_id])
     if (!rows[0]) throw new HttpError(404, '菜谱不存在')
     if (request.membership.role !== 'owner' && rows[0].author !== request.membership.member_id) throw new HttpError(403, '只能编辑自己创建的菜谱')
     requireFields(request.body, ['title', 'category', 'cookMinutes', 'difficulty'])
     validateRecipeContent(request.body)
-    validateCoverUrl(request.body.coverUrl)
+    const coverFileId = readCoverReference(request.body, rows[0].coverFileId || '', request.membership.family_id, cloudbaseStorageFileIdPrefix)
     const tagIds = normalizeTagIds(request.body.tagIds)
     validateRecipeTagCount(tagIds)
-    const coverUrl = request.body.coverUrl === undefined ? (rows[0].coverUrl || '') : (request.body.coverUrl || '')
     await withTransaction(database, async (connection) => {
       await validateIngredientsExist(connection, request.body.ingredients)
-      await connection.execute(`UPDATE recipes SET title = ?, category = ?, description = ?, steps = ?, cook_minutes = ?, difficulty = ?, servings = ?, cover_url = ? WHERE id = ? AND family_id = ? AND status = 'active'`, [String(request.body.title).trim(), request.body.category, request.body.description || '', request.body.steps || '', Number(request.body.cookMinutes), Number(request.body.difficulty), Number(request.body.servings || 2), coverUrl, request.params.id, request.membership.family_id])
+      await connection.execute(`UPDATE recipes SET title = ?, category = ?, description = ?, steps = ?, cook_minutes = ?, difficulty = ?, servings = ?, cover_url = ? WHERE id = ? AND family_id = ? AND status = 'active'`, [String(request.body.title).trim(), request.body.category, request.body.description || '', request.body.steps || '', Number(request.body.cookMinutes), Number(request.body.difficulty), Number(request.body.servings || 2), coverFileId, request.params.id, request.membership.family_id])
       await connection.execute('DELETE FROM recipe_ingredients WHERE recipe_id = ?', [request.params.id])
       await saveIngredients(connection, request.params.id, request.body.ingredients)
       if (tagIds !== undefined) {
@@ -93,11 +101,24 @@ function validateRecipeContent(body) {
   validateIngredientItems(body.ingredients)
 }
 
-function validateCoverUrl(coverUrl) {
-  if (coverUrl === undefined || coverUrl === null || coverUrl === '') return
-  const isUploadedCover = /^\/uploads\/recipes\/[a-f0-9-]+\.(?:jpg|jpeg|png|webp)$/i.test(coverUrl)
-  const isBundledCover = /^\/assets\/recipes\/[a-z0-9]+(?:-[a-z0-9]+)*\.(?:jpg|jpeg|png|webp)$/i.test(coverUrl)
-  if (typeof coverUrl !== 'string' || (!isUploadedCover && !isBundledCover)) throw new HttpError(400, '封面地址不合法')
+function readCoverReference(body, currentValue, familyId, prefix) {
+  const hasStableValue = Object.prototype.hasOwnProperty.call(body, 'coverFileId')
+  const hasLegacyValue = Object.prototype.hasOwnProperty.call(body, 'coverUrl')
+  if (!hasStableValue && !hasLegacyValue) return String(currentValue || '')
+  const value = hasStableValue ? body.coverFileId : body.coverUrl
+  validateCoverFileId(value, familyId, prefix)
+  return String(value || '')
+}
+
+function validateCoverFileId(value, familyId, prefix) {
+  if (value === undefined || value === null || value === '') return
+  if (typeof value !== 'string') throw new HttpError(400, '封面地址不合法')
+  const normalizedPrefix = String(prefix || '').replace(/\/+$/, '')
+  const expectedCloudPrefix = `${normalizedPrefix}/families/${familyId}/recipes/`
+  const isCurrentFamilyCloudCover = Boolean(normalizedPrefix) && value.startsWith(expectedCloudPrefix) && !value.slice(expectedCloudPrefix.length).includes('/')
+  const isUploadedCover = /^\/uploads\/recipes\/[a-f0-9-]+\.(?:jpg|jpeg|png|webp)$/i.test(value)
+  const isBundledCover = /^\/assets\/recipes\/[a-z0-9]+(?:-[a-z0-9]+)*\.(?:jpg|jpeg|png|webp)$/i.test(value)
+  if (!isCurrentFamilyCloudCover && !isUploadedCover && !isBundledCover) throw new HttpError(400, '封面地址不合法')
 }
 
 function validateRecipeTagCount(tagIds) {
@@ -149,4 +170,4 @@ async function withTransaction(database, work) {
   }
 }
 
-module.exports = { router }
+module.exports = { router, validateCoverFileId, readCoverReference }

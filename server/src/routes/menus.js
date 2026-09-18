@@ -31,7 +31,24 @@ function parseInsightDays(value) {
   return Number(raw)
 }
 
-function router({ database, auth, family }) {
+async function resolveCoverItems(items, mediaUrlService) {
+  const list = Array.isArray(items) ? items : []
+  const stableValues = list.map((item) => item && (item.coverFileId !== undefined ? item.coverFileId : item.coverUrl))
+  if (!mediaUrlService) return list
+  const displayValues = await mediaUrlService.resolveValues(stableValues)
+  return list.map((item, index) => item && stableValues[index] !== undefined ? { ...item, coverUrl: displayValues[index] } : item)
+}
+
+async function resolveRecommendationCovers(recommendation, mediaUrlService) {
+  if (!mediaUrlService || !recommendation) return recommendation
+  if (Array.isArray(recommendation.items)) return { ...recommendation, items: await resolveCoverItems(recommendation.items, mediaUrlService) }
+  if (Array.isArray(recommendation.candidates)) {
+    return { ...recommendation, candidates: await Promise.all(recommendation.candidates.map(async (candidate) => ({ ...candidate, items: await resolveCoverItems(candidate.items, mediaUrlService) }))) }
+  }
+  return recommendation
+}
+
+function router({ database, auth, family, mediaUrlService }) {
   const result = express.Router()
   result.get('/ingredients', auth, asyncRoute(async (_request, response) => {
     const [rows] = await database.execute('SELECT id, name, calories_per_100g AS calories, protein_per_100g AS protein, fat_per_100g AS fat, carbohydrate_per_100g AS carbohydrate FROM ingredients ORDER BY name')
@@ -40,10 +57,11 @@ function router({ database, auth, family }) {
   result.get('/menus', auth, family, asyncRoute(async (request, response) => {
     const date = request.query.date || new Date().toISOString().slice(0, 10)
     requireDateOnly(date, '菜单日期')
-    const [rows] = await database.execute(`SELECT m.id, m.menu_date AS menuDate, m.meal_type AS mealType, m.status, CASE WHEN r.id IS NULL THEN NULL ELSE mi.id END AS itemId, r.id AS recipeId, r.title, r.category, mi.source, mi.note, f.rating AS feedbackRating, f.comment AS feedbackComment FROM menus m LEFT JOIN menu_items mi ON mi.menu_id = m.id LEFT JOIN recipes r ON r.id = mi.recipe_id AND r.family_id = m.family_id LEFT JOIN menu_feedback f ON f.menu_item_id = mi.id AND f.member_id = ? WHERE m.family_id = ? AND m.menu_date = ? ORDER BY FIELD(m.meal_type, 'breakfast', 'lunch', 'dinner'), mi.id`, [request.membership.member_id, request.membership.family_id, date])
+    const [rows] = await database.execute(`SELECT m.id, m.menu_date AS menuDate, m.meal_type AS mealType, m.status, CASE WHEN r.id IS NULL THEN NULL ELSE mi.id END AS itemId, r.id AS recipeId, r.title, r.category, r.cover_url AS coverFileId, mi.source, mi.note, f.rating AS feedbackRating, f.comment AS feedbackComment FROM menus m LEFT JOIN menu_items mi ON mi.menu_id = m.id LEFT JOIN recipes r ON r.id = mi.recipe_id AND r.family_id = m.family_id LEFT JOIN menu_feedback f ON f.menu_item_id = mi.id AND f.member_id = ? WHERE m.family_id = ? AND m.menu_date = ? ORDER BY FIELD(m.meal_type, 'breakfast', 'lunch', 'dinner'), mi.id`, [request.membership.member_id, request.membership.family_id, date])
     const grouped = {}
-    for (const row of rows) { grouped[row.mealType] ||= { id: row.id, menuDate: row.menuDate, mealType: row.mealType, status: row.status, items: [] }; if (row.itemId) grouped[row.mealType].items.push({ id: row.itemId, recipeId: row.recipeId, title: row.title, category: row.category, source: row.source, note: row.note, feedback: row.feedbackRating === null || row.feedbackRating === undefined ? null : { rating: Number(row.feedbackRating), comment: row.feedbackComment || '' } }) }
-    response.json({ ok: true, data: Object.values(grouped) })
+    for (const row of rows) { grouped[row.mealType] ||= { id: row.id, menuDate: row.menuDate, mealType: row.mealType, status: row.status, items: [] }; if (row.itemId) { const item = { id: row.itemId, recipeId: row.recipeId, title: row.title, category: row.category, source: row.source, note: row.note, feedback: row.feedbackRating === null || row.feedbackRating === undefined ? null : { rating: Number(row.feedbackRating), comment: row.feedbackComment || '' } }; if (row.coverFileId !== undefined) item.coverFileId = row.coverFileId; grouped[row.mealType].items.push(item) } }
+    const data = await Promise.all(Object.values(grouped).map(async (menu) => ({ ...menu, items: await resolveCoverItems(menu.items, mediaUrlService) })))
+    response.json({ ok: true, data })
   }))
   result.get('/menus/dates', auth, family, asyncRoute(async (request, response) => {
     const from = String(request.query.from || '').trim()
@@ -118,7 +136,7 @@ function router({ database, auth, family }) {
           recommendation
         })
         await connection.commit()
-        response.status(201).json({ ok: true, data: persisted })
+        response.status(201).json({ ok: true, data: await resolveRecommendationCovers(persisted, mediaUrlService) })
       } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
       return
     }
@@ -128,12 +146,12 @@ function router({ database, auth, family }) {
     requireEnum(mode, ['balanced', 'healthy', 'quick'], '推荐模式')
     requireIntegerRange(maxCookMinutes, 10, 480, '最大烹饪时间')
     const month = Number(String(menuDate).slice(5, 7))
-    const [rows] = await database.execute(`SELECT r.id, r.title, r.category, r.cook_minutes AS cookMinutes, r.difficulty, GROUP_CONCAT(ri.ingredient_id) AS ingredientIds FROM recipes r LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id WHERE r.family_id = ? AND r.status = 'active' GROUP BY r.id`, [request.membership.family_id])
+    const [rows] = await database.execute(`SELECT r.id, r.title, r.category, r.cook_minutes AS cookMinutes, r.difficulty, r.cover_url AS coverFileId, GROUP_CONCAT(ri.ingredient_id) AS ingredientIds FROM recipes r LEFT JOIN recipe_ingredients ri ON ri.recipe_id = r.id WHERE r.family_id = ? AND r.status = 'active' GROUP BY r.id`, [request.membership.family_id])
     const [restricted] = await database.execute(`SELECT DISTINCT mir.ingredient_id FROM member_ingredient_restrictions mir JOIN family_members fm ON fm.id = mir.member_id WHERE fm.family_id = ? AND fm.status = 'active'`, [request.membership.family_id])
     const [preferenceRows] = await database.execute(`SELECT fm.id AS memberId, mcp.category, mcp.preference_score AS preferenceScore FROM family_members fm LEFT JOIN member_category_preferences mcp ON mcp.member_id = fm.id WHERE fm.family_id = ? AND fm.status = 'active'`, [request.membership.family_id])
     const familyPreferenceScores = aggregateFamilyPreferences(preferenceRows)
     const hasFamilyPreferences = preferenceRows.some((row) => row.category !== null && row.category !== undefined)
-    const dishes = rows.map((row) => ({ ...row, ingredientIds: row.ingredientIds ? row.ingredientIds.split(',').map(Number) : [], seasonalMonths: [month], nutrition: { protein: 10, vegetables: row.category === '素菜' ? 3 : 1 } }))
+    const dishes = rows.map((row) => ({ ...row, coverUrl: row.coverFileId || null, ingredientIds: row.ingredientIds ? row.ingredientIds.split(',').map(Number) : [], seasonalMonths: [month], nutrition: { protein: 10, vegetables: row.category === '素菜' ? 3 : 1 } }))
     const recommendation = buildRecommendation({ dishes, restrictedIngredientIds: restricted.map((item) => item.ingredient_id), familyPreferenceScores, hasFamilyPreferences, month, peopleCount: Number(peopleCount), maxCookMinutes: Number(maxCookMinutes), mode })
     if (!recommendation.ok) return response.status(422).json(recommendation)
     const connection = await database.getConnection()
@@ -141,14 +159,14 @@ function router({ database, auth, family }) {
       await connection.beginTransaction()
       const runId = await persistRecommendationRun({ connection, familyId: request.membership.family_id, memberId: request.membership.member_id, menuDate, mealType, peopleCount: Number(peopleCount), maxCookMinutes: Number(maxCookMinutes), mode, recommendation })
       await connection.commit()
-      response.json({ ok: true, data: { ...recommendation, runId } })
+      response.json({ ok: true, data: await resolveRecommendationCovers({ ...recommendation, runId }, mediaUrlService) })
     } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
   }))
   result.get('/recommendations/:id/candidates/:rank', auth, family, asyncRoute(async (request, response) => {
     requirePositiveInteger(request.params.id, '推荐批次ID')
     requirePositiveInteger(request.params.rank, '候选编号')
     const data = await loadPersistedCandidate({ connection: database, familyId: request.membership.family_id, runId: Number(request.params.id), rank: Number(request.params.rank) })
-    response.json({ ok: true, data })
+    response.json({ ok: true, data: await resolveRecommendationCovers(data, mediaUrlService) })
   }))
   result.post('/recommendations/:id/apply', auth, family, asyncRoute(async (request, response) => {
     requirePositiveInteger(request.params.id, '推荐批次ID')
@@ -207,4 +225,4 @@ function router({ database, auth, family }) {
   }))
   return result
 }
-module.exports = { router }
+module.exports = { router, resolveCoverItems, resolveRecommendationCovers }

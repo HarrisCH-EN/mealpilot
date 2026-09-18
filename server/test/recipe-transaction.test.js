@@ -25,9 +25,9 @@ function makeRecipeDatabase({ failOnIngredientId = null, initial } = {}) {
     if (/FROM ingredients WHERE id IN/i.test(sql)) {
       return [target.ingredients.filter((ingredient) => params.includes(ingredient.id))]
     }
-    if (/SELECT created_by_member_id AS author(?:, cover_url AS coverUrl)? FROM recipes/i.test(sql)) {
+    if (/SELECT created_by_member_id AS author(?:, cover_url AS (?:coverUrl|coverFileId))? FROM recipes/i.test(sql)) {
       const recipe = target.recipes.find((item) => item.id === Number(params[0]) && item.family_id === params[1] && item.status === 'active')
-      return [recipe ? [{ author: recipe.created_by_member_id, coverUrl: recipe.cover_url || '' }] : []]
+      return [recipe ? [{ author: recipe.created_by_member_id, coverFileId: recipe.cover_url || '', coverUrl: recipe.cover_url || '' }] : []]
     }
     if (/INSERT INTO recipes/i.test(sql)) {
       const [familyId, memberId, title] = params

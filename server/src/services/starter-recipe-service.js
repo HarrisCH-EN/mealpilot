@@ -1,4 +1,5 @@
 const starterRecipes = require('../data/starter-recipes')
+const { systemRecipeCovers } = require('../data/system-recipe-covers')
 
 const RECIPE_CATEGORIES = new Set(['荤菜', '素菜', '汤', '主食'])
 
@@ -43,7 +44,7 @@ async function querySystemTags(connection, codes) {
   return new Map(rows.map((row) => [row.code, row.id]))
 }
 
-async function seedStarterRecipes(connection, { familyId, ownerMemberId }) {
+async function seedStarterRecipes(connection, { familyId, ownerMemberId, fileIdForPath }) {
   if (!connection || typeof connection.execute !== 'function') throw fail('缺少事务数据库连接')
   assertPositiveId(familyId, '家庭编号')
   assertPositiveId(ownerMemberId, '家庭成员编号')
@@ -63,11 +64,14 @@ async function seedStarterRecipes(connection, { familyId, ownerMemberId }) {
   let ingredientCount = 0
   let tagCount = 0
   for (const recipe of starterRecipes) {
+    const cloudPath = systemRecipeCovers[recipe.title]
+    if (cloudPath && typeof fileIdForPath !== 'function') throw fail('CloudBase Storage 文件 ID 构造器未配置')
+    const coverFileId = cloudPath ? fileIdForPath(cloudPath) : ''
     const [inserted] = await connection.execute(
       `INSERT INTO recipes
        (family_id, created_by_member_id, title, category, description, steps, cook_minutes, difficulty, servings, cover_url)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [familyId, ownerMemberId, recipe.title, recipe.category, recipe.description, recipe.steps, recipe.cookMinutes, recipe.difficulty, recipe.servings, recipe.coverUrl]
+      [familyId, ownerMemberId, recipe.title, recipe.category, recipe.description, recipe.steps, recipe.cookMinutes, recipe.difficulty, recipe.servings, coverFileId]
     )
     if (!inserted || !inserted.insertId) throw fail(`Starter Recipe 插入失败：${recipe.title}`)
     const recipeId = inserted.insertId

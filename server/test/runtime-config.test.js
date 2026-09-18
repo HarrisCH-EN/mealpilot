@@ -47,7 +47,7 @@ async function withServer(app, callback) {
 }
 
 test('runtime app wiring uses the configured JWT secret for dev-login tokens', async () => {
-  const { app } = createRuntimeApp({ jwtSecret: 'runtime-secret-a', devAuthEnabled: true, uploadRoot: 'runtime-uploads' }, runtimeDatabase())
+  const { app } = createRuntimeApp({ jwtSecret: 'runtime-secret-a', devAuthEnabled: true }, runtimeDatabase())
 
   await withServer(app, async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/auth/dev-login`, {
@@ -64,7 +64,7 @@ test('runtime app wiring uses the configured JWT secret for dev-login tokens', a
 
 test('dev-login preserves an existing custom display name', async () => {
   const database = runtimeDatabase({ displayName: '昨天修改的名字' })
-  const { app } = createRuntimeApp({ jwtSecret: 'runtime-secret', devAuthEnabled: true, uploadRoot: 'runtime-uploads' }, database)
+  const { app } = createRuntimeApp({ jwtSecret: 'runtime-secret', devAuthEnabled: true }, database)
 
   await withServer(app, async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/auth/dev-login`, {
@@ -80,7 +80,7 @@ test('dev-login preserves an existing custom display name', async () => {
 })
 
 test('runtime app wiring disables dev-login when configured false', async () => {
-  const { app } = createRuntimeApp({ jwtSecret: 'runtime-secret', devAuthEnabled: false, uploadRoot: 'runtime-uploads' }, {
+  const { app } = createRuntimeApp({ jwtSecret: 'runtime-secret', devAuthEnabled: false }, {
     execute: async () => { throw new Error('disabled dev-login must not query the database') }
   })
 
@@ -107,11 +107,11 @@ test('tokens signed with one secret cannot be verified with another secret', () 
 
 test('production config rejects a missing or development JWT secret', () => {
   assert.throws(
-    () => getConfig({ NODE_ENV: 'production', JWT_SECRET: '' }),
+    () => getConfig({ NODE_ENV: 'production', JWT_SECRET: '', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }),
     /JWT_SECRET/
   )
   assert.throws(
-    () => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'local-development-secret-change-me' }),
+    () => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'local-development-secret-change-me', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }),
     /JWT_SECRET/
   )
 })
@@ -121,12 +121,35 @@ test('production config rejects development login even with a valid JWT secret',
     () => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'explicit-production-secret', DEV_AUTH_ENABLED: 'true' }),
     /DEV_AUTH_ENABLED|开发登录/
   )
-  assert.doesNotThrow(() => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'explicit-production-secret', DEV_AUTH_ENABLED: 'false' }))
+  assert.doesNotThrow(() => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'explicit-production-secret', DEV_AUTH_ENABLED: 'false', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }))
 })
 
 test('only exact production NODE_ENV activates production config rules', () => {
-  const base = { JWT_SECRET: '', WECHAT_APP_ID: '', WECHAT_APP_SECRET: '' }
+  const base = { JWT_SECRET: '', WECHAT_APP_ID: '', WECHAT_APP_SECRET: '', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }
   assert.doesNotThrow(() => getConfig({ ...base, NODE_ENV: undefined }))
   assert.doesNotThrow(() => getConfig({ ...base, NODE_ENV: 'test' }))
   assert.equal(getConfig({ ...base, NODE_ENV: 'production', JWT_SECRET: 'explicit-production-secret' }).environment, 'production')
+})
+
+test('production config fails fast for missing CloudBase storage settings without exposing the API key', () => {
+  for (const name of ['CLOUDBASE_ENV_ID', 'CLOUDBASE_STORAGE_FILE_ID_PREFIX', 'CLOUDBASE_APIKEY']) {
+    const env = {
+      NODE_ENV: 'production',
+      JWT_SECRET: 'explicit-production-secret',
+      DEV_AUTH_ENABLED: 'false',
+      CLOUDBASE_ENV_ID: 'env',
+      CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket',
+      CLOUDBASE_APIKEY: 'secret-value'
+    }
+    delete env[name]
+    assert.throws(() => getConfig(env), new RegExp(name))
+  }
+  assert.doesNotThrow(() => getConfig({
+    NODE_ENV: 'production',
+    JWT_SECRET: 'explicit-production-secret',
+    DEV_AUTH_ENABLED: 'false',
+    CLOUDBASE_ENV_ID: 'env',
+    CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket',
+    CLOUDBASE_APIKEY: 'secret-value'
+  }))
 })

@@ -34,6 +34,13 @@ async function findOrCreateWechatUser(database, { openid, displayName = '微信�
   return rows[0]
 }
 
+async function presentUser(user, mediaUrlService) {
+  if (!user || !mediaUrlService) return user
+  const avatarFileId = String(user.avatarFileId !== undefined ? user.avatarFileId : user.avatar_url || '').trim()
+  const [avatarUrl] = await mediaUrlService.resolveValues([avatarFileId])
+  return { ...user, avatarFileId, avatar_url: avatarUrl, avatarUrl }
+}
+
 function mapWechatAuthError(error) {
   if (!(error instanceof WechatAuthError)) return error
   if (error.kind === 'invalid-code') return new HttpError(401, '微信登录凭证无效')
@@ -41,7 +48,7 @@ function mapWechatAuthError(error) {
   return new HttpError(500, '微信登录配置不可用')
 }
 
-function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, family, familyAdmin = requireFamilyAdmin(database), seedStarterRecipes = defaultSeedStarterRecipes }) {
+function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, family, familyAdmin = requireFamilyAdmin(database), seedStarterRecipes = defaultSeedStarterRecipes, fileIdForPath, mediaUrlService }) {
   const result = express.Router()
 
   result.post('/auth/wechat-login', asyncRoute(async (request, response) => {
@@ -56,8 +63,9 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
       throw mapWechatAuthError(error)
     }
     if (!session || typeof session.openid !== 'string' || !session.openid.trim()) throw new HttpError(401, '微信登录凭证无效')
-    const user = await findOrCreateWechatUser(database, { openid: session.openid.trim() })
-    response.json({ ok: true, data: { token: createToken(user, jwtSecret), user, membership: await currentMembership(database, user.id) } })
+    const storedUser = await findOrCreateWechatUser(database, { openid: session.openid.trim() })
+    const user = await presentUser(storedUser, mediaUrlService)
+    response.json({ ok: true, data: { token: createToken(storedUser, jwtSecret), user, membership: await currentMembership(database, storedUser.id) } })
   }))
 
   result.post('/auth/dev-login', asyncRoute(async (request, response) => {
@@ -66,12 +74,13 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
     const displayName = String(request.body.displayName || '演示用户').trim().slice(0, 40)
     await database.execute(`INSERT INTO users (openid, display_name) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`, [openid, displayName])
     const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE openid = ?', [openid])
-    const user = rows[0]
-    response.json({ ok: true, data: { token: createToken(user, jwtSecret), user, membership: await currentMembership(database, user.id) } })
+    const storedUser = rows[0]
+    const user = await presentUser(storedUser, mediaUrlService)
+    response.json({ ok: true, data: { token: createToken(storedUser, jwtSecret), user, membership: await currentMembership(database, storedUser.id) } })
   }))
 
   result.get('/auth/me', auth, asyncRoute(async (request, response) => {
-    response.json({ ok: true, data: { user: request.user, membership: await currentMembership(database, request.user.id) } })
+    response.json({ ok: true, data: { user: await presentUser(request.user, mediaUrlService), membership: await currentMembership(database, request.user.id) } })
   }))
 
   result.patch('/auth/profile', auth, asyncRoute(async (request, response) => {
@@ -81,7 +90,7 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
     await database.execute('UPDATE users SET display_name = ? WHERE id = ?', [displayName, request.user.id])
     const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE id = ?', [request.user.id])
     if (!rows[0]) throw new HttpError(401, '登录已失效')
-    response.json({ ok: true, data: { user: rows[0] } })
+    response.json({ ok: true, data: { user: await presentUser(rows[0], mediaUrlService) } })
   }))
 
   result.post('/families', auth, asyncRoute(async (request, response) => {
@@ -105,7 +114,7 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
         }
       }
       const [ownerMember] = await connection.execute("INSERT INTO family_members (family_id, user_id, role, nickname) VALUES (?, ?, 'owner', ?)", [created.insertId, request.user.id, request.user.display_name])
-      await seedStarterRecipes(connection, { familyId: created.insertId, ownerMemberId: ownerMember.insertId })
+      await seedStarterRecipes(connection, { familyId: created.insertId, ownerMemberId: ownerMember.insertId, fileIdForPath })
       await connection.commit()
       const [rows] = await database.execute('SELECT id, name, invite_code, owner_user_id FROM families WHERE id = ?', [created.insertId])
       response.status(201).json({ ok: true, data: rows[0] })
@@ -136,7 +145,9 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
   result.get('/families/current', auth, family, asyncRoute(async (request, response) => {
     const [members] = await database.execute(`SELECT fm.id, fm.user_id AS userId, fm.role, fm.nickname, u.display_name AS displayName, u.avatar_url AS avatarUrl FROM family_members fm JOIN users u ON u.id = fm.user_id WHERE fm.family_id = ? AND fm.status = 'active' ORDER BY CASE fm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, fm.id`, [request.membership.family_id])
     const { invite_code: _inviteCode, ...membership } = request.membership
-    response.json({ ok: true, data: { ...membership, members } })
+    const avatarUrls = mediaUrlService ? await mediaUrlService.resolveValues(members.map((member) => member.avatarUrl)) : members.map((member) => member.avatarUrl)
+    const resolvedMembers = members.map((member, index) => ({ ...member, avatarFileId: String(member.avatarUrl || '').trim(), avatarUrl: avatarUrls[index] }))
+    response.json({ ok: true, data: { ...membership, members: resolvedMembers } })
   }))
 
   result.patch('/families/current/name', auth, familyAdmin, asyncRoute(async (request, response) => {

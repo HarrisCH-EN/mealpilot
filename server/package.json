@@ -14,7 +14,8 @@
     "test:all": "npm run test:direct && npm run test:integration",
     "db:init": "node src/scripts/init-database.js",
     "db:migrate": "node src/scripts/migrate-database.js",
-    "db:seed": "node src/scripts/seed-database.js"
+    "db:seed": "node src/scripts/seed-database.js",
+    "storage:migrate-recipe-covers": "node src/scripts/migrate-recipe-cover-storage.js"
   },
   "dependencies": {
     "@cloudbase/node-sdk": "^3.18.3",

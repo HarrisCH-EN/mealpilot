@@ -41,7 +41,7 @@ function emptyIngredientDraft() {
   return { ingredientId: 0, ingredientName: '', amountGrams: 100, note: '' }
 }
 
-function serializeFormState(form, stepItems, coverPath = '', selectedTagIds = []) {
+function serializeFormState(form, stepItems, coverFileId = '', selectedTagIds = []) {
   return JSON.stringify({
     form: {
       title: String(form.title || ''),
@@ -57,7 +57,7 @@ function serializeFormState(form, stepItems, coverPath = '', selectedTagIds = []
       }))
     },
     steps: (stepItems || []).map((item) => String(item && item.text || '')),
-    coverUrl: String(coverPath || ''),
+    coverFileId: String(coverFileId || ''),
     tagIds: normalizeTagIds(selectedTagIds)
   })
 }
@@ -74,7 +74,7 @@ Page({
     navStyle: '',
     contentStyle: '',
     coverUrl: '',
-    coverPath: '',
+    coverFileId: '',
     coverInitial: '菜',
     ingredientsOptions: [],
     tagCatalog: [],
@@ -124,13 +124,13 @@ Page({
   },
 
   refreshDirtyState() {
-    const snapshot = serializeFormState(this.data.form, this.data.stepItems, this.data.coverPath, this.data.selectedTagIds)
+    const snapshot = serializeFormState(this.data.form, this.data.stepItems, this.data.coverFileId, this.data.selectedTagIds)
     this.setData({ isDirty: Boolean(this.data.initialSnapshot && snapshot !== this.data.initialSnapshot) })
   },
 
   captureInitialSnapshot() {
     this.setData({
-      initialSnapshot: serializeFormState(this.data.form, this.data.stepItems, this.data.coverPath, this.data.selectedTagIds),
+      initialSnapshot: serializeFormState(this.data.form, this.data.stepItems, this.data.coverFileId, this.data.selectedTagIds),
       isDirty: false
     })
   },
@@ -152,7 +152,7 @@ Page({
       const selectedTagIds = normalizeTagIds((recipe.tags || []).map((tag) => tag.id))
       this.setData({
         ingredientsOptions,
-        coverPath: recipe.coverUrl || '',
+        coverFileId: recipe.coverFileId || recipe.coverUrl || '',
         coverUrl: resolveCoverUrl(recipe.coverUrl || ''),
         coverInitial: String(recipe.title || '菜').slice(0, 1),
         categoryIndex: Math.max(0, this.data.categories.indexOf(recipe.category)),
@@ -490,9 +490,10 @@ Page({
     this.setData({ uploadingCover: true })
     try {
       const result = await uploadFile(tempFilePath)
-      const coverPath = String(result && result.coverUrl || '')
-      if (!coverPath) throw new Error('上传未返回封面地址')
-      this.setData({ coverPath, coverUrl: resolveCoverUrl(coverPath) }, () => this.refreshDirtyState())
+      const coverFileId = String(result && result.coverFileId || '')
+      const coverUrl = String(result && result.coverUrl || '')
+      if (!coverFileId || !coverUrl) throw new Error('上传未返回有效封面')
+      this.setData({ coverFileId, coverUrl }, () => this.refreshDirtyState())
     } catch (error) {
       wx.showToast({ title: error.message || '封面上传失败', icon: 'none' })
     } finally {
@@ -543,7 +544,7 @@ Page({
       description: String(form.description || '').trim(),
       steps: serializeRecipeSteps(this.data.stepItems),
       ingredients: serializeIngredients(form.ingredients),
-      coverUrl: this.data.coverPath || '',
+      coverFileId: this.data.coverFileId || '',
       tagIds: this.data.selectedTagIds
     }
     if (payload.ingredients.length !== form.ingredients.length) {
