@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const root = path.join(__dirname, '..', 'pages', 'recommend')
+const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recommend')
 const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
 const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
 const styles = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')

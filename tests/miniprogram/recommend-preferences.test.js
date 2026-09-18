@@ -20,7 +20,7 @@ const {
   structureSummary,
   toggleTagId,
   validateStructure
-} = require('../pages/recommend/preference-state')
+} = require('../../miniprogram/pages/recommend/preference-state')
 
 test('R4 exposes the full legal preparation-time ruler range', () => {
   const values = PREP_TIME_OPTIONS.map((item) => item.value)

@@ -3,7 +3,7 @@ const path = require('node:path')
 const { spawnSync } = require('node:child_process')
 
 const projectRoot = path.resolve(__dirname, '..')
-const testRoot = path.join(projectRoot, 'test')
+const testRoot = path.join(projectRoot, 'tests', 'miniprogram')
 
 function collectTestFiles(directory) {
   return fs.readdirSync(directory, { withFileTypes: true }).flatMap((entry) => {

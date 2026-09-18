@@ -4,7 +4,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const vm = require('node:vm')
 
-const root = path.join(__dirname, '..')
+const root = path.join(__dirname, '..', '..', 'miniprogram')
 const api = fs.readFileSync(path.join(root, 'utils', 'api.js'), 'utf8')
 const app = fs.readFileSync(path.join(root, 'app.js'), 'utf8')
 const recommendation = fs.readFileSync(path.join(root, 'pages', 'recommend', 'index.js'), 'utf8')

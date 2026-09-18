@@ -7,3 +7,6 @@ server/uploads/
 *.log
 .DS_Store
 ~$*
+*.bkp
+.$*
+project.private.config.json

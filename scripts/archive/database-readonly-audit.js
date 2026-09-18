@@ -1,5 +1,5 @@
-const mysql = require('../server/node_modules/mysql2/promise')
-const { getConfig } = require('../server/src/config')
+const mysql = require('../../server/node_modules/mysql2/promise')
+const { getConfig } = require('../../server/src/config')
 
 const TABLES = [
   'users',

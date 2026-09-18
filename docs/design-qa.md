@@ -21,7 +21,7 @@
 
 ## 运行证据
 
-- `node --test miniprogram/test/*.test.js`：菜谱相关测试全部通过；同一命令有 2 个既有 settings 占位页面断言失败，与本轮菜谱文件无关。
+- `npm test --prefix tests/miniprogram`：历史菜谱相关测试记录；当前完整前端测试位于 `tests/miniprogram/`。
 - `npm test`（`server/`）：10/10 通过。
 - `node --check`：菜谱列表、详情、编辑页 JS 及 `utils/ui.js` 通过。
 - JSON 解析、`git diff --check`：通过。

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const root = path.join(__dirname, '..')
+const root = path.join(__dirname, '..', '..', 'miniprogram')
 const read = (...parts) => fs.readFileSync(path.join(root, ...parts), 'utf8')
 
 test('core pages expose a product-level no-Family state with a path to Family setup', () => {

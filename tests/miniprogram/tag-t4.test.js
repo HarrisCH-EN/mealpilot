@@ -3,9 +3,9 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const root = path.join(__dirname, '..')
+const root = path.join(__dirname, '..', '..', 'miniprogram')
 const read = (...segments) => fs.readFileSync(path.join(root, ...segments), 'utf8')
-const tags = require('../utils/tags')
+const tags = require('../../miniprogram/utils/tags')
 
 test('T4 tag helpers keep API order and preserve selected recipe tags', () => {
   const catalog = tags.flattenTagCatalog({
@@ -115,7 +115,7 @@ test('T4 tag management is a shared registered page for Settings and Recipe Form
 test('T4 recommendation accepts zero or many API tag ids without frontend semantic inference', () => {
   const script = read('pages', 'recommend', 'index.js')
   const template = read('pages', 'recommend', 'index.wxml')
-  const preferenceState = require('../pages/recommend/preference-state')
+  const preferenceState = require('../../miniprogram/pages/recommend/preference-state')
   assert.deepEqual(preferenceState.buildCanonicalRequest({
     menuDate: '2026-09-09', peopleCount: 2, maxPrepMinutes: 60,
     structure: { meat: 1, vegetable: 1, soup: 0, staple: 0 }, preferences: {}

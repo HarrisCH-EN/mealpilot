@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const root = path.join(__dirname, '..')
+const root = path.join(__dirname, '..', '..', 'miniprogram')
 const pageRoot = path.join(root, 'pages', 'family-management')
 
 test('family management is a registered real page with family and member actions', () => {

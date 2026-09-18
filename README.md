@@ -95,9 +95,24 @@ miniprogram/
 │  ├─ account-management/
 │  └─ family-management/
 ├─ utils/
+├─ styles/
+├─ assets/
+│  ├─ icons/
+│  ├─ tab/
+│  └─ brand/
+├─ app.js
+├─ app.json
+├─ app.wxss
 ├─ config.js
-├─ test/
-└─ scripts/run-tests.js
+└─ sitemap.json
+tests/
+└─ miniprogram/
+scripts/
+└─ run-miniprogram-tests.js
+resources/
+├─ recipe-images/
+└─ brand/
+   └─ logo-source.png
 docs/
 ├─ CURRENT_VERSION.md
 ├─ FRONTEND_HANDOFF.md
@@ -331,10 +346,10 @@ npm run test:integration
 ### Frontend
 
 ~~~powershell
-npm test --prefix miniprogram
+npm test --prefix tests/miniprogram
 ~~~
 
-当前基线：147 passed，0 failed，0 skipped。Frontend 测试使用 Node built-in runner，覆盖 contract、纯函数和 source-level checks，不等同于微信开发者工具真实 E2E。
+Frontend 测试使用 Node built-in runner，位于 `tests/miniprogram/`，覆盖 contract、纯函数和 source-level checks，不等同于微信开发者工具真实 E2E。测试文件和 runner 不属于 `miniprogram/` 发布目录。
 
 ### 全部 Backend
 

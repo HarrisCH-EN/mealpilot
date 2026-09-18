@@ -18,7 +18,7 @@ const {
   shiftDate,
   toggleFavoriteRecipeId,
   toLocalISODate
-} = require('../utils/ui')
+} = require('../../miniprogram/utils/ui')
 
 test('time helpers map local hour to the approved greeting and meal windows', () => {
   assert.equal(getGreeting(4), '晚上好，')
@@ -80,7 +80,7 @@ test('menu carousel view model keeps three meal cards ordered and swipe-safe', (
     nextMealIndex,
     previousMealIndex,
     isHorizontalSwipe
-  } = require('../pages/menu/view-model')
+  } = require('../../miniprogram/pages/menu/view-model')
 
   assert.equal(nextMealIndex(2), 0)
   assert.equal(previousMealIndex(0), 2)
@@ -112,7 +112,7 @@ test('menu date rail keeps fixed context and reveals only when explicitly reques
     buildCalendarMonth,
     getCalendarPanelHeight,
     getCalendarRowCount
-  } = require('../pages/menu/view-model')
+  } = require('../../miniprogram/pages/menu/view-model')
   const dates = buildDateItems('2026-09-05', { todayValue: '2026-09-05', menuDateSet: ['2026-09-05'] })
   const metrics = getDateRailMetrics(390)
   assert.equal(getDateRailMetrics(390, true).viewportWidth, metrics.viewportWidth)
@@ -141,7 +141,7 @@ test('menu date rail keeps fixed context and reveals only when explicitly reques
 })
 
 test('menu date timeline stays fixed while selection changes', () => {
-  const { buildTimelineItems } = require('../pages/menu/view-model')
+  const { buildTimelineItems } = require('../../miniprogram/pages/menu/view-model')
   const options = { before: 120, after: 180, todayValue: '2026-09-05' }
   const first = buildTimelineItems('2026-09-05', options)
   const again = buildTimelineItems('2026-09-05', { ...options, selectedDate: '2026-12-01' })
@@ -154,14 +154,14 @@ test('menu date timeline stays fixed while selection changes', () => {
 })
 
 test('menu markers replace the loaded month instead of keeping stale dates', () => {
-  const { mergeMenuDateKeys } = require('../pages/menu/view-model')
+  const { mergeMenuDateKeys } = require('../../miniprogram/pages/menu/view-model')
   assert.deepEqual(mergeMenuDateKeys(
     ['2026-08-31', '2026-09-03', '2026-10-01'],
     '2026-09-01',
     '2026-09-30',
     [{ menuDate: '2026-09-06', hasMenu: true }, { menuDate: '2026-09-03', hasMenu: false }]
   ), ['2026-08-31', '2026-09-06', '2026-10-01'])
-  const css = fs.readFileSync(path.join(__dirname, '..', 'pages', 'menu', 'index.wxss'), 'utf8')
+  const css = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'menu', 'index.wxss'), 'utf8')
   assert.match(css, /\.menu-date--selected \.menu-date__marker/)
 })
 
@@ -194,7 +194,7 @@ test('local recipe favorites normalize storage values and toggle without duplica
 })
 
 test('app config keeps four stable tabs with the Airbnb Rausch active state', () => {
-  const root = path.join(__dirname, '..')
+  const root = path.join(__dirname, '..', '..', 'miniprogram')
   const config = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))
   assert.equal(config.window.navigationBarTitleText, '')
   assert.equal(config.window.navigationBarBackgroundColor, '#ffffff')
@@ -215,14 +215,14 @@ test('app config keeps four stable tabs with the Airbnb Rausch active state', ()
 })
 
 test('sitemap has a valid allow rule for DevTools preview', () => {
-  const root = path.join(__dirname, '..')
+  const root = path.join(__dirname, '..', '..', 'miniprogram')
   const sitemap = JSON.parse(fs.readFileSync(path.join(root, 'sitemap.json'), 'utf8'))
   assert.equal(sitemap.desc, 'MealPilot / 饭有谱')
   assert.deepEqual(sitemap.rules, [{ action: 'allow', page: '*' }])
 })
 
 test('global stylesheet exposes Airbnb color, type, spacing and component tokens', () => {
-  const css = fs.readFileSync(path.join(__dirname, '..', 'app.wxss'), 'utf8')
+  const css = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'app.wxss'), 'utf8')
   assert.match(css, /Airbnb Cereal VF/)
   assert.match(css, /--color-primary:\s*#ff385c/i)
   assert.match(css, /--color-ink:\s*#222222/i)
@@ -236,8 +236,8 @@ test('global stylesheet exposes Airbnb color, type, spacing and component tokens
 })
 
 test('tab pages keep global spacing while recipe catalog owns one fixed viewport', () => {
-  const css = fs.readFileSync(path.join(__dirname, '..', 'app.wxss'), 'utf8')
-  const recipesCss = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipes', 'index.wxss'), 'utf8')
+  const css = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'app.wxss'), 'utf8')
+  const recipesCss = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipes', 'index.wxss'), 'utf8')
   assert.match(css, /\.page\s*\{[^}]*padding:\s*32rpx 32rpx 48rpx;/s)
   assert.doesNotMatch(css, /\.page\s*\{[^}]*min-height:\s*100vh;/s)
   assert.doesNotMatch(css, /\.page\s*\{[^}]*152rpx|\.page\s*\{[^}]*safe-area-inset-bottom/s)
@@ -248,7 +248,7 @@ test('tab pages keep global spacing while recipe catalog owns one fixed viewport
 })
 
 test('recipe catalog uses compact two-column cards with stable actions', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipes')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipes')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
   assert.doesNotMatch(template, /recipe-card__favorite/)
@@ -260,7 +260,7 @@ test('recipe catalog uses compact two-column cards with stable actions', () => {
 })
 
 test('round icon controls keep fixed square touch areas instead of stretching into pills', () => {
-  const root = path.join(__dirname, '..', 'pages')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages')
   const circleControls = [
     [path.join(root, 'recommend', 'index.wxss'), 'recommend-stepper__button', '68'],
     [path.join(root, 'menu', 'index.wxss'), 'menu-add', '72'],
@@ -275,11 +275,11 @@ test('round icon controls keep fixed square touch areas instead of stretching in
 
 test('icon buttons lock their flex basis and maximum width to remain circular', () => {
   const targets = [
-    [path.join(__dirname, '..', 'app.wxss'), 'search-orb', '64'],
-    [path.join(__dirname, '..', 'app.wxss'), 'sheet-close', '64'],
-    [path.join(__dirname, '..', 'pages', 'recommend', 'index.wxss'), 'recommend-stepper__button', '68'],
-    [path.join(__dirname, '..', 'pages', 'menu', 'index.wxss'), 'menu-add', '72'],
-    [path.join(__dirname, '..', 'pages', 'recipes', 'index.wxss'), 'add-recipe-button', '72'],
+    [path.join(__dirname, '..', '..', 'miniprogram', 'app.wxss'), 'search-orb', '64'],
+    [path.join(__dirname, '..', '..', 'miniprogram', 'app.wxss'), 'sheet-close', '64'],
+    [path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recommend', 'index.wxss'), 'recommend-stepper__button', '68'],
+    [path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'menu', 'index.wxss'), 'menu-add', '72'],
+    [path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipes', 'index.wxss'), 'add-recipe-button', '72'],
   ]
   for (const [file, className, size] of targets) {
     const css = fs.readFileSync(file, 'utf8')
@@ -289,8 +289,8 @@ test('icon buttons lock their flex basis and maximum width to remain circular', 
 })
 
 test('recipe catalog keeps category rail fixed beside an independently scrolling two-column grid', () => {
-  const css = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipes', 'index.wxss'), 'utf8')
-  const template = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipes', 'index.wxml'), 'utf8')
+  const css = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipes', 'index.wxss'), 'utf8')
+  const template = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipes', 'index.wxml'), 'utf8')
   assert.match(template, /category-rail/)
   assert.match(template, /recipe-list/)
   assert.match(template, /recipe-card__photo/)
@@ -303,18 +303,18 @@ test('recipe catalog keeps category rail fixed beside an independently scrolling
 test('tab pages share the compact page header and recipe search stays subordinate to the list', () => {
   const pages = ['menu', 'recipes']
   for (const pageName of pages) {
-    const template = fs.readFileSync(path.join(__dirname, '..', 'pages', pageName, 'index.wxml'), 'utf8')
+    const template = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', pageName, 'index.wxml'), 'utf8')
     assert.match(template, /page-header/, `${pageName} should use the shared page header`)
   }
-  const recipesTemplate = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipes', 'index.wxml'), 'utf8')
-  const recipesCss = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipes', 'index.wxss'), 'utf8')
+  const recipesTemplate = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipes', 'index.wxml'), 'utf8')
+  const recipesCss = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipes', 'index.wxss'), 'utf8')
   assert.match(recipesTemplate, /confirm-type="search"[^>]*bindconfirm="submitSearch"/)
   assert.doesNotMatch(recipesTemplate, /recipe-search__submit/)
   assert.match(recipesCss, /\.recipe-card__menu\s*\{[^}]*width:\s*40rpx;[^}]*height:\s*40rpx;[^}]*font-size:\s*0;/s)
 })
 
 test('recommend home exposes the canonical setup flow', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recommend')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recommend')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
   assert.match(template, /今晚吃什么/)
@@ -329,7 +329,7 @@ test('recommend home exposes the canonical setup flow', () => {
 })
 
 test('recommend home restores the editorial CTA while moving the unchanged setup form into a sheet', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recommend')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recommend')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
@@ -353,7 +353,7 @@ test('recommend home restores the editorial CTA while moving the unchanged setup
 })
 
 test('recommendation screen follows the canonical setup, candidate, and apply flow', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recommend')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recommend')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
@@ -386,7 +386,7 @@ test('recommendation screen follows the canonical setup, candidate, and apply fl
 })
 
 test('menu screen uses a data-driven date strip and three-card meal deck without changing menu actions', () => {
-  const root = path.join(__dirname, '..', 'pages', 'menu')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'menu')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
@@ -500,7 +500,7 @@ test('menu screen uses a data-driven date strip and three-card meal deck without
 })
 
 test('recipe catalog implements the image list and add-to-menu flow', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipes')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipes')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   assert.match(template, /category-rail/)
@@ -514,7 +514,7 @@ test('recipe catalog implements the image list and add-to-menu flow', () => {
 })
 
 test('recipe catalog applies the scoped cloud theme and persists local favorites', () => {
-  const miniprogramRoot = path.join(__dirname, '..')
+  const miniprogramRoot = path.join(__dirname, '..', '..', 'miniprogram')
   const theme = fs.readFileSync(path.join(miniprogramRoot, 'styles', 'recipe-theme.wxss'), 'utf8')
   const root = path.join(miniprogramRoot, 'pages', 'recipes')
   const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
@@ -540,7 +540,7 @@ test('recipe catalog applies the scoped cloud theme and persists local favorites
 })
 
 test('recipe images use aspectFill and degrade to the neutral fallback on load errors', () => {
-  const pagesRoot = path.join(__dirname, '..', 'pages')
+  const pagesRoot = path.join(__dirname, '..', '..', 'miniprogram', 'pages')
   const listTemplate = fs.readFileSync(path.join(pagesRoot, 'recipes', 'index.wxml'), 'utf8')
   const listScript = fs.readFileSync(path.join(pagesRoot, 'recipes', 'index.js'), 'utf8')
   const recommendTemplate = fs.readFileSync(path.join(pagesRoot, 'recommend', 'index.wxml'), 'utf8')
@@ -565,7 +565,7 @@ test('recipe images use aspectFill and degrade to the neutral fallback on load e
 })
 
 test('recipe detail and form pages use real recipe APIs including ingredients', () => {
-  const pages = path.join(__dirname, '..', 'pages')
+  const pages = path.join(__dirname, '..', '..', 'miniprogram', 'pages')
   const detail = fs.readFileSync(path.join(pages, 'recipe-detail', 'index.js'), 'utf8')
   const form = fs.readFileSync(path.join(pages, 'recipe-form', 'index.js'), 'utf8')
   const formTemplate = fs.readFileSync(path.join(pages, 'recipe-form', 'index.wxml'), 'utf8')
@@ -582,7 +582,7 @@ test('recipe detail and form pages use real recipe APIs including ingredients', 
 })
 
 test('recipe detail uses custom safe-area navigation and a three-layer ceramic plate hero', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipe-detail')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-detail')
   const config = JSON.parse(fs.readFileSync(path.join(root, 'index.json'), 'utf8'))
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
@@ -614,7 +614,7 @@ test('recipe detail uses custom safe-area navigation and a three-layer ceramic p
 })
 
 test('recipe detail positions the complete custom nav below the native capsule', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipe-detail')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-detail')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const functionSource = script.slice(
     script.indexOf('function getNavigationLayout()'),
@@ -660,8 +660,8 @@ test('recipe detail positions the complete custom nav below the native capsule',
 })
 
 test('recipe detail scheme A actions keep edit in the footer and omit unavailable sharing', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipe-detail')
-  const miniprogramRoot = path.join(__dirname, '..')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-detail')
+  const miniprogramRoot = path.join(__dirname, '..', '..', 'miniprogram')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
 
@@ -675,7 +675,7 @@ test('recipe detail scheme A actions keep edit in the footer and omit unavailabl
 })
 
 test('recipe detail uses the confirmed white reading layout and rounded content cards', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipe-detail')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-detail')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
 
@@ -693,7 +693,7 @@ test('recipe detail uses the confirmed white reading layout and rounded content 
 })
 
 test('recipe detail persists local favorite state and exposes real edit/delete actions', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipe-detail')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-detail')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   assert.match(template, /bindtap="toggleFavorite"/)
@@ -707,7 +707,7 @@ test('recipe detail persists local favorite state and exposes real edit/delete a
 })
 
 test('recipe form scheme C uses a safe custom nav, immersive hero and unified editor cards', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipe-form')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-form')
   const config = JSON.parse(fs.readFileSync(path.join(root, 'index.json'), 'utf8'))
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
@@ -751,7 +751,7 @@ test('recipe form scheme C uses a safe custom nav, immersive hero and unified ed
 })
 
 test('recipe editor uses unified numbered rows with opt-in step editing', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipe-form')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-form')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   assert.match(template, /ingredient-sheet/)
@@ -782,16 +782,16 @@ test('recipe editor uses unified numbered rows with opt-in step editing', () => 
 })
 
 test('recipe form keeps real png icon assets and no fake media controls', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipe-form')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-form')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const iconRefs = [...template.matchAll(/src="(\/assets\/icons\/[^"']+\.png)"/g)].map((match) => match[1])
   assert.ok(iconRefs.length >= 8)
-  for (const iconRef of iconRefs) assert.ok(fs.existsSync(path.join(__dirname, '..', iconRef.slice(1))), iconRef)
+  for (const iconRef of iconRefs) assert.ok(fs.existsSync(path.join(__dirname, '..', '..', 'miniprogram', iconRef.slice(1))), iconRef)
   assert.doesNotMatch(template, /更换图片|图片数量|3\/6|6张/)
 })
 
 test('recipe form exposes dirty-state protection without changing the save contract', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipe-form')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-form')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   assert.match(script, /isDirty/)
@@ -804,7 +804,7 @@ test('recipe form exposes dirty-state protection without changing the save contr
 })
 
 test('recipe form protects ingredient deletion with a confirmation step', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipe-form')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-form')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   assert.match(template, /bindtap="removeIngredientFromSheet"/)
@@ -813,7 +813,7 @@ test('recipe form protects ingredient deletion with a confirmation step', () => 
 })
 
 test('settings keeps real family actions in consumer-style profile sections', () => {
-  const root = path.join(__dirname, '..', 'pages', 'settings')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'settings')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   assert.match(script, /ensureAuthenticated\(\)/)
@@ -830,8 +830,8 @@ test('settings keeps real family actions in consumer-style profile sections', ()
 })
 
 test('settings and about pages use scoped tokens, real actions and custom about navigation', () => {
-  const settingsRoot = path.join(__dirname, '..', 'pages', 'settings')
-  const aboutRoot = path.join(__dirname, '..', 'pages', 'about')
+  const settingsRoot = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'settings')
+  const aboutRoot = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'about')
   const settingsCss = fs.readFileSync(path.join(settingsRoot, 'index.wxss'), 'utf8')
   const settingsTemplate = fs.readFileSync(path.join(settingsRoot, 'index.wxml'), 'utf8')
   const settingsScript = fs.readFileSync(path.join(settingsRoot, 'index.js'), 'utf8')
@@ -840,7 +840,7 @@ test('settings and about pages use scoped tokens, real actions and custom about 
   const aboutTemplate = fs.readFileSync(path.join(aboutRoot, 'index.wxml'), 'utf8')
   const aboutCss = fs.readFileSync(path.join(aboutRoot, 'index.wxss'), 'utf8')
   const aboutScript = fs.readFileSync(path.join(aboutRoot, 'index.js'), 'utf8')
-  const appConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'app.json'), 'utf8'))
+  const appConfig = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'app.json'), 'utf8'))
   assert.match(settingsCss, /--settings-bg: #ffffff/)
   assert.match(settingsCss, /--settings-dashboard: #fff5f7/)
   assert.match(settingsCss, /env\(safe-area-inset-bottom\)/)
@@ -879,7 +879,7 @@ test('settings and about pages use scoped tokens, real actions and custom about 
 })
 
 test('every visible WXML event is backed by a page handler', () => {
-  const pagesRoot = path.join(__dirname, '..', 'pages')
+  const pagesRoot = path.join(__dirname, '..', '..', 'miniprogram', 'pages')
   for (const pageName of fs.readdirSync(pagesRoot)) {
     const pageRoot = path.join(pagesRoot, pageName)
     const templatePath = path.join(pageRoot, 'index.wxml')
@@ -896,7 +896,7 @@ test('every visible WXML event is backed by a page handler', () => {
 })
 
 test('menu context is consumed once by its matching action', () => {
-  const { createMenuContextStore } = require('../utils/menu-context')
+  const { createMenuContextStore } = require('../../miniprogram/utils/menu-context')
   const state = {}
   const context = createMenuContextStore(state)
 
@@ -909,11 +909,11 @@ test('menu context is consumed once by its matching action', () => {
 })
 
 test('menu-originated add and detail flows preserve the selected meal context', () => {
-  const menuScript = fs.readFileSync(path.join(__dirname, '..', 'pages', 'menu', 'index.js'), 'utf8')
-  const menuTemplate = fs.readFileSync(path.join(__dirname, '..', 'pages', 'menu', 'index.wxml'), 'utf8')
-  const recipesScript = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipes', 'index.js'), 'utf8')
-  const detailScript = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipe-detail', 'index.js'), 'utf8')
-  const detailTemplate = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipe-detail', 'index.wxml'), 'utf8')
+  const menuScript = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'menu', 'index.js'), 'utf8')
+  const menuTemplate = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'menu', 'index.wxml'), 'utf8')
+  const recipesScript = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipes', 'index.js'), 'utf8')
+  const detailScript = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-detail', 'index.js'), 'utf8')
+  const detailTemplate = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-detail', 'index.wxml'), 'utf8')
 
   assert.match(menuScript, /getMenuContextStore/)
   assert.match(menuScript, /action: 'add'/)
@@ -927,7 +927,7 @@ test('menu-originated add and detail flows preserve the selected meal context', 
 })
 
 test('active meal keeps an add action after dishes have been added', () => {
-  const root = path.join(__dirname, '..', 'pages', 'menu')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'menu')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const css = fs.readFileSync(path.join(root, 'index.wxss'), 'utf8')
   assert.match(template, /wx:for="\{\{card\.items\}\}"[\s\S]*meal-note__append-add/)
@@ -936,7 +936,7 @@ test('active meal keeps an add action after dishes have been added', () => {
 })
 
 test('menu date navigation keeps titles, calendar markers and rail in sync', () => {
-  const root = path.join(__dirname, '..', 'pages', 'menu')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'menu')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   assert.match(script, /menuTitle/)
@@ -948,7 +948,7 @@ test('menu date navigation keeps titles, calendar markers and rail in sync', () 
 })
 
 test('menu removal is guarded while the request is in flight', () => {
-  const root = path.join(__dirname, '..', 'pages', 'menu')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'menu')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   assert.match(script, /removingItemId/)
@@ -957,10 +957,10 @@ test('menu removal is guarded while the request is in flight', () => {
 })
 
 test('recipe details expose current-day menu status and add confirmation action', () => {
-  const detailRoot = path.join(__dirname, '..', 'pages', 'recipe-detail')
+  const detailRoot = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-detail')
   const detailScript = fs.readFileSync(path.join(detailRoot, 'index.js'), 'utf8')
   const detailTemplate = fs.readFileSync(path.join(detailRoot, 'index.wxml'), 'utf8')
-  const recipesRoot = path.join(__dirname, '..', 'pages', 'recipes')
+  const recipesRoot = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipes')
   const recipesScript = fs.readFileSync(path.join(recipesRoot, 'index.js'), 'utf8')
   assert.match(detailScript, /request\(`?\/menus\?date=/)
   assert.match(detailScript, /已加入/)
@@ -970,13 +970,13 @@ test('recipe details expose current-day menu status and add confirmation action'
 })
 
 test('settings renders fetched recent-meal insight', () => {
-  const template = fs.readFileSync(path.join(__dirname, '..', 'pages', 'settings', 'index.wxml'), 'utf8')
+  const template = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'settings', 'index.wxml'), 'utf8')
   assert.match(template, /wx:if="\{\{insight && insightExpanded\}\}"/)
   assert.match(template, /insight-card|insight-summary/)
 })
 
 test('settings insight row toggles the fetched list open and closed', () => {
-  const root = path.join(__dirname, '..', 'pages', 'settings')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'settings')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   assert.match(script, /insightExpanded:\s*false/)
@@ -985,7 +985,7 @@ test('settings insight row toggles the fetched list open and closed', () => {
 })
 
 test('recommendation feedback is actionable and placeholder mode is not a fake control', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recommend')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recommend')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   assert.match(template, /recommend-error__text[^>]*>\{\{error \|\|/)
@@ -994,7 +994,7 @@ test('recommendation feedback is actionable and placeholder mode is not a fake c
 })
 
 test('recipe management actions explain edit permissions', () => {
-  const root = path.join(__dirname, '..', 'pages', 'recipe-detail')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-detail')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   assert.match(script, /canEdit/)
@@ -1003,13 +1003,13 @@ test('recipe management actions explain edit permissions', () => {
 })
 
 test('recipe form rejects empty ingredients and steps', () => {
-  const script = fs.readFileSync(path.join(__dirname, '..', 'pages', 'recipe-form', 'index.js'), 'utf8')
+  const script = fs.readFileSync(path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipe-form', 'index.js'), 'utf8')
   assert.match(script, /payload\.ingredients\.length/)
   assert.match(script, /payload\.steps\.length|payload\.steps\.trim\(\)/)
 })
 
 test('recipe catalog keeps favorites as the first local category with a clear empty state', () => {
-  const { filterRecipesByCategory } = require('../utils/ui')
+  const { filterRecipesByCategory } = require('../../miniprogram/utils/ui')
   const recipes = [
     { id: 1, title: '番茄炒蛋', category: '荤菜' },
     { id: 2, title: '清炒菜心', category: '素菜' }
@@ -1017,7 +1017,7 @@ test('recipe catalog keeps favorites as the first local category with a clear em
   assert.deepEqual(filterRecipesByCategory(recipes, '收藏', [2]), [recipes[1]])
   assert.deepEqual(filterRecipesByCategory(recipes, '收藏', []), [])
 
-  const root = path.join(__dirname, '..', 'pages', 'recipes')
+  const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recipes')
   const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'index.wxml'), 'utf8')
   assert.match(script, /categories:\s*\['收藏'/)

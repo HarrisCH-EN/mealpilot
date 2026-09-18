@@ -7,7 +7,7 @@ const starterRecipes = require('../src/data/starter-recipes')
 const { systemRecipeCovers } = require('../src/data/system-recipe-covers')
 const { seedStarterRecipes } = require('../src/services/starter-recipe-service')
 
-const assetDir = path.resolve(__dirname, '../..', 'miniprogram/assets/recipes')
+const assetDir = path.resolve(__dirname, '../..', 'resources/recipe-images')
 
 test('starter storage mapping has 47 existing images and only red-bean millet porridge is missing', () => {
   assert.equal(starterRecipes.length, 48)

@@ -141,7 +141,7 @@ node scripts/run-tests.js
 
 ## 5. 数据库只读审计
 
-审计脚本位于：[test/database-readonly-audit.js](/E:/Database_Design/test/database-readonly-audit.js)。它只执行 `SELECT`、`information_schema` 查询和本地上传目录读取，不做 INSERT、UPDATE、DELETE、DROP 或 TRUNCATE。
+审计脚本位于：[scripts/archive/database-readonly-audit.js](/E:/Database_Design/scripts/archive/database-readonly-audit.js)。它只执行 `SELECT`、`information_schema` 查询和 CloudBase 存储引用统计，不做 INSERT、UPDATE、DELETE、DROP 或 TRUNCATE。
 
 ### 5.1 当前业务库计数
 
@@ -254,7 +254,7 @@ node scripts/run-tests.js
 
 ## 9. 本轮新增审计文件
 
-- [只读数据库审计脚本](/E:/Database_Design/test/database-readonly-audit.js)
+- [只读数据库审计脚本](/E:/Database_Design/scripts/archive/database-readonly-audit.js)
 - [本报告](/E:/Database_Design/docs/reports/2026-09-16-release-audit.md)
 
 ## 10. 删除前待你审核的清单

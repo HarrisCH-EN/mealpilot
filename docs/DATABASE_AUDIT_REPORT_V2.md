@@ -20,7 +20,7 @@
 
 ## 2. `mealpilot` 当前行数
 
-以下数据来自只读脚本 [test/database-readonly-audit.js](/E:/Database_Design/test/database-readonly-audit.js)，本轮未执行删除、清空或更新。
+以下数据来自只读脚本 [scripts/archive/database-readonly-audit.js](/E:/Database_Design/scripts/archive/database-readonly-audit.js)，本轮未执行删除、清空或更新。
 
 | 表 | 行数 | 当前判断 |
 | --- | ---: | --- |

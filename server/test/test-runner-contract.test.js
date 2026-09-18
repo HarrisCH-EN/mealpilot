@@ -27,10 +27,10 @@ test('demo catalog direct test contains no business database dependency', () => 
 })
 
 test('frontend exposes a built-in Node test command without extra dependencies', () => {
-  const frontendPackage = JSON.parse(fs.readFileSync(path.join(root, 'miniprogram/package.json'), 'utf8'))
-  assert.equal(frontendPackage.scripts.test, 'node scripts/run-tests.js')
+  const frontendPackage = JSON.parse(fs.readFileSync(path.join(root, 'tests/miniprogram/package.json'), 'utf8'))
+  assert.equal(frontendPackage.scripts.test, 'node ../../scripts/run-miniprogram-tests.js')
   assert.match(
-    fs.readFileSync(path.join(root, 'miniprogram/scripts/run-tests.js'), 'utf8'),
+    fs.readFileSync(path.join(root, 'scripts/run-miniprogram-tests.js'), 'utf8'),
     /--test/
   )
 })

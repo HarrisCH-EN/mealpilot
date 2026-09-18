@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const root = path.join(__dirname, '..')
+const root = path.join(__dirname, '..', '..', 'miniprogram')
 
 test('login page is registered and presents the app identity plus every configured login option', () => {
   const appConfig = JSON.parse(fs.readFileSync(path.join(root, 'app.json'), 'utf8'))

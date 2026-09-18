@@ -2,6 +2,6 @@
   "name": "mealpilot-miniprogram",
   "private": true,
   "scripts": {
-    "test": "node scripts/run-tests.js"
+    "test": "node ../../scripts/run-miniprogram-tests.js"
   }
 }

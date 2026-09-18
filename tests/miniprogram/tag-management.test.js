@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const root = path.join(__dirname, '..')
+const root = path.join(__dirname, '..', '..', 'miniprogram')
 const read = (...segments) => fs.readFileSync(path.join(root, ...segments), 'utf8')
 
 test('tag management page exposes custom CRUD and system read-only sections', () => {

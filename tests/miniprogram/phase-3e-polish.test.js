@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const pagesRoot = path.join(__dirname, '..', 'pages')
+const pagesRoot = path.join(__dirname, '..', '..', 'miniprogram', 'pages')
 const readPage = (page, file) => fs.readFileSync(path.join(pagesRoot, page, file), 'utf8')
 
 test('menu feedback edits and displays the persisted comment with a 200-character guard', () => {

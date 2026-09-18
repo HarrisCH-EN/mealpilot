@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const root = path.join(__dirname, '..')
+const root = path.join(__dirname, '..', '..', 'miniprogram')
 const formScript = fs.readFileSync(path.join(root, 'pages', 'recipe-form', 'index.js'), 'utf8')
 const formTemplate = fs.readFileSync(path.join(root, 'pages', 'recipe-form', 'index.wxml'), 'utf8')
 const apiScript = fs.readFileSync(path.join(root, 'utils', 'api.js'), 'utf8')

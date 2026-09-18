@@ -6,6 +6,7 @@ const crypto = require('node:crypto')
 
 const projectRoot = path.resolve(__dirname, '..', '..')
 const miniprogramRoot = path.join(projectRoot, 'miniprogram')
+const resourceImageRoot = path.join(projectRoot, 'resources', 'recipe-images')
 const seed = fs.readFileSync(path.join(projectRoot, 'database', '02_seed.sql'), 'utf8')
 
 const expected = new Map([
@@ -40,8 +41,8 @@ test('demo recipe seed is the source of truth for cover_url mappings', () => {
 })
 
 test('required bundled recipe images are readable JPEGs while the media directory may grow', () => {
-  const assetDir = path.join(miniprogramRoot, 'assets', 'recipes')
-  const mappedFiles = [...expected.values()].filter(Boolean).map((coverUrl) => path.join(miniprogramRoot, coverUrl))
+  const assetDir = resourceImageRoot
+  const mappedFiles = [...expected.values()].filter(Boolean).map((coverUrl) => path.join(resourceImageRoot, path.basename(coverUrl)))
   const actualFiles = new Set(fs.readdirSync(assetDir))
   const hashes = new Set()
   for (const file of mappedFiles) {

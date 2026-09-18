@@ -4,7 +4,7 @@ const fs = require('node:fs')
 const path = require('node:path')
 const vm = require('node:vm')
 
-const root = path.join(__dirname, '..')
+const root = path.join(__dirname, '..', '..', 'miniprogram')
 
 test('settings profile opens the account management page for a logged-in user', () => {
   const template = fs.readFileSync(path.join(root, 'pages', 'settings', 'index.wxml'), 'utf8')
