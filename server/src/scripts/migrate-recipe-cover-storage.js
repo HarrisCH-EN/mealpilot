@@ -33,6 +33,9 @@ function classifyRecipeForStorageMigration(row, template, targetFileId) {
 
 async function runMigration({ database, fileIdForPath, apply = false, logger } = {}) {
   if (!database || typeof database.execute !== 'function') throw new TypeError('database with execute() is required')
+  if (typeof fileIdForPath !== 'function') throw new Error('CloudBase Storage 文件 ID 构造器未配置')
+  const validationFileId = fileIdForPath('system/recipes/__migration-validation__.jpg')
+  if (typeof validationFileId !== 'string' || !/^cloud:\/\/[^/]+\/.+/.test(validationFileId)) throw new Error('CLOUDBASE_STORAGE_PATH_FAILED')
   const templates = new Map(starterRecipes.map((template) => [template.title, template]))
   const [rows] = await database.execute(`
     SELECT id, family_id AS familyId, created_by_member_id AS createdByMemberId,
@@ -49,7 +52,6 @@ async function runMigration({ database, fileIdForPath, apply = false, logger } =
       continue
     }
     const cloudPath = systemRecipeCovers[template.title]
-    if (cloudPath && typeof fileIdForPath !== 'function') throw new Error('CloudBase Storage 文件 ID 构造器未配置')
     const targetFileId = cloudPath ? fileIdForPath(cloudPath) : ''
     plans.push({ row, template, ...classifyRecipeForStorageMigration(row, template, targetFileId) })
   }

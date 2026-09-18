@@ -61,6 +61,15 @@ test('storage service sanitizes SDK credential failures', async () => {
   )
 })
 
+test('storage fileIdForPath rejects missing or non-CloudBase prefixes', () => {
+  for (const fileIdPrefix of ['', 'https://bucket.example']) {
+    const storage = createCloudStorageService({ envId: 'env', fileIdPrefix })
+    assert.throws(() => storage.fileIdForPath('system/recipes/a.jpg'), (error) => error.code === 'CLOUDBASE_STORAGE_PATH_FAILED')
+  }
+  const storage = createCloudStorageService({ envId: 'env', fileIdPrefix: 'cloud://env.bucket/' })
+  assert.equal(storage.fileIdForPath('system/recipes/a.jpg'), 'cloud://env.bucket/system/recipes/a.jpg')
+})
+
 test('media URL service preserves legacy values and degrades one failed cloud URL', async () => {
   const storage = {
     async getTemporaryUrls(fileIds) {

@@ -23,6 +23,12 @@ function normalizePrefix(prefix) {
   return String(prefix || '').trim().replace(/\/+$/, '')
 }
 
+function validateFileIdPrefix(prefix) {
+  const normalized = normalizePrefix(prefix)
+  if (!/^cloud:\/\/[^/]+(?:\/[^/]*)*$/.test(normalized)) throw storageError('path')
+  return normalized
+}
+
 function createCloudStorageService({ envId, fileIdPrefix, sdk } = {}) {
   let app
 
@@ -42,7 +48,7 @@ function createCloudStorageService({ envId, fileIdPrefix, sdk } = {}) {
   function fileIdForPath(cloudPath) {
     const relativePath = String(cloudPath || '').trim().replace(/^\/+/, '')
     if (!relativePath || relativePath.includes('..') || relativePath.startsWith('cloud://')) throw storageError('path')
-    return `${normalizePrefix(fileIdPrefix)}/${relativePath}`
+    return `${validateFileIdPrefix(fileIdPrefix)}/${relativePath}`
   }
 
   async function uploadBuffer({ cloudPath, buffer }) {

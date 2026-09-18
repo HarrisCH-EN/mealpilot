@@ -109,3 +109,23 @@ test('recipe edit without a replacement preserves the stable cover ID instead of
   })
   assert.equal(database.state.updateCover, stableCover)
 })
+
+test('starter recipe edit preserves an unchanged system cover ID', async () => {
+  const systemCover = 'cloud://test.bucket/system/recipes/蒜蓉空心菜.jpg'
+  const database = makeDatabase({ coverFileId: systemCover })
+  await withServer(makeApp(database), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/recipes/1`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body({ coverFileId: systemCover })) })
+    assert.equal(response.status, 200)
+  })
+  assert.equal(database.state.updateCover, systemCover)
+})
+
+test('recipe edit still rejects a changed cover from another family', async () => {
+  const systemCover = 'cloud://test.bucket/system/recipes/蒜蓉空心菜.jpg'
+  const database = makeDatabase({ coverFileId: systemCover })
+  await withServer(makeApp(database), async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/recipes/1`, { method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body({ coverFileId: 'cloud://test.bucket/families/8/recipes/x.jpg' })) })
+    assert.equal(response.status, 400)
+  })
+  assert.equal(database.state.updateCover, null)
+})

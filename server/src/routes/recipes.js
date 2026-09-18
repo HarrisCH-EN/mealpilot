@@ -63,7 +63,7 @@ function router({ database, auth, family, mediaUrlService, cloudbaseStorageFileI
     if (request.membership.role !== 'owner' && rows[0].author !== request.membership.member_id) throw new HttpError(403, '只能编辑自己创建的菜谱')
     requireFields(request.body, ['title', 'category', 'cookMinutes', 'difficulty'])
     validateRecipeContent(request.body)
-    const coverFileId = readCoverReference(request.body, rows[0].coverFileId || '', request.membership.family_id, cloudbaseStorageFileIdPrefix)
+    const coverFileId = readCoverReference(request.body, rows[0].coverFileId || '', request.membership.family_id, cloudbaseStorageFileIdPrefix, true)
     const tagIds = normalizeTagIds(request.body.tagIds)
     validateRecipeTagCount(tagIds)
     await withTransaction(database, async (connection) => {
@@ -101,11 +101,12 @@ function validateRecipeContent(body) {
   validateIngredientItems(body.ingredients)
 }
 
-function readCoverReference(body, currentValue, familyId, prefix) {
+function readCoverReference(body, currentValue, familyId, prefix, allowExisting = false) {
   const hasStableValue = Object.prototype.hasOwnProperty.call(body, 'coverFileId')
   const hasLegacyValue = Object.prototype.hasOwnProperty.call(body, 'coverUrl')
   if (!hasStableValue && !hasLegacyValue) return String(currentValue || '')
   const value = hasStableValue ? body.coverFileId : body.coverUrl
+  if (allowExisting && String(value || '') === String(currentValue || '')) return String(value || '')
   validateCoverFileId(value, familyId, prefix)
   return String(value || '')
 }

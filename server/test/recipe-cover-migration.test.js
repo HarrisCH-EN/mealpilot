@@ -58,3 +58,19 @@ test('migration dry-run does not write and apply writes only the classified targ
   assert.equal(calls.filter((call) => /UPDATE recipes/i.test(call.sql)).length, 1)
   assert.deepEqual(calls.find((call) => /UPDATE recipes/i.test(call.sql)).params, [target, 1, tomato.coverUrl])
 })
+
+test('migration rejects an invalid file ID builder before dry-run or apply writes', async () => {
+  const calls = []
+  const database = {
+    async execute(sql) {
+      calls.push(sql)
+      if (/SELECT id, family_id/i.test(sql)) return [[rowFrom(tomato)]]
+      if (/UPDATE recipes/i.test(sql)) return [{ affectedRows: 1 }]
+      throw new Error(`unexpected SQL: ${sql}`)
+    }
+  }
+  const invalidFileIdForPath = () => '/system/recipes/a.jpg'
+  await assert.rejects(() => runMigration({ database, fileIdForPath: invalidFileIdForPath, apply: false }), /CLOUDBASE_STORAGE_PATH_FAILED/)
+  await assert.rejects(() => runMigration({ database, fileIdForPath: invalidFileIdForPath, apply: true }), /CLOUDBASE_STORAGE_PATH_FAILED/)
+  assert.equal(calls.length, 0)
+})
