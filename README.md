@@ -20,7 +20,7 @@ MealPilot（饭有谱）是一个基于微信小程序、Express REST API 和 My
 
 推荐是规则和可解释评分模型，不是 AI、机器学习或协同过滤系统。
 
-当前实现基线、数据库边界和交付状态见 [docs/CURRENT_VERSION.md](docs/CURRENT_VERSION.md)。
+当前实现基线、数据库边界和交付状态见 [docs/项目现状说明.md](docs/项目现状说明.md)；完整文档入口见 [docs/文档索引.md](docs/文档索引.md)。
 
 ## 1. 当前功能
 
@@ -32,7 +32,7 @@ MealPilot（饭有谱）是一个基于微信小程序、Express REST API 和 My
 - Family Admin：普通成员可读取/复制邀请码；管理员可改名、刷新邀请码、设置成员权限和移除成员；创建者可移交创建者身份。
 - Invite Code：密码学随机 6 位数字/大小写字母组合，ASCII 区分大小写，刷新后旧邀请码立即失效。
 - Recipe：列表、详情、新增、编辑、软删除、食材明细、步骤和封面。
-- Recipe Cover：本地上传 JPG、PNG、WebP，数据库保存相对 URL。
+- Recipe Cover：上传 JPG、PNG、WebP 到 CloudBase 私有 Storage，数据库保存稳定 File ID，接口返回临时展示 URL。
 - Menu：按日期和餐次查看、手动加菜、备注、幂等添加、删除 MenuItem。
 - Restriction：成员级忌口维护，并作为家庭推荐硬过滤。
 - Preference：成员级类别偏好持久化，并参与家庭软排序。
@@ -114,11 +114,23 @@ resources/
 └─ brand/
    └─ logo-source.png
 docs/
-├─ CURRENT_VERSION.md
-├─ FRONTEND_HANDOFF.md
-└─ superpowers/
+├─ 文档索引.md
+├─ 项目现状说明.md
+├─ 系统架构与部署说明.md
+├─ 前端开发与接口说明.md
+├─ 数据库设计与审计说明.md
+├─ 推荐系统设计说明.md
+├─ 界面设计规范.md
+├─ 菜谱图片素材来源说明.md
+├─ 课程设计/
+├─ 图表/
+└─ 归档/
 start-mealpilot-api.bat
 ~~~
+
+## 4.1 文档入口
+
+正式文档、课程设计交付物、图表源文件和历史审计记录统一从 [docs/文档索引.md](docs/文档索引.md) 进入。历史归档只用于追溯，不覆盖当前代码事实。
 
 ## 5. 环境要求
 
