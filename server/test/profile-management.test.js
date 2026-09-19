@@ -69,7 +69,9 @@ test('profile endpoint updates the authenticated display name and returns the fr
       id: 7,
       openid: 'profile-user',
       display_name: '新的名字',
-      avatar_url: ''
+      avatar_url: '',
+      avatarFileId: '',
+      avatarUrl: ''
     })
     assert.deepEqual(database.calls.find((call) => /UPDATE users SET display_name/i.test(call.sql)).params, ['新的名字', 7])
   })

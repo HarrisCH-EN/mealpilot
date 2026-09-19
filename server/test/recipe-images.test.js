@@ -68,3 +68,11 @@ test('local MiniProgram image paths follow the existing bundle-relative conventi
   for (const tab of appConfig.tabBar.list) assert.match(tab.iconPath, /^assets\/tab\//)
   for (const coverUrl of expected.values()) if (coverUrl) assert.match(coverUrl, /^\/assets\/recipes\/[a-z0-9]+(?:-[a-z0-9]+)*\.jpg$/)
 })
+
+test('bundled recipe cover paths exist under the MiniProgram root', () => {
+  for (const coverUrl of expected.values()) {
+    if (!coverUrl) continue
+    const file = path.join(miniprogramRoot, coverUrl.replace(/^\//, ''))
+    assert.equal(fs.existsSync(file), true, `${coverUrl} must be bundled under miniprogram/`)
+  }
+})

@@ -2,6 +2,9 @@ const { apiBaseUrl, allowDevLogin } = require('../config')
 const app = getApp()
 let authPromise = null
 let loginRedirecting = false
+let profileRedirecting = false
+const PROFILE_SETUP_ROUTE = '/pages/profile-setup/index'
+const MAIN_ROUTE = '/pages/recommend/index'
 
 function updateAuthState(patch) {
   if (typeof app.setAuthState === 'function') app.setAuthState(patch)
@@ -46,8 +49,33 @@ function redirectToLogin() {
   wx.reLaunch({ url: '/pages/login/index' })
 }
 
+function redirectToProfileSetup() {
+  let currentRoute = ''
+  try {
+    const pages = typeof getCurrentPages === 'function' ? getCurrentPages() : []
+    currentRoute = pages.length ? String(pages[pages.length - 1].route || '') : ''
+  } catch (_error) {
+    currentRoute = ''
+  }
+  if (currentRoute === 'pages/profile-setup/index' || currentRoute === PROFILE_SETUP_ROUTE) {
+    profileRedirecting = false
+    return
+  }
+  if (profileRedirecting || typeof wx.reLaunch !== 'function') return
+  profileRedirecting = true
+  wx.reLaunch({ url: PROFILE_SETUP_ROUTE })
+}
+
+function nextRouteForSession(session) {
+  return session && session.profileComplete === true ? MAIN_ROUTE : PROFILE_SETUP_ROUTE
+}
+
 function requireAuthentication() {
-  if (readToken() && app.globalData.authReady === true) return true
+  if (readToken() && app.globalData.authReady === true && app.globalData.profileComplete === true) return true
+  if (readToken() && app.globalData.authReady === true && app.globalData.profileComplete === false) {
+    redirectToProfileSetup()
+    return false
+  }
   redirectToLogin()
   return false
 }
@@ -71,7 +99,13 @@ function request(path, method = 'GET', data = {}, options = {}) {
       error.status = res.statusCode
       if (res.statusCode === 401 && !options.skipReauth && !/^\/auth\/(wechat-login|dev-login)$/.test(path)) {
         try {
-          await reauthenticate()
+          const session = await reauthenticate()
+          if (!session || session.profileComplete !== true) {
+            const profileError = Object.assign(new Error('请先完善个人资料'), { code: 'PROFILE_REQUIRED', status: 409 })
+            redirectToProfileSetup()
+            reject(profileError)
+            return
+          }
           return resolve(await request(path, method, data, { ...options, skipReauth: true }))
         } catch (reauthError) {
           if (typeof app.clearSession === 'function') app.clearSession()
@@ -196,7 +230,16 @@ function uploadRequest(path, filePath, fallbackMessage, options = {}) {
       if (!result.error) return resolve(result.data)
       if (result.error.status !== 401 || options.skipReauth) return reject(result.error)
       try {
-        await reauthenticate()
+        const session = await reauthenticate()
+        if (!session || session.profileComplete !== true) {
+          const profileError = Object.assign(new Error('请先完善个人资料'), {
+            code: 'PROFILE_REQUIRED',
+            status: 409
+          })
+          redirectToProfileSetup()
+          reject(profileError)
+          return
+        }
         resolve(await uploadRequest(path, filePath, fallbackMessage, { ...options, skipReauth: true }))
       } catch (error) {
         if (typeof app.clearSession === 'function') app.clearSession()
@@ -222,4 +265,4 @@ function resolveCoverUrl(coverUrl) {
 function isNoActiveFamilyError(error) {
   return Number(error && error.status) === 403 && /创建或加入家庭|active Family/.test(String(error && error.message || ''))
 }
-module.exports = { request, wechatLogin, ensureAuthenticated, devLogin, uploadFile, uploadAvatar, resolveCoverUrl, isNoActiveFamilyError, redirectToLogin, requireAuthentication }
+module.exports = { request, wechatLogin, ensureAuthenticated, devLogin, uploadFile, uploadAvatar, resolveCoverUrl, isNoActiveFamilyError, redirectToLogin, redirectToProfileSetup, nextRouteForSession, requireAuthentication }

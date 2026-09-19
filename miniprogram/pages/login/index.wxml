@@ -3,8 +3,8 @@
   <view wx:else class="login-shell">
     <view class="login-brand">
       <image class="login-brand__logo" src="/assets/brand/logo.png" mode="aspectFit" />
-      <view class="login-brand__name">MealPilot</view>
       <view class="login-brand__name-zh">饭有谱</view>
+      <view class="login-brand__name">MealPilot</view>
       <view class="login-brand__subtitle">Plan less. Eat better.</view>
     </view>
 

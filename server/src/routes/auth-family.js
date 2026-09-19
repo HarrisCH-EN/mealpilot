@@ -4,6 +4,7 @@ const { createToken } = require('../auth')
 const { HttpError, requireFields, requireEnum, requirePositiveInteger } = require('../http')
 const { currentMembership, requireFamilyAdmin } = require('../middleware/authenticate')
 const { WechatAuthError } = require('../services/wechat-auth-service')
+const { isProfileComplete } = require('../services/auth-profile')
 const { seedStarterRecipes: defaultSeedStarterRecipes } = require('../services/starter-recipe-service')
 
 const asyncRoute = (handler) => (request, response, next) => Promise.resolve(handler(request, response, next)).catch(next)
@@ -35,10 +36,21 @@ async function findOrCreateWechatUser(database, { openid, displayName = '微信�
 }
 
 async function presentUser(user, mediaUrlService) {
-  if (!user || !mediaUrlService) return user
+  if (!user) return user
   const avatarFileId = String(user.avatarFileId !== undefined ? user.avatarFileId : user.avatar_url || '').trim()
+  if (!mediaUrlService) return { ...user, avatarFileId, avatar_url: avatarFileId, avatarUrl: avatarFileId }
   const [avatarUrl] = await mediaUrlService.resolveValues([avatarFileId])
   return { ...user, avatarFileId, avatar_url: avatarUrl, avatarUrl }
+}
+
+async function presentSession({ database, storedUser, jwtSecret, mediaUrlService, includeToken = false }) {
+  const data = {
+    user: await presentUser(storedUser, mediaUrlService),
+    membership: await currentMembership(database, storedUser.id),
+    profileComplete: isProfileComplete(storedUser)
+  }
+  if (includeToken) data.token = createToken(storedUser, jwtSecret)
+  return includeToken ? { token: data.token, user: data.user, membership: data.membership, profileComplete: data.profileComplete } : data
 }
 
 function mapWechatAuthError(error) {
@@ -60,12 +72,15 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
     try {
       session = await wechatAuthService.exchangeCodeForSession(normalizedCode)
     } catch (error) {
+      if (error instanceof WechatAuthError) {
+        const errcode = /^\d+$/.test(String(error.cause || '')) ? Number(error.cause) : undefined
+        console.warn('[MealPilot WeChat Auth]', { operation: 'wechat-code2session', kind: error.kind, errcode })
+      }
       throw mapWechatAuthError(error)
     }
     if (!session || typeof session.openid !== 'string' || !session.openid.trim()) throw new HttpError(401, '微信登录凭证无效')
     const storedUser = await findOrCreateWechatUser(database, { openid: session.openid.trim() })
-    const user = await presentUser(storedUser, mediaUrlService)
-    response.json({ ok: true, data: { token: createToken(storedUser, jwtSecret), user, membership: await currentMembership(database, storedUser.id) } })
+    response.json({ ok: true, data: await presentSession({ database, storedUser, jwtSecret, mediaUrlService, includeToken: true }) })
   }))
 
   result.post('/auth/dev-login', asyncRoute(async (request, response) => {
@@ -75,12 +90,11 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
     await database.execute(`INSERT INTO users (openid, display_name) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`, [openid, displayName])
     const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE openid = ?', [openid])
     const storedUser = rows[0]
-    const user = await presentUser(storedUser, mediaUrlService)
-    response.json({ ok: true, data: { token: createToken(storedUser, jwtSecret), user, membership: await currentMembership(database, storedUser.id) } })
+    response.json({ ok: true, data: await presentSession({ database, storedUser, jwtSecret, mediaUrlService, includeToken: true }) })
   }))
 
   result.get('/auth/me', auth, asyncRoute(async (request, response) => {
-    response.json({ ok: true, data: { user: await presentUser(request.user, mediaUrlService), membership: await currentMembership(database, request.user.id) } })
+    response.json({ ok: true, data: await presentSession({ database, storedUser: request.user, jwtSecret, mediaUrlService }) })
   }))
 
   result.patch('/auth/profile', auth, asyncRoute(async (request, response) => {
@@ -282,4 +296,4 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
   return result
 }
 
-module.exports = { router, findOrCreateWechatUser, inviteCode, normalizeInviteCode }
+module.exports = { router, findOrCreateWechatUser, inviteCode, normalizeInviteCode, presentUser, presentSession }

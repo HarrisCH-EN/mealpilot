@@ -1,422 +1,1075 @@
 # MealPilot / 饭有谱
 
-> Plan less. Eat better.
+> **Plan less. Eat better.**
 
-## 0. 品牌与部署命名
+MealPilot（饭有谱）是一款面向家庭场景的微信小程序，用于管理家庭菜谱、菜单、成员偏好与忌口，并提供可解释的规则推荐。
 
-| 项目 | 统一命名 |
+项目当前已经完成后端、数据库与 CloudBase 私有对象存储部署；小程序已切换到生产 API，现阶段主要进行真机验收、体验版测试与发布前检查。
+
+---
+
+## 1. 项目概览
+
+### 1.1 核心能力
+
+- 微信登录：`wx.login → code2Session → OpenID → JWT`
+- 用户资料：昵称、头像
+- 家庭管理：创建、加入、邀请码、成员角色、成员移除、所有者移交
+- 菜谱管理：列表、详情、新增、编辑、软删除、食材、步骤、封面
+- 标签系统：系统标签、家庭自定义标签
+- 菜单管理：按日期和餐次维护菜单、手动加菜、备注、删除
+- 饮食限制：成员忌口维护，并作为推荐硬约束
+- 成员偏好：类别偏好参与家庭推荐评分
+- 菜谱推荐：结构约束、标签偏好、营养、季节、多样性、新颖度综合评分
+- 推荐候选：单次推荐最多保留 3 套候选，可“换一组”并应用到菜单
+- 用餐反馈：评分与文字评价
+- 家庭洞察：菜单数量、菜品数量、热门菜谱、平均评分等
+
+推荐系统目前是**确定性规则 + 可解释加权评分模型**，不是机器学习、协同过滤或大模型推荐系统。
+
+---
+
+## 2. 当前生产状态
+
+### 2.1 已部署
+
+| 组件 | 当前状态 |
 | --- | --- |
-| 品牌名 | MealPilot |
-| 中文名 | 饭有谱 |
-| Slogan | Plan less. Eat better. |
-| Git 仓库 | mealpilot |
-| 微信小程序 | mealpilot-miniprogram |
-| 后端服务 | mealpilot-api |
-| CloudBase 服务 | mealpilot-api |
-| 数据库 | mealpilot |
-| 对象存储 | mealpilot-assets |
+| 微信小程序前端 | 已切换生产 API，正在进行真机与体验版验收 |
+| Backend | 已部署到腾讯 CloudBase 云托管 |
+| Backend 服务名 | `mealpilot-api` |
+| API Base | `https://mealpilot-api-315434-10-1423427242.sh.run.tcloudbase.com/api` |
+| MySQL | 已部署，业务数据库为 `mealpilot` |
+| Cloud Storage | CloudBase 私有 Storage |
+| 系统菜谱图片 | 已迁移到 `system/recipes/` |
+| 用户头像 | 已迁移到 `users/<userId>/avatars/` |
+| 用户菜谱封面 | 已迁移到 `families/<familyId>/recipes/` |
 
-MealPilot（饭有谱）是一个基于微信小程序、Express REST API 和 MySQL 的家庭菜谱与菜单系统。系统围绕家庭数据边界，提供菜谱、菜单、规则推荐、成员忌口、口味偏好、用餐反馈和基础洞察。
+当前小程序配置：
 
-推荐是规则和可解释评分模型，不是 AI、机器学习或协同过滤系统。
+```js
+activeEnvironment = 'production'
+```
 
-当前实现基线、数据库边界和交付状态见 [docs/项目现状说明.md](docs/项目现状说明.md)；完整文档入口见 [docs/文档索引.md](docs/文档索引.md)。
+生产环境：
 
-## 1. 当前功能
+```text
+https://mealpilot-api-315434-10-1423427242.sh.run.tcloudbase.com/api
+```
 
-- 正式微信登录：wx.login、Backend code2Session、OpenID 映射、JWT 会话。
-- 本地开发登录：受 DEV_AUTH_ENABLED 控制，仅用于开发和自动化测试。
-- 全局认证闸门：未登录只能停留在登录页，登录成功进入推荐页，退出或 401 失效回到登录页。
-- 全局用户资料：用户名、头像在账号、设置、家庭成员和成员忌口页面共用并持久化。
-- Family：创建家庭、邀请码加入、家庭改名、成员与 Owner/Admin 展示、单 active Family。
-- Family Admin：普通成员可读取/复制邀请码；管理员可改名、刷新邀请码、设置成员权限和移除成员；创建者可移交创建者身份。
-- Invite Code：密码学随机 6 位数字/大小写字母组合，ASCII 区分大小写，刷新后旧邀请码立即失效。
-- Recipe：列表、详情、新增、编辑、软删除、食材明细、步骤和封面。
-- Recipe Cover：上传 JPG、PNG、WebP 到 CloudBase 私有 Storage，数据库保存稳定 File ID，接口返回临时展示 URL。
-- Menu：按日期和餐次查看、手动加菜、备注、幂等添加、删除 MenuItem。
-- Restriction：成员级忌口维护，并作为家庭推荐硬过滤。
-- Preference：成员级类别偏好持久化，并参与家庭软排序。
-- Recommendation：规则生成、评分、理由、家庭限制过滤、推荐应用和幂等 Apply。
-- Feedback：当前 active Member 对 MenuItem 评分和可选文字反馈。
-- Insights：菜单数量、菜品数量、热门菜谱和平均评分。
+生产环境关闭开发登录：
 
-## 2. 架构
+```text
+allowDevLogin = false
+```
 
-~~~text
-微信小程序
-    │ wx.login / wx.request / Bearer JWT
-    ▼
-Express REST API
-    │ mysql2 connection pool / transaction / SQL
-    ▼
-MySQL 8：mealpilot
-~~~
+### 2.2 当前仍需完成
 
-正式登录链路：
+项目已经完成基础生产部署，但**微信小程序尚未完成最终正式发布流程**。当前剩余工作主要包括：
 
-~~~text
-wx.login → code → /api/auth/wechat-login → WeChat code2Session
-→ openid → users → JWT → /api/auth/me → Family business APIs
-~~~
+- 微信开发者工具完整编译检查
+- 真机登录与业务链路验收
+- 微信后台合法域名配置核对
+- 体验版测试
+- 微信审核与正式发布
+- 重新导出最新 draw.io 图表 PNG
+- 将当前 CloudBase 架构同步到最终课程设计 DOCX
 
-## 3. 技术栈
+---
 
-- Frontend：原生微信小程序，WXML、WXSS、JavaScript。
-- Backend：Node.js、Express 5、mysql2/promise、jsonwebtoken、dotenv。
-- Database：MySQL 8.0+、InnoDB、utf8mb4。
-- Authentication：微信 OpenID + JWT；不保存或返回 session_key。
-- Testing：Node.js built-in test runner；Direct、Real MySQL Integration、Frontend 三层测试。
+## 3. 系统架构
 
-## 4. 项目结构
+```text
+┌──────────────────────────────┐
+│        微信小程序客户端       │
+│   WXML / WXSS / JavaScript   │
+└──────────────┬───────────────┘
+               │
+               │ HTTPS
+               │ Authorization: Bearer JWT
+               ▼
+┌──────────────────────────────┐
+│   CloudBase 云托管           │
+│   mealpilot-api              │
+│   Node.js + Express          │
+└──────────────┬───────────────┘
+               │
+        ┌──────┴─────────┐
+        │                │
+        ▼                ▼
+┌───────────────┐  ┌──────────────────────┐
+│ MySQL         │  │ CloudBase Storage    │
+│ mealpilot     │  │ Private              │
+│ 结构化业务数据 │  │ 图片文件             │
+└───────────────┘  └──────────────────────┘
+```
 
-~~~text
-database/
-├─ 00_create_user.sql
-├─ 01_schema.sql
-├─ 02_seed.sql
-├─ 03_queries.sql
-├─ 04_recommendation_refactor_r1.sql
-├─ 05_recommendation_run_nullable_legacy.sql
-├─ 06_recipe_tag_metadata_backfill.sql
-├─ 07_remove_cuisine_tags.sql
-├─ 08_tag_system_v1.sql
-├─ 09_family-admin-role.sql
-└─ 10_family-invite-code.sql
-server/
-├─ src/routes/
-├─ src/services/
-├─ src/middleware/
-├─ src/scripts/
-├─ test/
-└─ test/integration/
-miniprogram/
-├─ pages/
-│  ├─ login/
-│  ├─ account-management/
-│  └─ family-management/
-├─ utils/
-├─ styles/
-├─ assets/
-│  ├─ icons/
-│  ├─ tab/
-│  └─ brand/
-├─ app.js
-├─ app.json
-├─ app.wxss
-├─ config.js
-└─ sitemap.json
-tests/
-└─ miniprogram/
-scripts/
-└─ run-miniprogram-tests.js
-resources/
-├─ recipe-images/
-└─ brand/
-   └─ logo-source.png
-docs/
-├─ 文档索引.md
-├─ 项目现状说明.md
-├─ 系统架构与部署说明.md
-├─ 前端开发与接口说明.md
-├─ 数据库设计与审计说明.md
-├─ 推荐系统设计说明.md
-├─ 界面设计规范.md
-├─ 菜谱图片素材来源说明.md
-├─ 课程设计/
-├─ 图表/
-└─ 归档/
-start-mealpilot-api.bat
-~~~
+微信登录额外经过：
 
-## 4.1 文档入口
-
-正式文档、课程设计交付物、图表源文件和历史审计记录统一从 [docs/文档索引.md](docs/文档索引.md) 进入。历史归档只用于追溯，不覆盖当前代码事实。
-
-## 5. 环境要求
-
-- Windows 10/11 或等价开发环境。
-- Node.js 18 或更高版本；当前验证版本为 Node.js 24.14.0。
-- MySQL 8.0 或更高版本；当前验证版本为 MySQL 8.0.45。
-- npm。
-- 微信开发者工具。
-
-项目使用 Node.js 18+ 已提供的 fetch、AbortController、URL、node:test 和 node --watch 能力。
-
-## 6. 环境变量
-
-复制 server/.env.example 为 server/.env。真实 .env 不应提交到 Git。
-
-| 变量 | 用途 | 分类 |
-| --- | --- | --- |
-| PORT | Backend 监听端口，默认 3000 | 可选 |
-| MYSQL_HOST | MySQL 地址 | 本地 Backend 必需 |
-| MYSQL_PORT | MySQL 端口 | 本地 Backend 必需 |
-| MYSQL_USER | 项目数据库用户 | 本地 Backend 必需 |
-| MYSQL_PASSWORD | 数据库密码 | 本地 Backend 必需 |
-| MYSQL_DATABASE | 业务数据库，通常为 mealpilot | 本地 Backend 必需 |
-| JWT_SECRET | JWT 签名密钥 | 必须配置为稳定随机值 |
-| DEV_AUTH_ENABLED | 是否启用 /api/auth/dev-login | 开发可为 true，生产建议 false |
-| NODE_ENV | 生产配置校验开关 | 生产部署建议设置为 production |
-| WECHAT_APP_ID | 微信小程序 AppID | 正式微信登录必需 |
-| WECHAT_APP_SECRET | 微信小程序 AppSecret | 仅 Backend，正式微信登录必需 |
-| CLOUDBASE_ENV_ID | CloudBase 环境 ID | 正式 Backend 必需 |
-| CLOUDBASE_STORAGE_FILE_ID_PREFIX | CloudBase Storage 文件 ID 前缀，例如 `cloud://env.bucket` | 正式 Backend 必需 |
-| CLOUDBASE_APIKEY | CloudBase 服务端 API Key | 正式 Backend 必需，仅服务端 |
-| MYSQL_TEST_DATABASE | Real MySQL Integration 测试库 | 仅 Integration |
-| PHASE_1C_ALLOW_DB_WRITES | 显式允许测试库写入，必须为 1 | 仅 Integration |
-
-WECHAT_APP_SECRET 不得写入小程序、API response、日志或测试快照。
-
-## 7. 数据库初始化
-
-业务数据库为 mealpilot。首次初始化时使用具有建库和授权权限的 MySQL 管理账号执行：
-
-~~~powershell
-mysql -u root -p < database/00_create_user.sql
-~~~
-
-然后配置 server/.env，执行：
-
-~~~powershell
-cd E:\Database_Design\server
-npm install
-npm run db:init
-npm run db:migrate
-npm run db:seed
-~~~
-
-真实脚本含义：
-
-- db:init：读取项目 database/01_schema.sql 创建数据库和表；当前新建 Schema 已包含 canonical Recommendation 结构。
-- db:seed：读取项目 database/02_seed.sql 写入本地演示数据。
-- 03_queries.sql：课程展示和统计用 SQL，不是启动必需步骤。
-- 04、05、06、07、08、09、10：针对已经存在的旧数据库执行的增量升级，按数据库演进顺序执行；06 用于按 seed 映射 insert-only 补齐现有 Recipe 的口味、饮食和烹饪方法标签，07 用于清理已废弃的菜系标签并收窄标签类型，08 用于启用系统/自定义标签，09 用于启用家庭管理员角色，10 用于让邀请码区分大小写。`npm run db:migrate` 当前只幂等校正家庭管理相关的旧库结构，不能替代 04～08 的完整历史迁移。
-
-当前 `01_schema.sql` 定义 19 张表；seed 包含 48 道 Recipe、食材和完整的 recipe_ingredients 关系，供本地演示和开发使用。
-
-## 8. Backend 启动
-
-~~~powershell
-cd E:\Database_Design\server
-npm install
-Copy-Item .env.example .env
-# 编辑 .env 后：
-npm run db:init
-npm run db:migrate
-npm run db:seed
-npm run dev
-~~~
-
-也可以双击根目录 start-mealpilot-api.bat。健康检查：
-
-~~~text
-GET http://127.0.0.1:3000/api/health
-~~~
-
-## 9. 微信小程序设置
-
-小程序目录为 miniprogram/。在微信开发者工具中导入项目根目录并编译。
-
-miniprogram/config.js 集中管理：
-
-- development API：http://127.0.0.1:3000/api
-- production API：HTTPS placeholder，需要部署前替换
-- allowDevLogin：开发环境可用，生产环境关闭
-
-开发者工具本地调试可以开启“不校验合法域名、TLS 版本以及 HTTPS 证书”。真机不能访问电脑的 127.0.0.1；正式环境必须使用 HTTPS Backend，并在微信后台配置 request 合法域名。
-
-## 10. Authentication
-
-### 正式微信登录
-
-~~~text
+```text
 wx.login
-→ code
-→ POST /api/auth/wechat-login
-→ Backend 调用 code2Session
-→ openid
-→ users.openid
-→ JWT
-→ GET /api/auth/me
-~~~
+  ↓
+临时 code
+  ↓
+POST /api/auth/wechat-login
+  ↓
+Backend 调用微信 code2Session
+  ↓
+openid
+  ↓
+users
+  ↓
+JWT
+```
 
-Frontend 不提交 openid、unionid、session_key 或 user_id。新用户自动创建 User，但不会自动创建 Family；登录后可以创建或加入家庭。
+---
 
-### Development Login
+## 4. 媒体存储架构
 
-~~~text
-DEV_AUTH_ENABLED=true
-→ POST /api/auth/dev-login
-~~~
+MealPilot 不再把用户图片保存在 Docker / 云托管实例本地磁盘。
 
-仅用于本地开发、自动化测试和没有微信运行环境的调试。正式产品入口应使用微信登录。
+当前正式架构：
 
-### 强制登录闸门
+```text
+MySQL
+→ 保存稳定 CloudBase File ID
 
-未登录、没有 Token 或 Token 失效时，小程序只展示 `pages/login/index`。业务页面进入时会先检查共享会话；普通请求收到 401 会清理会话并回到登录页。登录成功后统一进入 `pages/recommend/index`，退出登录直接 `reLaunch` 到登录页。
+CloudBase Storage
+→ 保存图片二进制
 
-## 11. 核心 API
+Backend
+→ 使用 CloudBase 服务端凭据生成临时 HTTPS URL
 
-基础地址为 API_BASE/api。除健康检查和登录接口外，业务接口需要 Bearer JWT。
+Mini Program
+→ 使用临时 HTTPS URL 展示图片
+```
 
-| 模块 | API |
-| --- | --- |
-| Auth | POST /auth/wechat-login、POST /auth/dev-login、GET /auth/me、PATCH /auth/profile |
-| Profile | POST /uploads/avatar |
-| Family | POST /families、POST /families/join、GET /families/current、PATCH /families/current/name、GET /families/current/invite-code、POST /families/current/invite-code/refresh、POST /families/leave |
-| Family Admin | POST /families/current/transfer-ownership、PATCH /families/current/members/:memberId/role、DELETE /families/current/members/:memberId |
-| Recipe | GET/POST /recipes、GET/PUT/DELETE /recipes/:id |
-| Ingredient | GET /ingredients |
-| Menu | GET /menus、GET /menus/dates、POST /menus/items、DELETE /menus/items/:id |
-| Recommendation | POST /recommendations、GET /recommendations/:id/candidates/:rank、POST /recommendations/:id/apply |
-| Restriction | GET/POST /family-members/:memberId/restrictions、DELETE .../:ingredientId |
-| Preference | GET /family-members/:memberId/preferences、PUT/DELETE .../:category |
-| Feedback | GET/PUT/DELETE /menu-items/:menuItemId/feedback |
-| Insights | GET /insights?days=7|30（默认 7 天，设置页可切换近 7 天/近 30 天） |
-| Upload | POST /uploads/avatar、POST /uploads/recipe-cover |
+### 4.1 为什么数据库不保存临时 HTTPS URL
 
-统一响应：
+CloudBase 临时 URL 会过期，因此数据库必须保存稳定标识：
 
-~~~json
-{ "ok": true, "data": {} }
-~~~
+```text
+cloud://...
+```
 
-失败响应：
+API 在读取数据时，再把稳定 File ID 转换成临时 HTTPS URL。
 
-~~~json
-{ "ok": false, "message": "可展示的错误信息" }
-~~~
+典型响应：
 
-跨 Family 资源统一返回 404；无 active Family 通常返回 403；业务冲突返回 409。
+```json
+{
+  "coverFileId": "cloud://.../families/1/recipes/example.jpg",
+  "coverUrl": "https://temporary-signed-url..."
+}
+```
 
-## 12. 核心业务规则
+其中：
 
-- 一个 User 同一时间最多拥有一个 active Family membership。
-- Family 是 Recipe、Menu、RecommendationRun、Member 等家庭业务数据的隔离边界。
-- Owner 不能直接 leave；创建者可将创建者身份转移给 active 成员，转移后原创建者降为普通成员并可退出家庭。Admin 可以管理成员、修改家庭名称和刷新邀请码；普通成员可以查看并复制邀请码。Family delete 暂不实现。
-- 邀请码由服务端随机生成 6 位数字/大小写字母组合，`families.invite_code` 使用 `ascii_bin` 区分大小写；管理员刷新后旧码立即失效。
-- Recipe 使用 soft delete；历史 MenuItem 使用 Dynamic Reference，仍可展示同 Family 的 deleted Recipe。
-- 新 Menu 的粒度是 family_id + menu_date + meal_type，同一槽位只能有一个 Menu。
-- 同一 Menu 中同一 Recipe 只能有一个 MenuItem；空 Menu 保留。
-- Restriction 是 active Member 的硬过滤；命中任一限制的 Recipe 不进入推荐候选。
-- Preference 是 active Member 的类别软偏好；未设置按中性值 3，家庭按 active Member 平均值聚合。
-- Recommendation Apply 对 stale 或跨 Family Recipe 整体失败并回滚。
-- Feedback 由当前 active Member 维护，重复评分更新原关系。
+- `coverFileId`：持久化身份，用于保存和编辑
+- `coverUrl`：短期展示地址，仅用于 `<image>`
 
-## 13. Recommendation Model
+### 4.2 数据库字段兼容说明
 
-~~~text
-canonical request: maxPrepMinutes + structure + preferences
-        ↓
-active-member restrictions
-        ↓
-hard category/ingredient filter
-        ↓
-family and session preference soft score
-        ↓
-ingredient/method diversity + nutrition + season + novelty
-        ↓
-persisted candidates with score/reason snapshots
-~~~
+当前数据库仍沿用历史字段名：
 
-新推荐结果会持久化为 `recommendation_runs`、`recommendation_candidates` 和 `recommendation_candidate_items`。客户端通过候选 `candidateId` 读取或 Apply；Apply 会重新校验当前家庭、成员、Recipe 状态、限制和菜单结构，并使用事务和幂等规则写入 Menu。旧的 `maxCookMinutes + mode` 请求和历史 `recommendation_items` 仍保留兼容读取与 Apply 路径。
+```text
+recipes.cover_url
+users.avatar_url
+```
 
-## 14. Recipe Cover Upload
+但这两个字段在当前生产架构中的语义已经变为：
 
-~~~text
-POST /api/uploads/recipe-cover
-~~~
+> **稳定 CloudBase `cloud://` File ID**
 
-支持 JPG、JPEG、PNG、WebP，大小上限 5 MB。文件上传至 CloudBase Storage，数据库只保存稳定的 `cloud://...` 文件 ID；API 和小程序使用临时 HTTPS URL 展示。头像属于全局用户资料，菜谱封面属于家庭菜谱资料。
+请不要因为字段名包含 `_url`，就把临时 HTTPS URL 持久化进去。
 
-上传接口返回 `coverFileId`（稳定 ID）和 `coverUrl`（临时展示 URL）。Recipe 创建/编辑优先接收 `coverFileId`，读取接口同时返回稳定 ID 与临时 URL。上传失败时 Recipe 不会假装保存成功；数据库更新失败会清理本次新上传对象，旧头像删除失败只记录安全告警，不影响主请求。
+### 4.3 Storage 路径
 
-历史菜谱封面迁移默认只做 dry-run；确认摘要并完成备份后执行 `npm run storage:migrate-recipe-covers -- --apply`。迁移不会自动上传本地图片，也不会在应用启动时执行。
+```text
+system/recipes/<filename>
 
-## 15. 测试系统
+users/<userId>/avatars/<uuid>.<ext>
 
-### Backend Direct
+families/<familyId>/recipes/<uuid>.<ext>
+```
 
-~~~powershell
-cd E:\Database_Design\server
-npm test
-~~~
+系统菜谱图片的原始母版保存在：
 
-Direct 测试不连接、不读取、不写入 mealpilot。
+```text
+resources/recipe-images/
+```
 
-### Backend Real MySQL Integration
+这些原图不属于微信小程序发布包。
 
-~~~powershell
-cd E:\Database_Design\server
-$env:MYSQL_TEST_DATABASE = 'mealpilot_test'
-$env:PHASE_1C_ALLOW_DB_WRITES = '1'
-npm run test:integration
-~~~
+---
 
-当前声明测试：46 passed，0 failed，0 skipped。安全门禁要求测试库名称包含 test，且不得等于 MYSQL_DATABASE。Integration 可以 DROP/CREATE 和清理测试库，但绝对不能使用 mealpilot。没有安全环境时命令会 fail-fast，不会 fallback 到业务库。
+## 5. 家庭数据隔离
+
+MealPilot 使用逻辑多租户模型。
+
+```text
+User
+  ↓ JWT
+Backend
+  ↓ 查询 family_members
+Membership
+  ↓
+family_id
+  ↓
+Family-scoped SQL
+```
+
+家庭业务数据通过：
+
+- JWT 用户身份
+- `family_members`
+- `family_id`
+- Backend 权限中间件
+- Family-scoped SQL
+
+共同实现隔离。
+
+例如：
+
+```sql
+SELECT *
+FROM recipes
+WHERE id = ?
+  AND family_id = ?;
+```
+
+即使用户知道其他家庭某条记录的 ID，只要不属于当前家庭，正常 API 也不会返回该数据。
+
+当前家庭角色：
+
+```text
+owner
+admin
+member
+```
+
+注意：这是**应用层逻辑隔离**，不是每个家庭单独建立一套物理数据库。
+
+---
+
+## 6. 技术栈
 
 ### Frontend
 
-~~~powershell
-npm test --prefix tests/miniprogram
-~~~
+- 微信原生小程序
+- WXML
+- WXSS
+- JavaScript
+- `wx.request`
+- `wx.uploadFile`
+- 微信登录 API
 
-Frontend 测试使用 Node built-in runner，位于 `tests/miniprogram/`，覆盖 contract、纯函数和 source-level checks，不等同于微信开发者工具真实 E2E。测试文件和 runner 不属于 `miniprogram/` 发布目录。
+### Backend
 
-### 全部 Backend
+- Node.js
+- Express 5
+- `mysql2/promise`
+- `jsonwebtoken`
+- `zod`
+- `@cloudbase/node-sdk`
+- `dotenv`
 
-~~~powershell
+### Database
+
+- MySQL 8.0+
+- InnoDB
+- utf8mb4
+- Primary Key / Foreign Key
+- UNIQUE / CHECK / INDEX
+- Transaction
+- Soft Delete
+- Migration
+
+### Testing
+
+- Node.js built-in test runner
+- Backend Direct Tests
+- Real MySQL Integration Tests
+- MiniProgram source / contract tests
+
+---
+
+## 7. 项目结构
+
+```text
+mealpilot/
+│
+├─ miniprogram/                 # 微信小程序正式运行代码
+│  ├─ pages/
+│  ├─ utils/
+│  ├─ styles/
+│  ├─ assets/
+│  │  ├─ brand/
+│  │  ├─ icons/
+│  │  └─ tab/
+│  ├─ app.js
+│  ├─ app.json
+│  ├─ app.wxss
+│  ├─ config.js
+│  └─ sitemap.json
+│
+├─ server/                      # Node.js / Express Backend
+│  ├─ src/
+│  │  ├─ routes/
+│  │  ├─ services/
+│  │  ├─ middleware/
+│  │  ├─ data/
+│  │  └─ scripts/
+│  ├─ test/
+│  ├─ Dockerfile
+│  ├─ package.json
+│  └─ package-lock.json
+│
+├─ database/                    # MySQL Schema 与迁移历史
+│  ├─ 00_create_user.sql
+│  ├─ 01_schema.sql
+│  ├─ 02_seed.sql
+│  ├─ 03_queries.sql
+│  ├─ 04_recommendation_refactor_r1.sql
+│  ├─ 05_recommendation_run_nullable_legacy.sql
+│  ├─ 06_recipe_tag_metadata_backfill.sql
+│  ├─ 07_remove_cuisine_tags.sql
+│  ├─ 08_tag_system_v1.sql
+│  ├─ 09_family-admin-role.sql
+│  └─ 10_family-invite-code.sql
+│
+├─ tests/
+│  └─ miniprogram/              # 小程序自动化测试
+│
+├─ scripts/
+│  └─ run-miniprogram-tests.js
+│
+├─ resources/
+│  ├─ recipe-images/            # 系统菜谱原始母版
+│  └─ brand/
+│     └─ logo-source.png
+│
+├─ docs/
+│  ├─ 文档索引.md
+│  ├─ 项目现状说明.md
+│  ├─ 系统架构与部署说明.md
+│  ├─ 前端开发与接口说明.md
+│  ├─ 数据库设计与审计说明.md
+│  ├─ 推荐系统设计说明.md
+│  ├─ 界面设计规范.md
+│  ├─ 菜谱图片素材来源说明.md
+│  ├─ 课程设计/
+│  ├─ 图表/
+│  └─ 归档/
+│
+├─ project.config.json
+├─ README.md
+└─ .gitignore
+```
+
+---
+
+## 8. 文档
+
+完整文档入口：
+
+- [文档索引](docs/文档索引.md)
+- [项目现状说明](docs/项目现状说明.md)
+- [系统架构与部署说明](docs/系统架构与部署说明.md)
+- [前端开发与接口说明](docs/前端开发与接口说明.md)
+- [数据库设计与审计说明](docs/数据库设计与审计说明.md)
+- [推荐系统设计说明](docs/推荐系统设计说明.md)
+- [界面设计规范](docs/界面设计规范.md)
+- [菜谱图片素材来源说明](docs/菜谱图片素材来源说明.md)
+
+图表：
+
+- [系统总体架构图](docs/图表/系统总体架构图.drawio)
+- [系统总体 E-R 图](docs/图表/系统总体E-R图.drawio)
+- [系统功能模块图](docs/图表/系统功能模块图.drawio)
+- [菜谱推荐处理流程图](docs/图表/菜谱推荐处理流程图.drawio)
+
+课程设计：
+
+- [课程设计任务书](docs/课程设计/课程设计任务书.doc)
+- [课程设计报告源稿](docs/课程设计/课程设计报告源稿.md)
+- [课程设计报告](docs/课程设计/课程设计报告.docx)
+
+---
+
+## 9. 环境变量
+
+后端环境变量示例位于：
+
+```text
+server/.env.example
+```
+
+真实 `.env`、API Key、数据库密码和微信 Secret 不应提交到 Git。
+
+| 变量 | 用途 |
+| --- | --- |
+| `NODE_ENV` | Backend 运行环境 |
+| `PORT` | HTTP 监听端口 |
+| `MYSQL_HOST` | MySQL Host |
+| `MYSQL_PORT` | MySQL Port |
+| `MYSQL_USER` | MySQL Runtime User |
+| `MYSQL_PASSWORD` | MySQL Password |
+| `MYSQL_DATABASE` | MySQL Database |
+| `JWT_SECRET` | JWT 签名密钥 |
+| `WECHAT_APP_ID` | 微信小程序 AppID |
+| `WECHAT_APP_SECRET` | 微信小程序 AppSecret |
+| `DEV_AUTH_ENABLED` | 是否允许开发登录 |
+| `CLOUDBASE_ENV_ID` | CloudBase 环境 ID |
+| `CLOUDBASE_STORAGE_FILE_ID_PREFIX` | CloudBase File ID 前缀 |
+| `CLOUDBASE_APIKEY` | CloudBase 服务端 API Key |
+| `MYSQL_TEST_DATABASE` | Real MySQL Integration 测试数据库 |
+| `PHASE_1C_ALLOW_DB_WRITES` | Integration Test 写入门禁 |
+
+三个身份系统不要混淆：
+
+```text
+JWT
+→ Mini Program → Backend
+
+MySQL Credentials
+→ Backend → MySQL
+
+CLOUDBASE_APIKEY
+→ Backend → CloudBase Storage
+```
+
+服务端凭据绝不能进入小程序代码。
+
+---
+
+## 10. 本地开发
+
+### 10.1 安装 Backend 依赖
+
+```powershell
 cd E:\Database_Design\server
-npm run test:all
-~~~
+npm install
+```
 
-该命令会先运行 Direct，再运行带安全门禁的 Integration；未配置测试库时会明确失败，不应把失败误报为完整测试通过。
+复制环境变量：
 
-## 16. Real MySQL Integration 测试库
+```powershell
+Copy-Item .env.example .env
+```
 
-建议使用独立的 mealpilot_test，不要复制或清空业务库。使用 MySQL 管理账号准备测试库和专用权限，例如：
+然后填写本地开发环境所需配置。
 
-~~~sql
-CREATE DATABASE IF NOT EXISTS mealpilot_test CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
-GRANT ALL PRIVILEGES ON mealpilot_test.* TO 'mealpilot_app'@'localhost';
-GRANT CREATE, DROP ON *.* TO 'mealpilot_app'@'localhost';
-FLUSH PRIVILEGES;
-~~~
+### 10.2 初始化新数据库
 
-测试 runner 会读取正式 database/01_schema.sql，在测试库中重建 Schema 和最小 fixture；不维护第二份 Schema，不复制 mealpilot 数据。
+`database/01_schema.sql` 是当前完整 Schema。
 
-## 17. Course Design Scope
+```powershell
+cd E:\Database_Design\server
+npm run db:init
+```
 
-项目同时作为数据库课程设计，真实体现：
+如果只是本地 Demo / 开发环境，需要演示数据时：
 
-- Primary Key、Foreign Key、Composite Key、UNIQUE、CHECK、DEFAULT、NOT NULL
-- 1:N、M:N、关联实体、索引和参照完整性
-- Transaction、Rollback、Concurrency、FOR UPDATE、UPSERT、Idempotency
-- Soft Delete、JOIN、LEFT JOIN、GROUP BY、AVG、COUNT、Family isolation
+```powershell
+npm run db:seed
+```
 
-最终 ER 图、数据字典、课程报告和答辩材料另行整理，不在本 README 中展开。
+> 不要在生产业务库上执行完整 `02_seed.sql`。
 
-## 18. Known Limitations / Deferred
+### 10.3 已存在数据库升级
 
-这些不是当前业务 Bug，而是明确的后续范围：
+历史数据库升级由编号 migration 管理：
 
-- UnionID 数据模型、刷新令牌和多设备 Session 中心。
-- Refresh Token、logout revoke、Token blacklist、多设备 Session 中心。
-- 多 Family、Family switch、Family delete。
-- Menu completed 流程。
-- Recommendation 行为学习、Feedback 学习、AI/LLM、协同过滤。
-- 云对象存储、CDN、orphan image cleanup。
-- 生产服务器、域名、HTTPS、监控、备份与灾备部署。
+```text
+04 → 05 → 06 → 07 → 08 → 09 → 10
+```
 
-## 19. Production Prerequisites
+当前项目提供：
 
-当前代码已经提供正式认证、账号资料和家庭管理能力，但尚未完成生产部署。上线前仍需：
+```powershell
+npm run db:migrate
+```
 
-1. 配置真实 WECHAT_APP_ID 和 WECHAT_APP_SECRET。
-2. 将 miniprogram/config.js production API 替换为正式 HTTPS 地址。
-3. 在微信后台配置 request 合法域名。
-4. 部署 `mealpilot-api`、`mealpilot` 数据库、`mealpilot-assets` 对象存储和备份策略。
-5. 旧库按 04～08、09、10 的迁移顺序完成升级；新库按当前 schema 初始化。
-6. 重新执行安全的 Real MySQL Integration 和现场小程序验收。
+Migration runner 使用 `schema_migrations` 记录迁移版本和 checksum，并通过 MySQL advisory lock 避免并发迁移。
 
-不要把当前 localhost 或 HTTPS placeholder 误认为已经部署。
+生产环境执行任何 migration 前都应先确认：
+
+- 当前数据库
+- 当前版本
+- 备份
+- 迁移脚本
+- 回滚兼容性
+
+### 10.4 启动 Backend
+
+```powershell
+npm run dev
+```
+
+本地 API：
+
+```text
+http://127.0.0.1:3000/api
+```
+
+健康检查：
+
+```text
+GET http://127.0.0.1:3000/api/health
+```
+
+---
+
+## 11. 微信小程序环境
+
+配置文件：
+
+```text
+miniprogram/config.js
+```
+
+当前同时保留：
+
+```text
+development
+production
+```
+
+本地开发 API：
+
+```text
+http://127.0.0.1:3000/api
+```
+
+生产 API：
+
+```text
+https://mealpilot-api-315434-10-1423427242.sh.run.tcloudbase.com/api
+```
+
+当前激活：
+
+```text
+production
+```
+
+正式环境：
+
+```text
+allowDevLogin = false
+```
+
+开发者工具本地开发时可以临时切换到 `development`，但提交体验版 / 正式版前必须重新确认：
+
+```text
+activeEnvironment = 'production'
+```
+
+---
+
+## 12. Authentication
+
+正式微信登录：
+
+```text
+wx.login
+  ↓
+code
+  ↓
+POST /api/auth/wechat-login
+  ↓
+Backend code2Session
+  ↓
+openid
+  ↓
+User
+  ↓
+JWT
+```
+
+Frontend 不直接提交：
+
+```text
+openid
+session_key
+user_id
+```
+
+业务 API 使用：
+
+```http
+Authorization: Bearer <JWT>
+```
+
+生产环境禁止启用：
+
+```text
+DEV_AUTH_ENABLED=true
+```
+
+---
+
+## 13. 核心 API
+
+所有路径以下面的 Base URL 为前缀：
+
+```text
+/api
+```
+
+### Authentication
+
+```text
+POST  /auth/wechat-login
+POST  /auth/dev-login
+GET   /auth/me
+PATCH /auth/profile
+```
+
+### Family
+
+```text
+POST   /families
+POST   /families/join
+GET    /families/current
+PATCH  /families/current/name
+GET    /families/current/invite-code
+POST   /families/current/invite-code/refresh
+POST   /families/leave
+POST   /families/current/transfer-ownership
+PATCH  /families/current/members/:memberId/role
+DELETE /families/current/members/:memberId
+```
+
+### Recipe
+
+```text
+GET    /recipes
+GET    /recipes/:id
+POST   /recipes
+PUT    /recipes/:id
+DELETE /recipes/:id
+GET    /ingredients
+```
+
+### Tag
+
+```text
+GET    /tags
+POST   /tags
+PUT    /tags/:id
+DELETE /tags/:id
+```
+
+### Menu
+
+```text
+GET    /menus
+GET    /menus/dates
+POST   /menus/items
+DELETE /menus/items/:id
+```
+
+### Recommendation
+
+```text
+POST /recommendations
+GET  /recommendations/:id/candidates/:rank
+POST /recommendations/:id/apply
+```
+
+### Preference
+
+```text
+GET    /family-members/:memberId/preferences
+PUT    /family-members/:memberId/preferences/:category
+DELETE /family-members/:memberId/preferences/:category
+GET    /families/current/preferences
+```
+
+### Restriction
+
+```text
+GET    /family-members/:memberId/restrictions
+POST   /family-members/:memberId/restrictions
+DELETE /family-members/:memberId/restrictions/:ingredientId
+GET    /families/current/restrictions
+```
+
+### Feedback
+
+```text
+GET    /menu-items/:menuItemId/feedback
+PUT    /menu-items/:menuItemId/feedback
+DELETE /menu-items/:menuItemId/feedback
+```
+
+### Insights
+
+```text
+GET /insights?days=7
+GET /insights?days=30
+```
+
+### Upload
+
+```text
+POST /uploads/avatar
+POST /uploads/recipe-cover
+```
+
+---
+
+## 14. 推荐系统
+
+当前 canonical 推荐请求主要包含：
+
+```text
+menuDate
+mealType
+peopleCount
+maxPrepMinutes
+structure
+preferences.selectedTagIds
+```
+
+处理链：
+
+```text
+身份与 Family 校验
+        ↓
+读取家庭有效菜谱
+        ↓
+汇总 active 成员限制
+        ↓
+忌口硬过滤
+        ↓
+按照菜单结构生成完整组合
+        ↓
+多因素评分
+        ↓
+候选去重与多样性筛选
+        ↓
+最多持久化 3 套 Candidate
+        ↓
+前端展示 / 换一组
+        ↓
+candidateId Apply
+        ↓
+再次校验
+        ↓
+事务写入 Menu / MenuItem
+```
+
+当前菜单总评分权重：
+
+| 因素 | 权重 |
+| --- | ---: |
+| Preference | 30 |
+| Ingredient Diversity | 15 |
+| Method Diversity | 10 |
+| Nutrition | 15 |
+| Seasonal | 10 |
+| Novelty | 20 |
+
+其中 Preference 分量综合：
+
+```text
+本次标签偏好
++
+家庭成员类别偏好
+```
+
+Canonical 持久化结构：
+
+```text
+recommendation_runs
+    ↓
+recommendation_candidates
+    ↓
+recommendation_candidate_items
+```
+
+旧的：
+
+```text
+recommendation_items
+```
+
+仍保留用于历史兼容，不是新客户端的主路径。
+
+---
+
+## 15. 数据库
+
+当前 `database/01_schema.sql` 定义 **19 张业务表**：
+
+```text
+users
+families
+family_members
+
+ingredients
+ingredient_seasons
+
+recipes
+recipe_ingredients
+
+tag_definitions
+recipe_tags_legacy
+recipe_tags
+
+member_category_preferences
+member_ingredient_restrictions
+
+recommendation_runs
+recommendation_items
+recommendation_candidates
+recommendation_candidate_items
+
+menus
+menu_items
+menu_feedback
+```
+
+更多数据库说明见：
+
+[数据库设计与审计说明](docs/数据库设计与审计说明.md)
+
+---
+
+## 16. 测试
+
+### Backend Direct
+
+```powershell
+cd E:\Database_Design\server
+npm test
+```
+
+最近一次文档重构验收记录：
+
+```text
+226 passed
+0 failed
+```
+
+Backend Direct 测试不应读写生产数据库 `mealpilot`。
+
+### MiniProgram
+
+```powershell
+npm test --prefix tests/miniprogram
+```
+
+最近一次文档重构验收记录：
+
+```text
+152 passed
+0 failed
+```
+
+这些测试属于：
+
+- source-level checks
+- contract tests
+- pure function tests
+
+它们不等同于微信开发者工具 / 真机 E2E。
+
+### Real MySQL Integration
+
+Integration Test 必须使用独立测试数据库，例如：
+
+```text
+mealpilot_test
+```
+
+并显式开启写入门禁：
+
+```powershell
+$env:MYSQL_TEST_DATABASE = 'mealpilot_test'
+$env:PHASE_1C_ALLOW_DB_WRITES = '1'
+
+cd E:\Database_Design\server
+npm run test:integration
+```
+
+Integration runner 可以在测试库执行重建和清理，因此：
+
+> **绝对不要把 `MYSQL_TEST_DATABASE` 指向生产数据库 `mealpilot`。**
+
+最近一次文档重构没有重新执行 Integration Test，因此 README 不把历史 46/46 结果描述为当前最新验证结果。
+
+---
+
+## 17. 系统菜谱图片
+
+系统菜谱源素材位于：
+
+```text
+resources/recipe-images/
+```
+
+线上对象位于：
+
+```text
+CloudBase Storage
+└─ system/recipes/
+```
+
+运行时映射：
+
+```text
+server/src/data/system-recipe-covers.js
+```
+
+当前：
+
+```text
+Starter Recipes：48
+System Cover Mappings：47
+```
+
+“红豆小米粥”目前没有系统封面映射，前端使用无封面 fallback。
+
+---
+
+## 18. 安全边界
+
+### 服务端 Secret
+
+以下信息只能存在于服务端环境：
+
+```text
+MYSQL_PASSWORD
+JWT_SECRET
+WECHAT_APP_SECRET
+CLOUDBASE_APIKEY
+```
+
+不能进入：
+
+- Git
+- README 中的真实值
+- 微信小程序包
+- API Response
+- 前端日志
+
+### Storage
+
+CloudBase Storage 当前为私有权限。
+
+小程序没有 CloudBase 服务端 API Key。
+
+访问模型：
+
+```text
+Authenticated User
+        ↓
+MealPilot Backend
+        ↓
+权限校验
+        ↓
+CloudBase Temporary URL
+        ↓
+Mini Program
+```
+
+临时 URL 本身在有效期内可直接访问，因此不要把它当作永久权限凭证。
+
+---
+
+## 19. 当前限制
+
+以下属于当前明确的后续范围，不是已实现能力：
+
+- 多 Family / Family Switch
+- Family Delete
+- Refresh Token / Token Blacklist / 多设备 Session 中心
+- Menu completed workflow
+- 推荐系统长期行为学习
+- Feedback 驱动推荐学习
+- AI / LLM / Collaborative Filtering
+- Storage orphan 自动回收
+- Storage 病毒扫描
+- 更完整的监控、备份和灾备
+- 正式自定义域名
+- 自动化微信真机 E2E
+
+---
+
+## 20. 当前发布阶段
+
+目前状态：
+
+```text
+Backend                   ✅
+MySQL                     ✅
+CloudBase Storage         ✅
+系统菜谱图片迁移            ✅
+头像上传                    ✅
+菜谱封面上传                ✅
+Production API 配置        ✅
+Backend Direct Tests      ✅
+MiniProgram Tests         ✅
+
+微信真机完整验收             进行中
+微信体验版                   待完成
+微信审核                     待完成
+正式发布                     待完成
+```
+
+下一阶段主要围绕微信小程序发布，不需要重新设计后端存储架构。
+
+---
+
+## 21. License / 素材说明
+
+部分 Demo 菜谱图片来自 Pexels、Unsplash 或其他公开来源。
+
+其中部分小红书素材仅标记为：
+
+```text
+REFERENCE_ONLY
+```
+
+公开可访问不等于获得正式商业授权。
+
+详细来源与许可记录：
+
+[菜谱图片素材来源说明](docs/菜谱图片素材来源说明.md)
+
+如果 MealPilot 后续公开商业化，应优先替换为：
+
+- 自有拍摄素材
+- 用户上传内容
+- 明确获得授权的图库素材
+- 具有清晰商业使用许可的素材
+
+---
+
+## 22. 项目文档事实优先级
+
+当不同历史文档之间出现冲突时，按以下顺序判断：
+
+```text
+当前运行代码 / database Schema / migrations
+        ↓
+当前配置
+        ↓
+当前测试结果
+        ↓
+docs/ 正式文档
+        ↓
+docs/归档/ 历史记录
+```
+
+历史归档仅用于追溯，不代表当前生产状态。
+
+---
+
+**MealPilot / 饭有谱**
+
+> Plan less. Eat better.

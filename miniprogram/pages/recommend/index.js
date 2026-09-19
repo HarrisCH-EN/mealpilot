@@ -167,7 +167,11 @@ Page({
     if (!requireAuthentication()) return
     this.setData({ greeting: getGreeting(new Date().getHours()) })
     if (this._loadedOnce) {
-      if (!app.globalData.membership || this.data.noFamily) this.ensureLogin()
+      if (!app.globalData.membership || this.data.noFamily) {
+        this.ensureLogin()
+      } else {
+        this.loadTags()
+      }
       return
     }
     this._loadedOnce = true

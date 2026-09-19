@@ -107,25 +107,25 @@ test('tokens signed with one secret cannot be verified with another secret', () 
 
 test('production config rejects a missing or development JWT secret', () => {
   assert.throws(
-    () => getConfig({ NODE_ENV: 'production', JWT_SECRET: '', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }),
+    () => getConfig({ NODE_ENV: 'production', JWT_SECRET: '', WECHAT_APP_ID: 'wx-app', WECHAT_APP_SECRET: 'secret', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }),
     /JWT_SECRET/
   )
   assert.throws(
-    () => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'local-development-secret-change-me', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }),
+    () => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'local-development-secret-change-me', WECHAT_APP_ID: 'wx-app', WECHAT_APP_SECRET: 'secret', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }),
     /JWT_SECRET/
   )
 })
 
 test('production config rejects development login even with a valid JWT secret', () => {
   assert.throws(
-    () => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'explicit-production-secret', DEV_AUTH_ENABLED: 'true' }),
+    () => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'explicit-production-secret', DEV_AUTH_ENABLED: 'true', WECHAT_APP_ID: 'wx-app', WECHAT_APP_SECRET: 'secret', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }),
     /DEV_AUTH_ENABLED|开发登录/
   )
-  assert.doesNotThrow(() => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'explicit-production-secret', DEV_AUTH_ENABLED: 'false', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }))
+  assert.doesNotThrow(() => getConfig({ NODE_ENV: 'production', JWT_SECRET: 'explicit-production-secret', DEV_AUTH_ENABLED: 'false', WECHAT_APP_ID: 'wx-app', WECHAT_APP_SECRET: 'secret', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }))
 })
 
 test('only exact production NODE_ENV activates production config rules', () => {
-  const base = { JWT_SECRET: '', WECHAT_APP_ID: '', WECHAT_APP_SECRET: '', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }
+  const base = { JWT_SECRET: '', WECHAT_APP_ID: 'wx-app', WECHAT_APP_SECRET: 'secret', CLOUDBASE_ENV_ID: 'env', CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket', CLOUDBASE_APIKEY: 'key' }
   assert.doesNotThrow(() => getConfig({ ...base, NODE_ENV: undefined }))
   assert.doesNotThrow(() => getConfig({ ...base, NODE_ENV: 'test' }))
   assert.equal(getConfig({ ...base, NODE_ENV: 'production', JWT_SECRET: 'explicit-production-secret' }).environment, 'production')
@@ -137,6 +137,8 @@ test('production config fails fast for missing CloudBase storage settings withou
       NODE_ENV: 'production',
       JWT_SECRET: 'explicit-production-secret',
       DEV_AUTH_ENABLED: 'false',
+      WECHAT_APP_ID: 'wx-app',
+      WECHAT_APP_SECRET: 'secret',
       CLOUDBASE_ENV_ID: 'env',
       CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket',
       CLOUDBASE_APIKEY: 'secret-value'
@@ -148,8 +150,27 @@ test('production config fails fast for missing CloudBase storage settings withou
     NODE_ENV: 'production',
     JWT_SECRET: 'explicit-production-secret',
     DEV_AUTH_ENABLED: 'false',
+    WECHAT_APP_ID: 'wx-app',
+    WECHAT_APP_SECRET: 'secret',
     CLOUDBASE_ENV_ID: 'env',
     CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket',
     CLOUDBASE_APIKEY: 'secret-value'
   }))
+})
+
+test('production config fails fast when WeChat AppID or AppSecret is missing', () => {
+  for (const name of ['WECHAT_APP_ID', 'WECHAT_APP_SECRET']) {
+    const env = {
+      NODE_ENV: 'production',
+      JWT_SECRET: 'explicit-production-secret',
+      DEV_AUTH_ENABLED: 'false',
+      WECHAT_APP_ID: 'wx-app-id',
+      WECHAT_APP_SECRET: 'wechat-secret',
+      CLOUDBASE_ENV_ID: 'env',
+      CLOUDBASE_STORAGE_FILE_ID_PREFIX: 'cloud://env.bucket',
+      CLOUDBASE_APIKEY: 'secret-value'
+    }
+    delete env[name]
+    assert.throws(() => getConfig(env), new RegExp(name))
+  }
 })

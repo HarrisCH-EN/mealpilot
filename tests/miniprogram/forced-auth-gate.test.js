@@ -60,7 +60,7 @@ function loadApi({ token = '', authReady = Boolean(token) } = {}) {
   const calls = { redirects: [] }
   const storage = { token }
   const app = {
-    globalData: { token, authReady, user: { id: 1 }, membership: { family_id: 2 } },
+    globalData: { token, authReady, profileComplete: Boolean(token), user: { id: 1 }, membership: { family_id: 2 } },
     clearSession() {
       this.globalData.token = ''
       this.globalData.user = null

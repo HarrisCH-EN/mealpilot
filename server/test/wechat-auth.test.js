@@ -25,6 +25,7 @@ function databaseForUser(user = { id: 7, openid: 'openid-new', display_name: '�
       calls.push({ sql, params })
       if (/INSERT INTO users/i.test(sql)) return [{ insertId: user.id, affectedRows: 1 }]
       if (/SELECT id, openid, display_name, avatar_url FROM users WHERE openid/i.test(sql)) return [[user]]
+      if (/SELECT id, openid, display_name, avatar_url FROM users WHERE id/i.test(sql)) return [[user]]
       if (/FROM family_members fm JOIN families f/i.test(sql)) return [[]]
       throw new Error(`unexpected SQL: ${sql}`)
     }
@@ -57,10 +58,54 @@ test('wechat-login exchanges code, creates a User, and returns the existing JWT 
     assert.equal(receivedCode, 'wx-code-1')
     assert.equal(body.data.user.openid, 'openid-new')
     assert.equal(body.data.membership, null)
+    assert.equal(body.data.profileComplete, false)
     assert.equal(body.data.sessionKey, undefined)
     assert.equal(body.data.user.session_key, undefined)
     assert.deepEqual(readToken(body.data.token, 'wechat-test-secret'), { userId: 7, openid: 'openid-new' })
     assert.match(database.calls.find((call) => /INSERT INTO users/i.test(call.sql)).sql, /ON DUPLICATE KEY UPDATE/i)
+  })
+})
+
+test('wechat-login marks an existing complete profile without changing the identity flow', async () => {
+  const database = databaseForUser({ id: 17, openid: 'openid-complete', display_name: '小明', avatar_url: 'cloud://env/users/17/avatar.png' })
+  const app = createApp({
+    database,
+    jwtSecret: 'wechat-test-secret',
+    wechatAuthService: { exchangeCodeForSession: async () => ({ openid: 'openid-complete' }) }
+  })
+
+  await withServer(app, async (baseUrl) => {
+    const response = await fetch(`${baseUrl}/api/auth/wechat-login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code: 'complete-code' })
+    })
+    const body = await response.json()
+    assert.equal(response.status, 200)
+    assert.equal(body.data.profileComplete, true)
+  })
+})
+
+test('auth/me returns the same profile contract after token validation', async () => {
+  const database = databaseForUser({ id: 18, openid: 'openid-me', display_name: '小明', avatar_url: 'cloud://env/users/18/avatar.png' })
+  const app = createApp({
+    database,
+    jwtSecret: 'wechat-test-secret',
+    wechatAuthService: { exchangeCodeForSession: async () => ({ openid: 'openid-me' }) }
+  })
+
+  await withServer(app, async (baseUrl) => {
+    const loginResponse = await fetch(`${baseUrl}/api/auth/wechat-login`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ code: 'me-code' })
+    })
+    const token = (await loginResponse.json()).data.token
+    const response = await fetch(`${baseUrl}/api/auth/me`, { headers: { authorization: `Bearer ${token}` } })
+    const body = await response.json()
+    assert.equal(response.status, 200)
+    assert.equal(body.data.profileComplete, true)
+    assert.equal(body.data.membership, null)
   })
 })
 
@@ -211,6 +256,14 @@ test('Wechat client classifies provider and configuration failures', async () =>
   await assert.rejects(
     createWechatAuthService({ appId: 'app', appSecret: 'secret', fetchImpl: async () => ({ ok: true, json: async () => ({ errcode: 40029 }) }) }).exchangeCodeForSession('code'),
     (error) => error instanceof WechatAuthError && error.kind === 'invalid-code'
+  )
+  await assert.rejects(
+    createWechatAuthService({ appId: 'app', appSecret: 'secret', fetchImpl: async () => ({ ok: true, json: async () => ({ errcode: 40013 }) }) }).exchangeCodeForSession('code'),
+    (error) => error instanceof WechatAuthError && error.kind === 'config'
+  )
+  await assert.rejects(
+    createWechatAuthService({ appId: 'app', appSecret: 'secret', fetchImpl: async () => ({ ok: true, json: async () => ({ errcode: 40125 }) }) }).exchangeCodeForSession('code'),
+    (error) => error instanceof WechatAuthError && error.kind === 'config'
   )
   await assert.rejects(
     createWechatAuthService({ appId: 'app', appSecret: 'secret', fetchImpl: async () => { throw new Error('network') } }).exchangeCodeForSession('code'),

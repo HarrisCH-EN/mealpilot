@@ -92,14 +92,14 @@ function createAuthHarness({ token = '', loginOutcomes = ['success'], meResponse
         calls.wechatLogin += 1
         return setTimeout(() => options.success({
           statusCode: 200,
-          data: { ok: true, data: { token: 'jwt-token', user: { id: 7 }, membership: null } }
+          data: { ok: true, data: { token: 'jwt-token', user: { id: 7 }, membership: null, profileComplete: true } }
         }), 0)
       }
       if (options.url.endsWith('/auth/me')) {
         calls.me += 1
         return setTimeout(() => options.success({
           statusCode: meResponse ? meResponse.statusCode : 200,
-          data: meResponse ? meResponse.data : { ok: true, data: { user: { id: 7 }, membership: null } }
+          data: meResponse ? meResponse.data : { ok: true, data: { user: { id: 7 }, membership: null, profileComplete: true } }
         }), 0)
       }
       if (options.url.includes('/protected/')) {

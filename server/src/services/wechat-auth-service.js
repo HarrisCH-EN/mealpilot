@@ -41,8 +41,10 @@ function createWechatAuthService({ appId, appSecret, fetchImpl = globalThis.fetc
       }
 
       if (payload && Number(payload.errcode || 0) !== 0) {
-        const invalidCodes = new Set([40013, 40029, 40125])
-        throw new WechatAuthError(invalidCodes.has(Number(payload.errcode)) ? 'invalid-code' : 'unavailable', String(payload.errcode))
+        const errorCode = Number(payload.errcode)
+        if (errorCode === 40029) throw new WechatAuthError('invalid-code', String(errorCode))
+        if (errorCode === 40013 || errorCode === 40125) throw new WechatAuthError('config', String(errorCode))
+        throw new WechatAuthError('unavailable', String(errorCode))
       }
       if (!payload || typeof payload.openid !== 'string' || !payload.openid.trim()) throw new WechatAuthError('invalid-code')
 

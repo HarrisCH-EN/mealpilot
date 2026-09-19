@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/login/index",
+    "pages/profile-setup/index",
     "pages/recommend/index",
     "pages/menu/index",
     "pages/recipes/index",

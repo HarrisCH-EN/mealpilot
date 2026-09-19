@@ -16,7 +16,8 @@ function createRuntimeApp(config, database = createDatabase(config.mysql)) {
     cloudStorageService,
     mediaUrlService: config.mediaUrlService || createMediaUrlService({ storage: cloudStorageService }),
     cloudbaseStorageFileIdPrefix: config.cloudbaseStorageFileIdPrefix,
-    maxUploadBytes: config.maxUploadBytes
+    maxUploadBytes: config.maxUploadBytes,
+    serveLocalUploads: config.environment !== 'production'
   })
   return { app, database }
 }

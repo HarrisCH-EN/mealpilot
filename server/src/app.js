@@ -1,3 +1,4 @@
+const path = require('node:path')
 const express = require('express')
 const cors = require('cors')
 const { authenticate, requireFamily, requireFamilyAdmin } = require('./middleware/authenticate')
@@ -13,7 +14,7 @@ const { HttpError } = require('./http')
 const { createWechatAuthService } = require('./services/wechat-auth-service')
 const { createMediaUrlService } = require('./services/media-url-service')
 
-function createApp({ database, jwtSecret = 'local-development-secret-change-me', devAuthEnabled = true, wechatAppId = '', wechatAppSecret = '', wechatAuthService, cloudStorageService, mediaUrlService, cloudbaseStorageFileIdPrefix = '', maxUploadBytes }) {
+function createApp({ database, jwtSecret = 'local-development-secret-change-me', devAuthEnabled = true, wechatAppId = '', wechatAppSecret = '', wechatAuthService, cloudStorageService, mediaUrlService, cloudbaseStorageFileIdPrefix = '', maxUploadBytes, serveLocalUploads = false, localUploadsRoot = path.join(__dirname, '../uploads') }) {
   const app = express()
   app.use(cors())
   app.use(express.json({ limit: '1mb' }))
@@ -21,6 +22,8 @@ function createApp({ database, jwtSecret = 'local-development-secret-change-me',
   app.get('/api/health', async (_request, response) => {
     response.json({ ok: true, data: { service: 'mealpilot-api' } })
   })
+
+  if (serveLocalUploads) app.use('/uploads', express.static(localUploadsRoot))
 
   if (database) {
     const media = mediaUrlService || (cloudStorageService ? createMediaUrlService({ storage: cloudStorageService }) : null)

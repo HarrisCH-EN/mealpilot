@@ -1,5 +1,6 @@
 const { allowDevLogin } = require('../../config')
 const { request, uploadAvatar, resolveCoverUrl, requireAuthentication } = require('../../utils/api')
+const { normalizeDisplayName, validateDisplayName } = require('../../utils/profile')
 const app = getApp()
 
 function getDisplayName(user) {
@@ -130,14 +131,11 @@ Page({
       placeholderText: '请输入名字',
       confirmText: '保存',
       success: async (result) => {
-        const displayName = String(result.content || '').trim()
+        const displayName = normalizeDisplayName(result.content)
         if (!result.confirm) return
-        if (!displayName) {
-          wx.showToast({ title: '名字不能为空', icon: 'none' })
-          return
-        }
-        if (displayName.length > 40) {
-          wx.showToast({ title: '名字不能超过40个字符', icon: 'none' })
+        const validationError = validateDisplayName(displayName)
+        if (validationError) {
+          wx.showToast({ title: validationError.replace(/^请先填写/, '').replace('昵称', '名字'), icon: 'none' })
           return
         }
         this.setData({ profileUpdating: true })

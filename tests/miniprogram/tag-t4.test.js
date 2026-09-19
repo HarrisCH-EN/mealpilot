@@ -129,6 +129,13 @@ test('T4 recommendation accepts zero or many API tag ids without frontend semant
   assert.doesNotMatch(script, /fish.*seafood|shrimp.*seafood|steam.*light/i)
 })
 
+test('T4 recommendation refreshes the live tag catalog after returning from tag management', () => {
+  const script = read('pages', 'recommend', 'index.js')
+  const onShow = script.match(/  onShow\(\) \{[\s\S]*?\n  \},/)?.[0] || ''
+  assert.match(onShow, /if \(this\._loadedOnce\)/)
+  assert.match(onShow, /this\.loadTags\(\)/)
+})
+
 test('recommendation and menu dish cards render persisted recipe tags', () => {
   const recommendationScript = read('pages', 'recommend', 'index.js')
   const recommendationTemplate = read('pages', 'recommend', 'index.wxml')

@@ -11,6 +11,12 @@ function requireProductionCloudBase(env) {
   }
 }
 
+function requireProductionWechat(env) {
+  for (const name of ['WECHAT_APP_ID', 'WECHAT_APP_SECRET']) {
+    if (!String(env[name] || '').trim()) throw new Error(`生产环境缺少环境变量 ${name}`)
+  }
+}
+
 function resolveJwtSecret(environment, configuredSecret) {
   const value = String(configuredSecret || '').trim()
   if (environment === 'production' && (!value || value === DEVELOPMENT_JWT_SECRET)) {
@@ -24,7 +30,10 @@ function getConfig(env = process.env) {
   if (environment === 'production' && env.DEV_AUTH_ENABLED === 'true') {
     throw new Error('生产环境禁止启用开发登录，请设置 DEV_AUTH_ENABLED=false')
   }
-  if (environment === 'production') requireProductionCloudBase(env)
+  if (environment === 'production') {
+    requireProductionCloudBase(env)
+    requireProductionWechat(env)
+  }
   return {
     environment,
     port: Number(env.PORT || 3000),
@@ -44,4 +53,4 @@ function getConfig(env = process.env) {
   }
 }
 
-module.exports = { getConfig, DEVELOPMENT_JWT_SECRET, resolveJwtSecret, requireProductionCloudBase }
+module.exports = { getConfig, DEVELOPMENT_JWT_SECRET, resolveJwtSecret, requireProductionCloudBase, requireProductionWechat }

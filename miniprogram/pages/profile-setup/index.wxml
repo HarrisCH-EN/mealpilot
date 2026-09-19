@@ -1,0 +1,26 @@
+<view class="profile-setup-page" style="{{navStyle}}">
+  <view wx:if="{{sessionState === 'loadingSession'}}" class="profile-setup-loading">正在加载资料…</view>
+  <view wx:else class="profile-setup-shell">
+    <view class="profile-setup-brand">
+      <image class="profile-setup-brand__logo" src="/assets/brand/logo.png" mode="aspectFit" />
+      <view class="profile-setup-brand__title">欢迎来到饭有谱</view>
+      <view class="profile-setup-brand__copy">完善一下个人资料，让家人更容易认出你。</view>
+    </view>
+
+    <view class="profile-setup-card">
+      <view class="profile-setup-avatar-frame">
+        <button class="profile-setup-avatar" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar" disabled="{{submitting}}">
+          <image wx:if="{{avatarPreview}}" class="profile-setup-avatar__image" src="{{avatarPreview}}" mode="aspectFill" />
+          <view wx:else class="profile-setup-avatar__placeholder">选择头像</view>
+        </button>
+      </view>
+      <view class="profile-setup-avatar__hint">点击选择头像</view>
+
+      <view class="profile-setup-field-label">昵称</view>
+      <input class="profile-setup-input" type="nickname" value="{{displayName}}" bindinput="onNicknameInput" bindchange="onNicknameChange" placeholder="请输入昵称" disabled="{{submitting}}" />
+
+      <view wx:if="{{error}}" class="profile-setup-error">{{error}}</view>
+      <button class="profile-setup-submit" loading="{{submitting}}" disabled="{{submitting}}" bindtap="submitProfile">完成并进入</button>
+    </view>
+  </view>
+</view>

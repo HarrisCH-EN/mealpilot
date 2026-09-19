@@ -71,6 +71,10 @@ function createAccountPageHarness({ confirm, profileApi = {} } = {}) {
         resolveCoverUrl: (value) => value || '',
         requireAuthentication: () => true
       }
+      if (request === '../../utils/profile') return {
+        normalizeDisplayName: (value) => String(value || '').trim(),
+        validateDisplayName: (value) => !String(value || '').trim() ? '请先填写昵称' : String(value).trim().length > 40 ? '昵称不能超过40个字符' : ''
+      }
       return require(request)
     },
     wx,

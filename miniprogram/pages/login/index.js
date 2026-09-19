@@ -1,4 +1,4 @@
-const { wechatLogin, ensureAuthenticated, devLogin } = require('../../utils/api')
+const { wechatLogin, ensureAuthenticated, devLogin, nextRouteForSession } = require('../../utils/api')
 const { allowDevLogin } = require('../../config')
 const app = getApp()
 
@@ -60,8 +60,9 @@ Page({
     }
     this.setData({ checkingSession: true, error: '' })
     try {
-      await ensureAuthenticated()
-      this.redirectToHome()
+      const session = await ensureAuthenticated()
+      this.setData({ checkingSession: false, sessionChecked: true })
+      this.routeAfterAuthentication(session)
     } catch (error) {
       this.setData({ checkingSession: false, sessionChecked: true, error: error.message || '登录状态已失效，请重新登录' })
     }
@@ -80,13 +81,25 @@ Page({
   async login(loginAction, fallbackMessage) {
     this.setData({ loading: true, error: '' })
     try {
-      await loginAction()
-      const navigate = () => this.redirectToHome()
+      const session = await loginAction()
+      const navigate = () => this.routeAfterAuthentication(session)
+      this.setData({ loading: false })
       if (typeof wx.nextTick === 'function') wx.nextTick(navigate)
       else setTimeout(navigate, 100)
     } catch (error) {
       this.setData({ loading: false, error: error.message || fallbackMessage })
     }
+  },
+
+  routeAfterAuthentication(session) {
+    const route = nextRouteForSession(session)
+    if (route === '/pages/profile-setup/index') {
+      if (this._redirecting) return
+      this._redirecting = true
+      wx.reLaunch({ url: route })
+      return
+    }
+    this.redirectToHome()
   },
 
   redirectToHome() {
