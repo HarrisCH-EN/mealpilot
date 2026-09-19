@@ -9,7 +9,7 @@
     </view>
 
     <view class="login-card">
-      <view class="login-card__title">欢迎回来</view>
+      <view class="login-card__title">欢迎使用</view>
       <view class="login-card__copy">登录后继续管理家庭餐桌</view>
 
       <button class="login-option login-option--wechat" loading="{{loading}}" disabled="{{loading}}" bindtap="loginWithWechat">

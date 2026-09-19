@@ -120,11 +120,47 @@ function request(path, method = 'GET', data = {}, options = {}) {
   }))
 }
 function wxLoginCode() {
+  console.log('[MealPilot Login] wx.login start')
+
   return new Promise((resolve, reject) => wx.login({
-    success: (result) => result && typeof result.code === 'string' && result.code.trim()
-      ? resolve(result.code.trim())
-      : reject(Object.assign(new Error('微信登录未返回有效凭证'), { status: 401 })),
-    fail: reject
+    success(result) {
+      const hasCode = Boolean(
+        result &&
+        typeof result.code === 'string' &&
+        result.code.trim()
+      )
+
+      console.log('[MealPilot Login] wx.login success', {
+        hasCode,
+        errMsg: result && result.errMsg
+      })
+
+      if (!hasCode) {
+        reject(Object.assign(
+          new Error('微信登录未返回有效凭证'),
+          { status: 401 }
+        ))
+        return
+      }
+
+      // 不要打印真实 code
+      resolve(result.code.trim())
+    },
+
+    fail(error) {
+      console.warn('[MealPilot Login] wx.login fail', {
+        errMsg: error && error.errMsg,
+        errno: error && error.errno
+      })
+
+      reject(error)
+    },
+
+    complete(result) {
+      console.log('[MealPilot Login] wx.login complete', {
+        errMsg: result && result.errMsg
+      })
+    }
   }))
 }
 

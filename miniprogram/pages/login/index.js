@@ -69,9 +69,15 @@ Page({
   },
 
   async loginWithWechat() {
-    if (this.data.loading) return
-    await this.login(wechatLogin, '微信登录失败，请重试')
-  },
+  console.log('[MealPilot Login] button tapped')
+
+  if (this.data.loading) {
+    console.log('[MealPilot Login] ignored because loading=true')
+    return
+  }
+
+  await this.login(wechatLogin, '微信登录失败，请重试')
+},
 
   async loginWithDev() {
     if (this.data.loading) return
