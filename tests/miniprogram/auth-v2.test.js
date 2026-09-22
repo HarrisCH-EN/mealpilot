@@ -80,6 +80,63 @@ test('refreshing an authenticated session does not let page onShow redirect to l
   await refresh
 })
 
+test('logout remains final when an older session restore finishes afterward', async () => {
+  const storage = makeStorage('jwt-token')
+  const store = createAuthStore({ storage })
+  store.hydrate()
+  store.setSession({
+    token: 'jwt-token',
+    user: { id: 7 },
+    profileComplete: true,
+    membership: null
+  })
+
+  let resolveSession
+  const auth = createAuthService({
+    store,
+    wechatAuth: {},
+    httpClient: {
+      request: () => new Promise((resolve) => { resolveSession = resolve })
+    }
+  })
+
+  const restoring = auth.restoreSession()
+  await auth.logout()
+  resolveSession({ user: { id: 7 }, profileComplete: true, membership: null })
+  await restoring
+
+  assert.equal(store.getState().status, 'unauthenticated')
+  assert.equal(store.getState().token, '')
+  assert.equal(storage.values.token, '')
+})
+
+test('concurrent page refreshes share one session restore request', async () => {
+  const store = createAuthStore({ storage: makeStorage('jwt-token') })
+  store.hydrate()
+  store.setSession({ token: 'jwt-token', user: { id: 7 }, profileComplete: true, membership: null })
+
+  let requestCalls = 0
+  let resolveSession
+  const auth = createAuthService({
+    store,
+    wechatAuth: {},
+    httpClient: {
+      request: () => {
+        requestCalls += 1
+        return new Promise((resolve) => { resolveSession = resolve })
+      }
+    }
+  })
+
+  const first = auth.restoreSession()
+  const second = auth.restoreSession()
+  assert.equal(requestCalls, 1)
+
+  resolveSession({ user: { id: 7 }, profileComplete: true, membership: null })
+  await Promise.all([first, second])
+  assert.equal(store.getState().status, 'authenticated')
+})
+
 test('Auth V2 HTTP client shares one reauthentication across concurrent 401 responses and retries once', async () => {
   const storage = makeStorage('expired-token')
   const store = createAuthStore({ storage })

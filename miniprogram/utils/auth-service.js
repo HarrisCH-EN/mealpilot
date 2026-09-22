@@ -7,6 +7,7 @@ function safeAuthError(error, fallbackMessage = '登录失败，请重试') {
 
 function createAuthService({ store, wechatAuth, httpClient, allowDevLogin = false } = {}) {
   let reauthPromise = null
+  let restorePromise = null
   let logoutVersion = 0
 
   async function loginWithWechat() {
@@ -31,7 +32,8 @@ function createAuthService({ store, wechatAuth, httpClient, allowDevLogin = fals
     return reauthPromise
   }
 
-  async function restoreSession() {
+  async function restoreSessionOnce() {
+    const version = logoutVersion
     const currentSession = store.getState()
     const token = currentSession.token
     if (!token) {
@@ -41,9 +43,11 @@ function createAuthService({ store, wechatAuth, httpClient, allowDevLogin = fals
     if (currentSession.status !== 'authenticated') store.setAuthenticating()
     try {
       const session = await httpClient.request('/auth/me', 'GET', {}, { skipReauth: true })
+      if (version !== logoutVersion) return store.getState()
       store.setSession(session)
       return store.getState()
     } catch (error) {
+      if (version !== logoutVersion) return store.getState()
       if (Number(error && error.status) !== 401) {
         const safe = safeAuthError(error, '登录状态恢复失败，请重试')
         store.setAuthError(safe.code)
@@ -56,6 +60,11 @@ function createAuthService({ store, wechatAuth, httpClient, allowDevLogin = fals
         throw safeAuthError(reauthError, '登录已失效，请重新登录')
       }
     }
+  }
+
+  function restoreSession() {
+    if (!restorePromise) restorePromise = restoreSessionOnce().finally(() => { restorePromise = null })
+    return restorePromise
   }
 
   async function bootstrap() {
