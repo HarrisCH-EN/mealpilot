@@ -15,17 +15,22 @@ CREATE TABLE families (
   id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(40) NOT NULL,
   invite_code CHAR(6) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  owner_user_id BIGINT UNSIGNED NOT NULL,
+  owner_user_id BIGINT UNSIGNED NULL,
+  status ENUM('active', 'archived') NOT NULL DEFAULT 'active',
+  disbanded_at DATETIME NULL,
+  purge_after DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_family_invite_code (invite_code),
-  CONSTRAINT fk_family_owner FOREIGN KEY (owner_user_id) REFERENCES users(id)
+  KEY idx_family_recovery (owner_user_id, status, purge_after),
+  KEY idx_family_purge (status, purge_after),
+  CONSTRAINT fk_family_owner FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE family_members (
   id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   family_id BIGINT UNSIGNED NOT NULL,
-  user_id BIGINT UNSIGNED NOT NULL,
+  user_id BIGINT UNSIGNED NULL,
   role ENUM('owner', 'admin', 'member') NOT NULL DEFAULT 'member',
   nickname VARCHAR(40) NOT NULL,
   status ENUM('active', 'left') NOT NULL DEFAULT 'active',
@@ -33,7 +38,18 @@ CREATE TABLE family_members (
   UNIQUE KEY uq_family_member (family_id, user_id),
   KEY idx_member_user_status (user_id, status),
   CONSTRAINT fk_member_family FOREIGN KEY (family_id) REFERENCES families(id) ON DELETE CASCADE,
-  CONSTRAINT fk_member_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  CONSTRAINT fk_member_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE SET NULL
+) ENGINE=InnoDB;
+
+CREATE TABLE storage_cleanup_jobs (
+  id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+  file_id VARCHAR(500) NOT NULL,
+  kind ENUM('avatar', 'family_recipe') NOT NULL,
+  attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+  next_attempt_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE KEY uq_storage_cleanup_file (file_id),
+  KEY idx_storage_cleanup_due (next_attempt_at)
 ) ENGINE=InnoDB;
 
 CREATE TABLE ingredients (

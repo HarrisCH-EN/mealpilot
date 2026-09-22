@@ -1,5 +1,5 @@
 const { request, ensureAuthenticated, resolveCoverUrl, requireAuthentication } = require('../../utils/api')
-const app = getApp()
+const { store } = require('../../utils/auth-runtime')
 
 const TEMP_CACHE_KEYS = new Set(['recipeImageCache', 'menuPreviewCache', 'settingsCache'])
 
@@ -47,6 +47,9 @@ Page({
     insightRangeDays: 7,
     insightExpanded: false,
     membersExpanded: false,
+    recoverableFamilies: [],
+    showRecoverySheet: false,
+    familyActionLoading: false,
     loading: false,
     insightLoading: false,
     error: '',
@@ -69,7 +72,7 @@ Page({
     this.setData({ loading: true, error: '', family: null, familyMemberCount: 0, insight: null, insightRangeDays: 7, insightExpanded: false, membersExpanded: false, cacheLabel: '', userRoleLabel: '未加入家庭', canManageFamily: false })
     try {
       const data = await ensureAuthenticated()
-      const user = data.user || app.globalData.user || {}
+      const user = data.user || store.getState().user || {}
       const displayName = getDisplayName(user)
       this.setData({
         user,
@@ -95,9 +98,10 @@ Page({
         })
       }
     } catch (error) {
-      const user = app.globalData.user || {}
+      const session = store.getState()
+      const user = session.user || {}
       const displayName = getDisplayName(user)
-      const membership = app.globalData.membership || null
+      const membership = session.membership || null
       this.setData({
         user,
         userInitial: displayName.slice(0, 1),
@@ -118,23 +122,68 @@ Page({
     }
   },
 
-  createFamily() {
+  async createFamily() {
+    if (this.data.familyActionLoading) return
+    this.setData({ familyActionLoading: true })
+    try {
+      const recoverableFamilies = await request('/families/recoverable')
+      if (Array.isArray(recoverableFamilies) && recoverableFamilies.length) {
+        this.setData({ recoverableFamilies, showRecoverySheet: true })
+        return
+      }
+      this.openNewFamily()
+    } catch (error) {
+      wx.showToast({ title: error.message || '家庭信息加载失败', icon: 'none' })
+    } finally {
+      this.setData({ familyActionLoading: false })
+    }
+  },
+
+  openNewFamily() {
+    this.setData({ showRecoverySheet: false })
     wx.showModal({
       title: '创建家庭',
       editable: true,
       placeholderText: '例如：周末饭桌',
       success: async (result) => {
         const name = String(result.content || '').trim()
-        if (!result.confirm || !name) return
+        if (!result.confirm || !name || this.data.familyActionLoading) return
+        this.setData({ familyActionLoading: true })
         try {
           await request('/families', 'POST', { name })
           wx.showToast({ title: '家庭已创建', icon: 'success' })
-          this.refresh()
+          await this.refresh()
         } catch (error) {
           wx.showToast({ title: error.message || '创建失败', icon: 'none' })
+        } finally {
+          this.setData({ familyActionLoading: false })
         }
       }
     })
+  },
+
+  closeRecoverySheet() {
+    if (this.data.familyActionLoading) return
+    this.setData({ showRecoverySheet: false })
+  },
+
+  stopPropagation() {},
+
+  async restoreFamily(event) {
+    if (this.data.familyActionLoading) return
+    const familyId = Number(event.currentTarget.dataset.familyId)
+    if (!familyId) return
+    this.setData({ familyActionLoading: true })
+    try {
+      await request(`/families/${familyId}/restore`, 'POST')
+      this.setData({ showRecoverySheet: false, recoverableFamilies: [] })
+      wx.showToast({ title: '家庭已恢复', icon: 'success' })
+      await this.refresh()
+    } catch (error) {
+      wx.showToast({ title: error.message || '家庭恢复失败', icon: 'none' })
+    } finally {
+      this.setData({ familyActionLoading: false })
+    }
   },
 
   joinFamily() {

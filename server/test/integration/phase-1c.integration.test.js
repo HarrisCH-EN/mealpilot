@@ -9,6 +9,7 @@ const { getConfig } = require('../../src/config')
 const { createApp } = require('../../src/app')
 const { addMenuItem } = require('../../src/services/menu-item-service')
 const starterRecipes = require('../../src/data/starter-recipes')
+const { purgeExpiredFamilies } = require('../../src/services/family-lifecycle-service')
 
 const config = getConfig()
 const testDatabase = process.env.MYSQL_TEST_DATABASE
@@ -1062,6 +1063,66 @@ integrationTest('R1 legacy recommendation_items remains present and unchanged', 
   assert.deepEqual(names.sort(), ['dish_score', 'id', 'reason_text', 'recipe_id', 'recommendation_run_id'].sort())
   assert.equal((await queryOne('SELECT COUNT(*) AS count FROM recommendation_items WHERE recommendation_run_id = ?', [fixture.runs.runA])).count, 3)
 })
+
+integrationTest('real account deletion preserves authored family content while blocking administrators', async () => {
+  const memberUserId = fixture.users.memberA2User
+  const memberId = fixture.members.memberA2
+  const recipeId = await insertRecipe(database, {
+    familyId: fixture.families.familyA,
+    memberId,
+    title: '注销成员保留菜谱',
+    category: '素菜',
+    ingredientIds: [fixture.ingredients.ingredientX]
+  })
+
+  let response = await requestAs(fixture.users.userA, '/api/auth/account', { method: 'DELETE' })
+  assert.equal(response.status, 409)
+  assert.equal((await response.json()).code, 'ACCOUNT_ADMIN_BLOCKED')
+
+  response = await requestAs(memberUserId, '/api/auth/account', { method: 'DELETE' })
+  assert.equal(response.status, 200)
+  assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM users WHERE id = ?', [memberUserId])).count), 0)
+  const historicalMember = await queryOne('SELECT user_id AS userId, nickname, status FROM family_members WHERE id = ?', [memberId])
+  assert.deepEqual(historicalMember, { userId: null, nickname: '已注销成员', status: 'left' })
+  assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM recipes WHERE id = ?', [recipeId])).count), 1)
+})
+
+integrationTest('real lifecycle cleanup purges an expired archive through restrictive foreign keys', async () => {
+  const familyId = fixture.families.familyB
+  await database.execute('UPDATE recipes SET cover_url = ? WHERE id = ?', [`cloud://test.bucket/families/${familyId}/recipes/custom.jpg`, fixture.recipes.recipeB])
+  await database.execute("UPDATE family_members SET status = 'left' WHERE family_id = ?", [familyId])
+  await database.execute("UPDATE families SET status = 'archived', disbanded_at = DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 31 DAY), purge_after = DATE_SUB(CURRENT_TIMESTAMP, INTERVAL 1 DAY) WHERE id = ?", [familyId])
+
+  const result = await purgeExpiredFamilies({ database, cloudStorageService: integrationStorage, storageFileIdPrefix: 'cloud://test.bucket', now: new Date() })
+
+  assert.equal(result.purged, 1)
+  assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM families WHERE id = ?', [familyId])).count), 0)
+  assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM recipes WHERE family_id = ?', [familyId])).count), 0)
+  assert.equal(Number((await queryOne('SELECT COUNT(*) AS count FROM storage_cleanup_jobs')).count), 0)
+})
+
+integrationTest('real family archive expires independently and restores only its owner', async () => {
+  await database.execute("UPDATE family_members SET role = 'admin' WHERE id = ?", [fixture.members.memberA2])
+  let response = await requestAs(fixture.users.memberA2User, '/api/families/current', { method: 'DELETE' })
+  assert.equal(response.status, 200)
+  const archived = await queryOne('SELECT status, disbanded_at AS disbandedAt, purge_after AS purgeAfter FROM families WHERE id = ?', [fixture.families.familyA])
+  assert.equal(archived.status, 'archived')
+  assert.ok(archived.disbandedAt)
+  assert.ok(archived.purgeAfter)
+  assert.equal(Number((await queryOne("SELECT COUNT(*) AS count FROM family_members WHERE family_id = ? AND status = 'active'", [fixture.families.familyA])).count), 0)
+
+  response = await requestAs(fixture.users.userA, '/api/families/recoverable')
+  assert.equal(response.status, 200)
+  const recoverable = await response.json()
+  assert.equal(recoverable.data.some((item) => Number(item.id) === Number(fixture.families.familyA)), true)
+
+  response = await requestAs(fixture.users.userA, `/api/families/${fixture.families.familyA}/restore`, { method: 'POST' })
+  assert.equal(response.status, 200)
+  assert.equal((await queryOne('SELECT status FROM families WHERE id = ?', [fixture.families.familyA])).status, 'active')
+  assert.equal((await queryOne('SELECT status FROM family_members WHERE id = ?', [fixture.members.memberA])).status, 'active')
+  assert.equal((await queryOne('SELECT status FROM family_members WHERE id = ?', [fixture.members.memberA2])).status, 'left')
+})
+
 integrationTest('real new-family Starter Recipe initialization is isolated, referentially complete, and transactional', async () => {
   await cleanup()
   await seedStarterIngredients()

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const { createApp } = require('../src/app')
 const { createRuntimeApp } = require('../src/server')
 const { createToken, readToken } = require('../src/auth')
-const { findOrCreateWechatUser } = require('../src/routes/auth-family')
+const { findOrCreateWechatUser } = require('../src/services/auth-service')
 const { createWechatAuthService, WechatAuthError } = require('../src/services/wechat-auth-service')
 
 async function withServer(app, callback) {
@@ -17,13 +17,13 @@ async function withServer(app, callback) {
   }
 }
 
-function databaseForUser(user = { id: 7, openid: 'openid-new', display_name: '微信用户', avatar_url: '' }) {
+function databaseForUser(user = { id: 7, openid: 'openid-new', display_name: '微信用户', avatar_url: '' }, insertAffectedRows = 1) {
   const calls = []
   return {
     calls,
     async execute(sql, params) {
       calls.push({ sql, params })
-      if (/INSERT INTO users/i.test(sql)) return [{ insertId: user.id, affectedRows: 1 }]
+      if (/INSERT INTO users/i.test(sql)) return [{ insertId: user.id, affectedRows: insertAffectedRows }]
       if (/SELECT id, openid, display_name, avatar_url FROM users WHERE openid/i.test(sql)) return [[user]]
       if (/SELECT id, openid, display_name, avatar_url FROM users WHERE id/i.test(sql)) return [[user]]
       if (/FROM family_members fm JOIN families f/i.test(sql)) return [[]]
@@ -42,7 +42,7 @@ test('wechat-login exchanges code, creates a User, and returns the existing JWT 
     wechatAuthService: {
       exchangeCodeForSession: async (code) => {
         receivedCode = code
-        return { openid: 'openid-new', sessionKey: 'secret-session-key' }
+        return { openid: 'openid-new' }
       }
     }
   })
@@ -61,13 +61,13 @@ test('wechat-login exchanges code, creates a User, and returns the existing JWT 
     assert.equal(body.data.profileComplete, false)
     assert.equal(body.data.sessionKey, undefined)
     assert.equal(body.data.user.session_key, undefined)
-    assert.deepEqual(readToken(body.data.token, 'wechat-test-secret'), { userId: 7, openid: 'openid-new' })
+    assert.deepEqual(readToken(body.data.token, 'wechat-test-secret'), { userId: 7 })
     assert.match(database.calls.find((call) => /INSERT INTO users/i.test(call.sql)).sql, /ON DUPLICATE KEY UPDATE/i)
   })
 })
 
 test('wechat-login marks an existing complete profile without changing the identity flow', async () => {
-  const database = databaseForUser({ id: 17, openid: 'openid-complete', display_name: '小明', avatar_url: 'cloud://env/users/17/avatar.png' })
+  const database = databaseForUser({ id: 17, openid: 'openid-complete', display_name: '小明', avatar_url: 'cloud://env/users/17/avatar.png' }, 2)
   const app = createApp({
     database,
     jwtSecret: 'wechat-test-secret',
@@ -83,6 +83,7 @@ test('wechat-login marks an existing complete profile without changing the ident
     const body = await response.json()
     assert.equal(response.status, 200)
     assert.equal(body.data.profileComplete, true)
+    assert.equal(body.data.isNewUser, false)
   })
 })
 
@@ -186,7 +187,7 @@ test('wechat-login maps invalid WeChat credentials to 401 without leaking intern
     })
     assert.equal(response.status, 401)
     const body = await response.json()
-    assert.deepEqual(body, { ok: false, message: '微信登录凭证无效' })
+    assert.deepEqual(body, { ok: false, message: '微信登录凭证无效', code: 'AUTH_WECHAT_INVALID_CODE' })
     assert.doesNotMatch(JSON.stringify(body), /raw provider detail|secret|session/i)
   })
 })
@@ -227,7 +228,7 @@ test('normal runtime wiring passes WeChat credentials and injectable client to t
       body: JSON.stringify({ code: 'runtime-code' })
     })
     assert.equal(response.status, 200)
-    assert.deepEqual(readToken((await response.json()).data.token, 'runtime-wechat-secret'), { userId: 9, openid: 'openid-runtime' })
+    assert.deepEqual(readToken((await response.json()).data.token, 'runtime-wechat-secret'), { userId: 9 })
   })
 })
 
@@ -242,7 +243,7 @@ test('Wechat client exchanges code without exposing credentials or session key',
     }
   })
   const result = await service.exchangeCodeForSession('temporary-code')
-  assert.deepEqual(result, { openid: 'openid-1', unionid: 'union-1', sessionKey: 'session-1' })
+  assert.deepEqual(result, { openid: 'openid-1', unionid: 'union-1' })
   assert.match(requestedUrl, /appid=wx-test-app/)
   assert.match(requestedUrl, /secret=test-secret/)
   assert.match(requestedUrl, /js_code=temporary-code/)
@@ -291,7 +292,7 @@ test('concurrent openid upserts resolve to one logical User', async () => {
   const database = {
     async execute(sql, params) {
       calls.push({ sql, params })
-      if (/INSERT INTO users/i.test(sql)) return [{ insertId: 12, affectedRows: 1 }]
+      if (/INSERT INTO users/i.test(sql)) return [{ insertId: 12, affectedRows: 2 }]
       if (/SELECT id, openid, display_name, avatar_url FROM users WHERE openid/i.test(sql)) return [[{ id: 12, openid: 'same-openid', display_name: '微信用户', avatar_url: '' }]]
       throw new Error(`unexpected SQL: ${sql}`)
     }
@@ -300,6 +301,7 @@ test('concurrent openid upserts resolve to one logical User', async () => {
     findOrCreateWechatUser(database, { openid: 'same-openid' }),
     findOrCreateWechatUser(database, { openid: 'same-openid' })
   ])
-  assert.deepEqual(users.map((user) => user.id), [12, 12])
+  assert.deepEqual(users.map((result) => result.user.id), [12, 12])
+  assert.deepEqual(users.map((result) => result.isNewUser), [false, false])
   assert.equal(calls.filter((call) => /INSERT INTO users/i.test(call.sql)).length, 2)
 })

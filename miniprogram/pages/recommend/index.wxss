@@ -1,5 +1,7 @@
 .recommend-page { min-height: 100%; box-sizing: border-box; padding: 0 36rpx calc(128rpx + env(safe-area-inset-bottom)); background: #fffdfb; color: #222222; }
-.recommend-state { margin-top: 120rpx; }
+.recommend-empty-page { padding-top: 52rpx; }
+.recommend-empty-header { margin-bottom: 32rpx; padding: 0 8rpx; }
+.recommend-empty-header__title { font-size: 52rpx; font-weight: 650; letter-spacing: -1.5rpx; line-height: 1.15; }
 .recommend-setup { padding-top: 46rpx; }
 .recommend-hero { padding: 20rpx 0 44rpx; }
 .recommend-eyebrow { color: #968f8d; font-size: 23rpx; letter-spacing: 1rpx; line-height: 1.45; }
@@ -96,7 +98,6 @@
 }
 
 .recommend-setup { padding: 0; }
-.recommend-state { margin-right: var(--recommend-page-gutter); margin-left: var(--recommend-page-gutter); }
 .recommend-result, .recommend-confirmed, .recommend-error { margin-right: var(--recommend-page-gutter); margin-left: var(--recommend-page-gutter); }
 .recommend-home {
   min-height: calc(100vh - 96rpx);

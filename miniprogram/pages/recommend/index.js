@@ -1,5 +1,5 @@
 const { request, ensureAuthenticated, resolveCoverUrl, isNoActiveFamilyError, requireAuthentication } = require('../../utils/api')
-const app = getApp()
+const { store } = require('../../utils/auth-runtime')
 const { difficultyStars, getGreeting, MEALS, toLocalISODate } = require('../../utils/ui')
 const { displayTags, flattenTagCatalog } = require('../../utils/tags')
 const {
@@ -167,7 +167,7 @@ Page({
     if (!requireAuthentication()) return
     this.setData({ greeting: getGreeting(new Date().getHours()) })
     if (this._loadedOnce) {
-      if (!app.globalData.membership || this.data.noFamily) {
+      if (!store.getState().membership || this.data.noFamily) {
         this.ensureLogin()
       } else {
         this.loadTags()
@@ -180,13 +180,12 @@ Page({
   async ensureLogin() {
     try {
       const session = await ensureAuthenticated()
-      app.globalData.user = session.user || app.globalData.user
-      app.globalData.membership = session.membership || null
-      if (!app.globalData.membership) {
+      store.setSession({ user: session.user, membership: session.membership || null, profileComplete: session.profileComplete })
+      if (!store.getState().membership) {
         this.setData({ screen: 'no-family', noFamily: true, error: '' })
         return false
       }
-      this.setData({ noFamily: false })
+      this.setData({ screen: 'setup', noFamily: false, error: '', errorType: '' })
       await this.loadTags()
       return true
     } catch (error) {
@@ -370,7 +369,7 @@ Page({
       this.setData({ structureMessage: validation.message })
       return
     }
-    if (!app.globalData.membership && !(await this.ensureLogin())) return
+    if (!store.getState().membership && !(await this.ensureLogin())) return
     this.setData({ screen: 'loading', loading: true, preferenceOpen: false, error: '', errorType: '' })
     try {
       const data = await request('/recommendations', 'POST', this.buildRequest())

@@ -73,13 +73,12 @@ test('recipe cover upload accepts jpg png and webp and returns stable and displa
   assert.equal(storage.calls.uploads.every(({ buffer }) => Buffer.isBuffer(buffer)), true)
 })
 
-test('recipe cover upload rejects invalid extension, MIME, missing file, and oversized content', async () => {
+test('recipe cover upload trusts detected bytes over extension and MIME, while rejecting invalid and oversized content', async () => {
   const { app, storage } = makeApp({ maxBytes: 10 })
   await withServer(app, async (baseUrl) => {
     const cases = [
-      formFile(files.jpg, 'image/jpeg', 'dish.exe'),
-      formFile(files.jpg, 'application/octet-stream', 'dish.jpg'),
       formFile(Buffer.alloc(11, 1), 'image/jpeg', 'dish.jpg'),
+      formFile(Buffer.from('nope'), 'image/jpeg', 'dish.jpg'),
       new FormData()
     ]
     for (const form of cases) {
@@ -88,4 +87,13 @@ test('recipe cover upload rejects invalid extension, MIME, missing file, and ove
     }
   })
   assert.equal(storage.calls.uploads.length, 0)
+
+  const { app: mismatchApp, storage: mismatchStorage } = makeApp()
+  await withServer(mismatchApp, async (baseUrl) => {
+    for (const [mime, filename] of [['application/octet-stream', 'dish.jpg'], ['image/jpeg', 'dish.exe']]) {
+      const response = await fetch(`${baseUrl}/api/uploads/recipe-cover`, { method: 'POST', body: formFile(files.jpg, mime, filename) })
+      assert.equal(response.status, 201)
+    }
+  })
+  assert.equal(mismatchStorage.calls.uploads.length, 2)
 })

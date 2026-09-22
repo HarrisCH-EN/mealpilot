@@ -2,6 +2,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
+const vm = require('node:vm')
 
 const root = path.join(__dirname, '..', '..', 'miniprogram')
 const pageRoot = path.join(root, 'pages', 'family-management')
@@ -22,8 +23,9 @@ test('family management is a registered real page with family and member actions
   assert.match(styles, /\.family-hero__edit\s*\{[^}]*flex:\s*0 0 64rpx;[^}]*max-width:\s*64rpx/s)
   assert.match(styles, /\.family-member__manage\s*\{[^}]*width:\s*82rpx;[^}]*flex:\s*0 0 82rpx;[^}]*max-width:\s*82rpx/s)
   assert.match(template, /bindtap="leaveFamily"/)
-  assert.match(template, /bindtap="createFamily"/)
-  assert.match(template, /bindtap="joinFamily"/)
+  assert.doesNotMatch(template, /family-state--empty/)
+  assert.doesNotMatch(template, /bindtap="createFamily"/)
+  assert.doesNotMatch(template, /bindtap="joinFamily"/)
   assert.match(template, /bindtap="copyInviteCode"/)
   assert.match(template, /bindtap="refreshInviteCode"/)
   assert.match(template, /刷新邀请码/)
@@ -55,4 +57,97 @@ test('settings opens the family page and displays the family permission', () => 
   assert.doesNotMatch(settingsTemplate, /allowDevLogin \? '本地开发身份' : '微信登录用户'/)
   assert.doesNotMatch(settingsTemplate, /联系管理员获取邀请码/)
   assert.match(settingsTemplate, /class="settings-quick-card" bindtap="copyCode"/)
+})
+
+test('family management exposes administrator-only disband without a family-less creation screen', () => {
+  const template = fs.readFileSync(path.join(pageRoot, 'index.wxml'), 'utf8')
+  const script = fs.readFileSync(path.join(pageRoot, 'index.js'), 'utf8')
+  const styles = fs.readFileSync(path.join(pageRoot, 'index.wxss'), 'utf8')
+
+  assert.match(template, /wx:if="\{\{isAdmin\}\}"[^>]*class="family-danger"/)
+  assert.match(template, /bindtap="disbandFamily"/)
+  assert.doesNotMatch(template, /recoverableFamilies/)
+  assert.doesNotMatch(template, /bindtap="restoreFamily"/)
+  assert.doesNotMatch(script, /request\('\/families\/recoverable'\)/)
+  assert.match(script, /request\('\/families\/current', 'DELETE'/)
+  assert.match(script, /最终确认/)
+  assert.match(styles, /\.family-danger__button\s*\{[^}]*background:\s*transparent/s)
+})
+
+test('settings create-family opens the recovery-aware flow without navigating away', async () => {
+  const settingsScript = fs.readFileSync(path.join(root, 'pages', 'settings', 'index.js'), 'utf8')
+  const settingsTemplate = fs.readFileSync(path.join(root, 'pages', 'settings', 'index.wxml'), 'utf8')
+  const requests = []
+  const navigations = []
+  let page
+
+  assert.doesNotMatch(settingsScript, /\/pages\/family-management\/index\?action=create/)
+  assert.match(settingsTemplate, /wx:if="\{\{showRecoverySheet\}\}"/)
+  assert.match(settingsTemplate, /bindtap="restoreFamily"/)
+
+  vm.runInNewContext(settingsScript, {
+    Page(definition) { page = definition },
+    require(requestPath) {
+      if (requestPath === '../../utils/api') {
+        return {
+          request: async (url) => {
+            requests.push(url)
+            if (url === '/families/recoverable') {
+              return [{ id: 9, name: '旧家庭', remainingDays: 29 }]
+            }
+            return {}
+          },
+          ensureAuthenticated: async () => ({ user: {}, membership: null }),
+          resolveCoverUrl: (value) => value || '',
+          requireAuthentication: () => true
+        }
+      }
+      if (requestPath === '../../utils/auth-runtime') {
+        return { store: { getState: () => ({ membership: null }), setSession() {} } }
+      }
+      return require(requestPath)
+    },
+    wx: {
+      getWindowInfo: () => ({ statusBarHeight: 20, windowWidth: 375 }),
+      getSystemInfoSync: () => ({ statusBarHeight: 20, windowWidth: 375 }),
+      getMenuButtonBoundingClientRect: () => ({ bottom: 56 }),
+      showModal() {},
+      showToast() {},
+      navigateTo(options) { navigations.push(options) },
+      getStorageInfoSync: () => ({ keys: [] })
+    },
+    Number,
+    String,
+    Math
+  })
+
+  const context = {
+    ...page,
+    data: { ...page.data },
+    setData(patch) { Object.assign(this.data, patch) }
+  }
+  await page.createFamily.call(context)
+
+  assert.ok(requests.includes('/families/recoverable'))
+  assert.equal(navigations.length, 0)
+  assert.equal(context.data.showRecoverySheet, true)
+  assert.equal(context.data.recoverableFamilies[0].id, 9)
+})
+
+test('successful family disband returns directly to the settings tab', () => {
+  const script = fs.readFileSync(path.join(pageRoot, 'index.js'), 'utf8')
+
+  assert.match(
+    script,
+    /await request\('\/families\/current', 'DELETE'\)[\s\S]*wx\.switchTab\(\{ url: '\/pages\/settings\/index' \}\)/
+  )
+})
+
+test('family management redirects family-less users to settings instead of rendering an empty screen', () => {
+  const script = fs.readFileSync(path.join(pageRoot, 'index.js'), 'utf8')
+
+  assert.match(
+    script,
+    /if \(!membership\) \{[\s\S]*wx\.switchTab\(\{ url: '\/pages\/settings\/index' \}\)[\s\S]*return/
+  )
 })

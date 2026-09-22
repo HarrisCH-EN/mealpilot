@@ -15,8 +15,8 @@ test('core pages expose a product-level no-Family state with a path to Family se
   const recommendTemplate = read('pages', 'recommend', 'index.wxml')
   for (const script of [recipesScript, menuScript, recommendScript]) assert.match(script, /isNoActiveFamilyError|noFamily/)
   for (const template of [recipesTemplate, menuTemplate, recommendTemplate]) {
-    assert.match(template, /还没有加入家庭/)
-    assert.match(template, /创建家庭|加入家庭|去设置/)
+    assert.match(template, /还没加入家庭/)
+    assert.match(template, /创建或加入/)
   }
   assert.match(recipesScript, /goFamilySetup/)
   assert.match(menuScript, /goFamilySetup/)
@@ -39,8 +39,8 @@ test('deferred interactions are hidden or static instead of clickable fake actio
 })
 
 test('frontend request errors preserve HTTP status for accurate UX mapping', () => {
-  const apiScript = read('utils', 'api.js')
-  assert.match(apiScript, /error\.status\s*=\s*res\.statusCode/)
+  const httpClientScript = read('utils', 'http-client.js')
+  assert.match(httpClientScript, /error\.status\s*=\s*Number\(response && response\.statusCode\)/)
 })
 
 test('menu and recipe reloads clear stale collections before requesting fresh data', () => {

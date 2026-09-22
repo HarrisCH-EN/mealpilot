@@ -11,7 +11,8 @@ const MIGRATION_FILES = [
   '07_remove_cuisine_tags.sql',
   '08_tag_system_v1.sql',
   '09_family-admin-role.sql',
-  '10_family-invite-code.sql'
+  '10_family-invite-code.sql',
+  '11_account_family_lifecycle.sql'
 ]
 
 function normalizeMigrationSql(sql) {

@@ -1,7 +1,7 @@
 const { allowDevLogin } = require('../../config')
 const { request, uploadAvatar, resolveCoverUrl, requireAuthentication } = require('../../utils/api')
+const { authService, store } = require('../../utils/auth-runtime')
 const { normalizeDisplayName, validateDisplayName } = require('../../utils/profile')
-const app = getApp()
 
 function getDisplayName(user) {
   return String((user && user.display_name) || '微信用户').trim() || '微信用户'
@@ -43,13 +43,17 @@ Page({
     roleLabel: '未加入家庭',
     allowDevLogin,
     loggingOut: false,
+    deletingAccount: false,
+    accountDeletionBlockedVisible: false,
+    accountDeletionBlockedMessage: '',
     profileUpdating: false
   },
 
   onLoad() {
     if (!requireAuthentication()) return
-    const user = app.globalData.user || {}
-    const membership = app.globalData.membership || null
+    const session = store.getState()
+    const user = session.user || {}
+    const membership = session.membership || null
     const displayName = getDisplayName(user)
     this.setData({
       navStyle: getNavigationLayout(),
@@ -155,7 +159,7 @@ Page({
   applyUser(user) {
     const nextUser = user || {}
     const displayName = getDisplayName(nextUser)
-    app.setSession({ user: nextUser })
+    store.setSession({ user: nextUser })
     this.setData({
       user: nextUser,
       userInitial: displayName.slice(0, 1),
@@ -173,9 +177,72 @@ Page({
       success: (result) => {
         if (!result.confirm) return
         this.setData({ loggingOut: true })
-        app.clearSession()
-        wx.reLaunch({ url: '/pages/login/index' })
+        authService.logout().then(() => wx.reLaunch({ url: '/pages/login/index' }))
       }
     })
+  },
+
+  deleteAccount() {
+    if (this.data.deletingAccount || this.data.loggingOut) return
+    const role = this.data.membership && this.data.membership.role
+    if (role === 'owner' || role === 'admin') {
+      this.showAdminDeletionBlocked(role)
+      return
+    }
+    wx.showModal({
+      title: '注销账号',
+      content: '注销后将退出当前家庭，个人资料会被删除，家庭共享内容仍会保留。',
+      confirmText: '继续',
+      confirmColor: '#ff4f7b',
+      success: (first) => {
+        if (!first.confirm) return
+        wx.showModal({
+          title: '最终确认',
+          content: '账号资料将永久删除且无法恢复，确定注销吗？',
+          cancelText: '返回',
+          confirmText: '确认注销',
+          confirmColor: '#ff4f7b',
+          success: async (second) => {
+            if (!second.confirm || this.data.deletingAccount) return
+            this.setData({ deletingAccount: true })
+            try {
+              await request('/auth/account', 'DELETE')
+              await authService.logout()
+              wx.reLaunch({ url: '/pages/login/index' })
+            } catch (error) {
+              if (error && error.code === 'ACCOUNT_ADMIN_BLOCKED') {
+                this.showAdminDeletionBlocked(role)
+              } else {
+                wx.showToast({ title: error.message || '账号注销失败', icon: 'none' })
+              }
+            } finally {
+              this.setData({ deletingAccount: false })
+            }
+          }
+        })
+      }
+    })
+  },
+
+  showAdminDeletionBlocked(role) {
+    const content = role === 'owner'
+      ? '请先移交创建者身份或解散家庭，再注销账号。'
+      : '请先退出家庭、取消管理员身份或解散家庭，再注销账号。'
+    this.setData({
+      accountDeletionBlockedVisible: true,
+      accountDeletionBlockedMessage: content
+    })
+  },
+
+  dismissAdminDeletionBlocked() {
+    this.setData({ accountDeletionBlockedVisible: false })
+  },
+
+  goToFamilyManagement() {
+    this.setData({ accountDeletionBlockedVisible: false })
+    wx.navigateTo({ url: '/pages/family-management/index' })
+  },
+
+  stopPropagation() {
   }
 })

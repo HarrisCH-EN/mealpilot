@@ -2,7 +2,8 @@ const path = require('node:path')
 const express = require('express')
 const cors = require('cors')
 const { authenticate, requireFamily, requireFamilyAdmin } = require('./middleware/authenticate')
-const authFamily = require('./routes/auth-family')
+const authRoutes = require('./routes/auth')
+const families = require('./routes/families')
 const recipes = require('./routes/recipes')
 const menus = require('./routes/menus')
 const restrictions = require('./routes/restrictions')
@@ -13,6 +14,7 @@ const tags = require('./routes/tags')
 const { HttpError } = require('./http')
 const { createWechatAuthService } = require('./services/wechat-auth-service')
 const { createMediaUrlService } = require('./services/media-url-service')
+const { createAuthService } = require('./services/auth-service')
 
 function createApp({ database, jwtSecret = 'local-development-secret-change-me', devAuthEnabled = true, wechatAppId = '', wechatAppSecret = '', wechatAuthService, cloudStorageService, mediaUrlService, cloudbaseStorageFileIdPrefix = '', maxUploadBytes, serveLocalUploads = false, localUploadsRoot = path.join(__dirname, '../uploads') }) {
   const app = express()
@@ -31,7 +33,9 @@ function createApp({ database, jwtSecret = 'local-development-secret-change-me',
     const family = requireFamily(database)
     const familyAdmin = requireFamilyAdmin(database)
     const wechat = wechatAuthService || createWechatAuthService({ appId: wechatAppId, appSecret: wechatAppSecret })
-    app.use('/api', authFamily.router({ database, jwtSecret, devAuthEnabled, wechatAuthService: wechat, auth, family, familyAdmin, fileIdForPath: cloudStorageService && cloudStorageService.fileIdForPath ? cloudStorageService.fileIdForPath.bind(cloudStorageService) : undefined, mediaUrlService: media }))
+    const authService = createAuthService({ database, jwtSecret, wechatAuthService: wechat, mediaUrlService: media, storageFileIdPrefix: cloudbaseStorageFileIdPrefix })
+    app.use('/api', authRoutes.router({ authService, auth, devAuthEnabled }))
+    app.use('/api', families.router({ database, auth, family, familyAdmin, fileIdForPath: cloudStorageService && cloudStorageService.fileIdForPath ? cloudStorageService.fileIdForPath.bind(cloudStorageService) : undefined, mediaUrlService: media }))
     app.use('/api', recipes.router({ database, auth, family, mediaUrlService: media, cloudbaseStorageFileIdPrefix }))
     app.use('/api', menus.router({ database, auth, family, mediaUrlService: media }))
     app.use('/api', restrictions.router({ database, auth, family }))
@@ -47,7 +51,9 @@ function createApp({ database, jwtSecret = 'local-development-secret-change-me',
   }
 
   if (error instanceof HttpError) {
-    return response.status(error.status).json({ ok: false, message: error.message })
+    const body = { ok: false, message: error.message }
+    if (error.code) body.code = error.code
+    return response.status(error.status).json(body)
   }
 
   console.error('[MealPilot API Error]', {

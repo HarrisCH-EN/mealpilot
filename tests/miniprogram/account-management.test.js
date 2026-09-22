@@ -3,6 +3,7 @@ const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
 const vm = require('node:vm')
+const { createAuthStore } = require('../../miniprogram/utils/auth-store')
 
 const root = path.join(__dirname, '..', '..', 'miniprogram')
 
@@ -23,11 +24,26 @@ test('account management exposes a confirmed logout action and returns to login'
   assert.ok(appConfig.pages.includes('pages/account-management/index'))
   assert.match(template, /退出登录/)
   assert.match(template, /bindtap="logout"/)
-  assert.match(script, /app\.clearSession\(\)/)
+  assert.match(script, /authService\.logout\(\)/)
   assert.match(script, /wx\.reLaunch\(\{\s*url:\s*['"]\/pages\/login\/index['"]\s*\}\)/)
 })
 
-function createAccountPageHarness({ confirm, profileApi = {} } = {}) {
+test('account deletion is visually subtle, double-confirmed, and blocked for administrators', () => {
+  const pageRoot = path.join(root, 'pages', 'account-management')
+  const template = fs.readFileSync(path.join(pageRoot, 'index.wxml'), 'utf8')
+  const script = fs.readFileSync(path.join(pageRoot, 'index.js'), 'utf8')
+  const styles = fs.readFileSync(path.join(pageRoot, 'index.wxss'), 'utf8')
+
+  assert.match(template, /class="account-delete"[^>]*bindtap="deleteAccount"/)
+  assert.match(script, /deleteAccount\(\)/)
+  assert.match(script, /ACCOUNT_ADMIN_BLOCKED/)
+  assert.match(script, /request\('\/auth\/account', 'DELETE'/)
+  assert.match(template, /前往家庭管理/)
+  assert.match(script, /最终确认/)
+  assert.match(styles, /\.account-delete\s*\{[^}]*font-size:\s*2[0-6]rpx;[^}]*background:\s*transparent/s)
+})
+
+function createAccountPageHarness({ confirm, profileApi = {}, membership = null } = {}) {
   const script = fs.readFileSync(path.join(root, 'pages', 'account-management', 'index.js'), 'utf8')
   let page
   let clearSessionCalls = 0
@@ -36,14 +52,14 @@ function createAccountPageHarness({ confirm, profileApi = {} } = {}) {
   const actionSheets = []
   const chooseMediaCalls = []
   const toasts = []
-  const app = {
-    globalData: { user: { openid: 'demo-owner', display_name: '演示用户' } },
-    setSession(data) {
-      if (Object.prototype.hasOwnProperty.call(data, 'user')) this.globalData.user = data.user || null
-    },
-    clearSession() {
+  const storage = { token: 'jwt-token' }
+  const store = createAuthStore({ storage })
+  store.setSession({ token: storage.token, user: { openid: 'demo-owner', display_name: '演示用户' }, membership })
+  const app = { globalData: {} }
+  const authService = {
+    logout: async () => {
       clearSessionCalls += 1
-      this.globalData.user = null
+      store.clear()
     }
   }
   const wx = {
@@ -58,11 +74,11 @@ function createAccountPageHarness({ confirm, profileApi = {} } = {}) {
     chooseMedia(options) { chooseMediaCalls.push(options) },
     showToast(options) { toasts.push(options) },
     reLaunch(options) { relaunches.push(options) },
+    navigateTo(options) { relaunches.push(options) },
     navigateBack() {}
   }
   vm.runInNewContext(script, {
     Page: (definition) => { page = definition },
-    getApp: () => app,
     require: (request) => {
       if (request === '../../config') return { allowDevLogin: true }
       if (request === '../../utils/api') return {
@@ -71,6 +87,7 @@ function createAccountPageHarness({ confirm, profileApi = {} } = {}) {
         resolveCoverUrl: (value) => value || '',
         requireAuthentication: () => true
       }
+      if (request === '../../utils/auth-runtime') return { store, authService }
       if (request === '../../utils/profile') return {
         normalizeDisplayName: (value) => String(value || '').trim(),
         validateDisplayName: (value) => !String(value || '').trim() ? '请先填写昵称' : String(value).trim().length > 40 ? '昵称不能超过40个字符' : ''
@@ -89,20 +106,75 @@ function createAccountPageHarness({ confirm, profileApi = {} } = {}) {
     chooseAvatar: page.chooseAvatar,
     saveAvatar: page.saveAvatar,
     applyUser: page.applyUser,
-    editDisplayName: page.editDisplayName
+    editDisplayName: page.editDisplayName,
+    deleteAccount: page.deleteAccount,
+    showAdminDeletionBlocked: page.showAdminDeletionBlocked,
+    dismissAdminDeletionBlocked: page.dismissAdminDeletionBlocked,
+    goToFamilyManagement: page.goToFamilyManagement,
+    stopPropagation: page.stopPropagation
   }
-  return { page, context, app, clearSessionCalls: () => clearSessionCalls, relaunches, modals, actionSheets, chooseMediaCalls, toasts }
+  return { page, context, app, store, clearSessionCalls: () => clearSessionCalls, relaunches, modals, actionSheets, chooseMediaCalls, toasts }
 }
 
-test('confirmed logout clears the local session and relaunches the login page', () => {
+test('confirmed logout clears the local session and relaunches the login page', async () => {
   const harness = createAccountPageHarness({ confirm: true })
   harness.page.onLoad.call(harness.context)
   harness.page.logout.call(harness.context)
+  await Promise.resolve()
 
   assert.equal(harness.clearSessionCalls(), 1)
-  assert.equal(harness.app.globalData.user, null)
+  assert.equal(harness.store.getState().token, '')
   assert.equal(harness.relaunches.length, 1)
   assert.equal(harness.relaunches[0].url, '/pages/login/index')
+})
+
+test('account deletion sends no request until both confirmations succeed', async () => {
+  const requests = []
+  const harness = createAccountPageHarness({
+    confirm: false,
+    profileApi: { request: async (...args) => { requests.push(args); return { deleted: true } } }
+  })
+  harness.page.onLoad.call(harness.context)
+  harness.page.deleteAccount.call(harness.context)
+  assert.equal(harness.modals.length, 1)
+  harness.modals[0].success({ confirm: true })
+  assert.equal(harness.modals.length, 2)
+  await harness.modals[1].success({ confirm: true })
+
+  assert.deepEqual(requests[0], ['/auth/account', 'DELETE'])
+  assert.equal(harness.store.getState().token, '')
+  assert.equal(harness.relaunches[0].url, '/pages/login/index')
+})
+
+test('administrator account deletion is blocked before the API request', () => {
+  let requestCalls = 0
+  const harness = createAccountPageHarness({
+    confirm: false,
+    membership: { role: 'admin', family_id: 10 },
+    profileApi: { request: async () => { requestCalls += 1 } }
+  })
+  harness.page.onLoad.call(harness.context)
+  harness.page.deleteAccount.call(harness.context)
+
+  assert.equal(requestCalls, 0)
+  assert.equal(harness.context.data.accountDeletionBlockedVisible, true)
+  assert.equal(harness.modals.length, 0)
+})
+
+test('administrator account deletion opens an in-page explanation dialog', () => {
+  const template = fs.readFileSync(path.join(root, 'pages', 'account-management', 'index.wxml'), 'utf8')
+  const harness = createAccountPageHarness({
+    confirm: false,
+    membership: { role: 'owner', family_id: 10 }
+  })
+
+  harness.page.onLoad.call(harness.context)
+  harness.page.deleteAccount.call(harness.context)
+
+  assert.equal(harness.context.data.accountDeletionBlockedVisible, true)
+  assert.match(harness.context.data.accountDeletionBlockedMessage, /移交创建者身份或解散家庭/)
+  assert.match(template, /wx:if="\{\{accountDeletionBlockedVisible\}\}"/)
+  assert.match(template, /bindtap="goToFamilyManagement"/)
 })
 
 test('cancelling logout leaves the current session untouched', () => {
@@ -110,6 +182,7 @@ test('cancelling logout leaves the current session untouched', () => {
   harness.page.logout.call(harness.context)
 
   assert.equal(harness.clearSessionCalls(), 0)
+  assert.equal(harness.store.getState().token, 'jwt-token')
   assert.equal(harness.relaunches.length, 0)
 })
 
@@ -132,7 +205,7 @@ test('editing the display name persists it and refreshes the account session', a
   assert.equal(receivedRequest.method, 'PATCH')
   assert.equal(receivedRequest.data.displayName, '新名字')
   assert.equal(harness.context.data.user.display_name, '新名字')
-  assert.equal(harness.app.globalData.user.display_name, '新名字')
+  assert.equal(harness.store.getState().user.display_name, '新名字')
   assert.equal(harness.context.data.profileUpdating, false)
 })
 
@@ -176,7 +249,7 @@ test('account profile exposes a right-side edit button with avatar and name edit
   assert.match(script, /wx\.chooseMedia|wx\.chooseImage/)
   assert.match(script, /request\(\s*['"]\/auth\/profile['"]\s*,\s*['"]PATCH['"]/) 
   assert.match(script, /uploadAvatar\(/)
-  assert.match(api, /function uploadAvatar\(filePath\)/)
+  assert.match(api, /uploadAvatar:/)
   assert.match(styles, /\.account-profile__edit\s*\{[^}]*width:\s*64rpx;[^}]*flex:\s*0 0 64rpx;[^}]*margin:\s*0 0 0 auto;/s)
   assert.match(styles, /\.account-profile__edit\s*\{[^}]*background:\s*var\(--account-accent-soft\);/s)
 })

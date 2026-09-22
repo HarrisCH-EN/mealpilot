@@ -2,7 +2,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const express = require('express')
 const { requireFamily } = require('../src/middleware/authenticate')
-const { router } = require('../src/routes/auth-family')
+const { router } = require('../src/routes/families')
 const { ensureFamilyManagementSchema } = require('../src/scripts/family-management-schema')
 
 const family = { id: 10, name: '家庭 A', invite_code: 'aB3xY9', owner_user_id: 1 }

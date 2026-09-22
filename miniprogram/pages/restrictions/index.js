@@ -1,6 +1,5 @@
 const { request, resolveCoverUrl, requireAuthentication } = require('../../utils/api')
-
-const app = getApp()
+const { store } = require('../../utils/auth-runtime')
 
 function getNavigationLayout() {
   const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -76,8 +75,7 @@ Page({
       const session = await request('/auth/me')
       const membership = session.membership || null
       if (!membership) throw new Error('请先创建或加入家庭')
-      app.globalData.user = session.user || app.globalData.user
-      app.globalData.membership = membership
+      store.setSession({ user: session.user, membership })
 
       const family = await request('/families/current')
       const members = (family.members || []).filter((member) => member.status === undefined || member.status === 'active')

@@ -23,17 +23,7 @@
       <button class="family-button family-button--primary" bindtap="loadFamily">重新加载</button>
     </view>
 
-    <view wx:elif="{{!membership}}" class="family-state family-state--empty">
-      <view class="family-state__icon">家</view>
-      <view class="family-state__title">还没有加入家庭</view>
-      <view class="family-state__copy">创建家庭，或输入邀请码加入已有家庭。</view>
-      <view class="family-state__actions">
-        <button class="family-button family-button--primary" bindtap="createFamily">创建家庭</button>
-        <button class="family-button family-button--secondary" bindtap="joinFamily">加入家庭</button>
-      </view>
-    </view>
-
-    <view wx:else class="family-content">
+    <view wx:elif="{{membership}}" class="family-content">
       <view class="family-hero">
         <view class="family-hero__eyebrow">我的家庭</view>
         <view class="family-hero__name-row">
@@ -89,6 +79,13 @@
         <button class="family-button family-button--danger" loading="{{actionLoading}}" disabled="{{actionLoading || isOwner}}" bindtap="leaveFamily">{{isOwner ? '创建者暂不能退出' : '退出家庭'}}</button>
         <view class="family-actions__note">创建者需要先移交创建者身份后才能退出家庭。</view>
       </view>
+
+      <view wx:if="{{isAdmin}}" class="family-danger">
+        <view class="family-danger__title">危险操作</view>
+        <button class="family-danger__button" loading="{{actionLoading}}" disabled="{{actionLoading}}" bindtap="disbandFamily">解散家庭</button>
+        <view class="family-danger__note">解散后成员将退出，家庭数据保留 30 天。</view>
+      </view>
     </view>
   </scroll-view>
+
 </view>
