@@ -50,8 +50,7 @@ function createWechatAuthService({ appId, appSecret, fetchImpl = globalThis.fetc
 
       return {
         openid: payload.openid.trim(),
-        unionid: typeof payload.unionid === 'string' ? payload.unionid : undefined,
-        sessionKey: typeof payload.session_key === 'string' ? payload.session_key : undefined
+        unionid: typeof payload.unionid === 'string' ? payload.unionid : undefined
       }
     }
   }

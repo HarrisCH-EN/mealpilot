@@ -5,14 +5,14 @@ function authenticate({ database, jwtSecret }) {
   return async (request, _response, next) => {
     try {
       const header = request.headers.authorization || ''
-      if (!header.startsWith('Bearer ')) throw new HttpError(401, '请先登录')
+      if (!header.startsWith('Bearer ')) throw new HttpError(401, '请先登录', 'AUTH_REQUIRED')
       const session = readToken(header.slice(7), jwtSecret)
       const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE id = ?', [session.userId])
-      if (!rows[0]) throw new HttpError(401, '登录已失效')
+      if (!rows[0]) throw new HttpError(401, '登录已失效', 'AUTH_SESSION_EXPIRED')
       request.user = rows[0]
       next()
     } catch (error) {
-      next(error.status ? error : new HttpError(401, '登录已失效'))
+      next(error.status ? error : new HttpError(401, '登录已失效', 'AUTH_SESSION_EXPIRED'))
     }
   }
 }

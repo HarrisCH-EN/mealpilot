@@ -1,17 +1,13 @@
 const express = require('express')
 const crypto = require('node:crypto')
-const { createToken } = require('../auth')
 const { HttpError, requireFields, requireEnum, requirePositiveInteger } = require('../http')
 const { currentMembership, requireFamilyAdmin } = require('../middleware/authenticate')
-const { WechatAuthError } = require('../services/wechat-auth-service')
-const { isProfileComplete } = require('../services/auth-profile')
 const { seedStarterRecipes: defaultSeedStarterRecipes } = require('../services/starter-recipe-service')
 
 const asyncRoute = (handler) => (request, response, next) => Promise.resolve(handler(request, response, next)).catch(next)
 const INVITE_CODE_ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 const INVITE_CODE_LENGTH = 6
 const inviteCode = () => Array.from({ length: INVITE_CODE_LENGTH }, () => INVITE_CODE_ALPHABET[crypto.randomInt(INVITE_CODE_ALPHABET.length)]).join('')
-const MAX_WECHAT_CODE_LENGTH = 256
 
 function normalizeInviteCode(value) {
   const normalized = typeof value === 'string' ? value.trim() : ''
@@ -21,91 +17,11 @@ function normalizeInviteCode(value) {
 
 async function lockUser(connection, userId) {
   const [rows] = await connection.execute('SELECT id FROM users WHERE id = ? FOR UPDATE', [userId])
-  if (!rows[0]) throw new HttpError(401, '登录已失效')
+  if (!rows[0]) throw new HttpError(401, '登录已失效', 'AUTH_SESSION_EXPIRED')
 }
 
-async function findOrCreateWechatUser(database, { openid, displayName = '微信用户', avatarUrl = '' }) {
-  await database.execute(
-    `INSERT INTO users (openid, display_name, avatar_url) VALUES (?, ?, ?)
-     ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`,
-    [openid, displayName, avatarUrl]
-  )
-  const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE openid = ?', [openid])
-  if (!rows[0]) throw new HttpError(500, '登录用户数据异常')
-  return rows[0]
-}
-
-async function presentUser(user, mediaUrlService) {
-  if (!user) return user
-  const avatarFileId = String(user.avatarFileId !== undefined ? user.avatarFileId : user.avatar_url || '').trim()
-  if (!mediaUrlService) return { ...user, avatarFileId, avatar_url: avatarFileId, avatarUrl: avatarFileId }
-  const [avatarUrl] = await mediaUrlService.resolveValues([avatarFileId])
-  return { ...user, avatarFileId, avatar_url: avatarUrl, avatarUrl }
-}
-
-async function presentSession({ database, storedUser, jwtSecret, mediaUrlService, includeToken = false }) {
-  const data = {
-    user: await presentUser(storedUser, mediaUrlService),
-    membership: await currentMembership(database, storedUser.id),
-    profileComplete: isProfileComplete(storedUser)
-  }
-  if (includeToken) data.token = createToken(storedUser, jwtSecret)
-  return includeToken ? { token: data.token, user: data.user, membership: data.membership, profileComplete: data.profileComplete } : data
-}
-
-function mapWechatAuthError(error) {
-  if (!(error instanceof WechatAuthError)) return error
-  if (error.kind === 'invalid-code') return new HttpError(401, '微信登录凭证无效')
-  if (error.kind === 'unavailable') return new HttpError(503, '微信登录服务暂时不可用')
-  return new HttpError(500, '微信登录配置不可用')
-}
-
-function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, family, familyAdmin = requireFamilyAdmin(database), seedStarterRecipes = defaultSeedStarterRecipes, fileIdForPath, mediaUrlService }) {
+function router({ database, auth, family, familyAdmin = requireFamilyAdmin(database), seedStarterRecipes = defaultSeedStarterRecipes, fileIdForPath, mediaUrlService }) {
   const result = express.Router()
-
-  result.post('/auth/wechat-login', asyncRoute(async (request, response) => {
-    const code = request.body && request.body.code
-    if (typeof code !== 'string' || !code.trim()) throw new HttpError(400, '缺少字段：code')
-    const normalizedCode = code.trim()
-    if (normalizedCode.length > MAX_WECHAT_CODE_LENGTH) throw new HttpError(400, '微信登录凭证过长')
-    let session
-    try {
-      session = await wechatAuthService.exchangeCodeForSession(normalizedCode)
-    } catch (error) {
-      if (error instanceof WechatAuthError) {
-        const errcode = /^\d+$/.test(String(error.cause || '')) ? Number(error.cause) : undefined
-        console.warn('[MealPilot WeChat Auth]', { operation: 'wechat-code2session', kind: error.kind, errcode })
-      }
-      throw mapWechatAuthError(error)
-    }
-    if (!session || typeof session.openid !== 'string' || !session.openid.trim()) throw new HttpError(401, '微信登录凭证无效')
-    const storedUser = await findOrCreateWechatUser(database, { openid: session.openid.trim() })
-    response.json({ ok: true, data: await presentSession({ database, storedUser, jwtSecret, mediaUrlService, includeToken: true }) })
-  }))
-
-  result.post('/auth/dev-login', asyncRoute(async (request, response) => {
-    if (!devAuthEnabled) throw new HttpError(404, '开发登录未启用')
-    const openid = String(request.body.openid || 'demo-user').trim()
-    const displayName = String(request.body.displayName || '演示用户').trim().slice(0, 40)
-    await database.execute(`INSERT INTO users (openid, display_name) VALUES (?, ?) ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id)`, [openid, displayName])
-    const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE openid = ?', [openid])
-    const storedUser = rows[0]
-    response.json({ ok: true, data: await presentSession({ database, storedUser, jwtSecret, mediaUrlService, includeToken: true }) })
-  }))
-
-  result.get('/auth/me', auth, asyncRoute(async (request, response) => {
-    response.json({ ok: true, data: await presentSession({ database, storedUser: request.user, jwtSecret, mediaUrlService }) })
-  }))
-
-  result.patch('/auth/profile', auth, asyncRoute(async (request, response) => {
-    requireFields(request.body, ['displayName'])
-    const displayName = String(request.body.displayName).trim()
-    if (displayName.length > 40) throw new HttpError(400, '用户名不能超过40个字符')
-    await database.execute('UPDATE users SET display_name = ? WHERE id = ?', [displayName, request.user.id])
-    const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE id = ?', [request.user.id])
-    if (!rows[0]) throw new HttpError(401, '登录已失效')
-    response.json({ ok: true, data: { user: await presentUser(rows[0], mediaUrlService) } })
-  }))
 
   result.post('/families', auth, asyncRoute(async (request, response) => {
     requireFields(request.body, ['name'])
@@ -184,11 +100,9 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
       const membership = await currentMembership(connection, request.user.id)
       if (!membership) throw new HttpError(403, '请先创建或加入家庭')
       if (!['owner', 'admin'].includes(membership.role)) throw new HttpError(403, '仅家庭管理员可执行此操作')
-
       const [families] = await connection.execute('SELECT id, invite_code FROM families WHERE id = ? FOR UPDATE', [membership.family_id])
       const currentFamily = families[0]
       if (!currentFamily) throw new HttpError(404, '家庭不存在')
-
       let refreshedInviteCode = ''
       let updated = false
       for (let attempt = 0; attempt < 5; attempt += 1) {
@@ -236,12 +150,10 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
       const membership = await currentMembership(connection, request.user.id)
       if (!membership) throw new HttpError(403, '请先创建或加入家庭')
       if (membership.role !== 'owner') throw new HttpError(403, '仅创建者可移交创建者身份')
-
       const [rows] = await connection.execute(`SELECT id, user_id, role, status FROM family_members WHERE id = ? AND family_id = ? AND status = 'active' FOR UPDATE`, [Number(request.body.memberId), membership.family_id])
       const target = rows[0]
       if (!target) throw new HttpError(404, '家庭成员不存在')
       if (target.user_id === request.user.id) throw new HttpError(409, '不能移交给自己')
-
       const [updatedFamily] = await connection.execute('UPDATE families SET owner_user_id = ? WHERE id = ? AND owner_user_id = ?', [target.user_id, membership.family_id, request.user.id])
       if (!updatedFamily.affectedRows) throw new HttpError(409, '家庭创建者状态已变化，请刷新后重试')
       const [updatedTarget] = await connection.execute(`UPDATE family_members SET role = 'owner' WHERE id = ? AND family_id = ? AND status = 'active'`, [target.id, membership.family_id])
@@ -296,4 +208,4 @@ function router({ database, jwtSecret, devAuthEnabled, wechatAuthService, auth, 
   return result
 }
 
-module.exports = { router, findOrCreateWechatUser, inviteCode, normalizeInviteCode, presentUser, presentSession }
+module.exports = { router, inviteCode, normalizeInviteCode }

@@ -1,15 +1,8 @@
 const crypto = require('node:crypto')
-const path = require('node:path')
 const express = require('express')
 const { HttpError } = require('../http')
 
 const DEFAULT_MAX_BYTES = 5 * 1024 * 1024
-const ALLOWED_TYPES = new Map([
-  ['image/jpeg', new Set(['.jpg', '.jpeg'])],
-  ['image/png', new Set(['.png'])],
-  ['image/webp', new Set(['.webp'])]
-])
-
 function router({ cloudStorageService, mediaUrlService, storageFileIdPrefix = '', maxBytes = DEFAULT_MAX_BYTES, auth, family, database }) {
   const result = express.Router()
 
@@ -125,11 +118,10 @@ function readRequestBody(request, maxBytes) {
 }
 
 function validateImage(file, maxBytes) {
-  const extension = path.extname(file.filename).toLowerCase()
-  const allowedExtensions = ALLOWED_TYPES.get(file.mime)
-  if (!allowedExtensions || !allowedExtensions.has(extension) || !hasValidSignature(file.buffer, file.mime)) throw new HttpError(400, '仅支持 JPG、PNG 或 WebP 图片')
   if (file.buffer.length > maxBytes) throw new HttpError(413, '图片不能超过 5MB')
-  return extension
+  const detected = detectImageFormat(file.buffer)
+  if (!detected) throw new HttpError(400, '仅支持 JPG、PNG 或 WebP 图片')
+  return detected.extension
 }
 
 function parsePartHeaders(value) {
@@ -145,11 +137,18 @@ function parsePartHeaders(value) {
   return { name: name && name[1], filename: filename && filename[1], contentType: String(headers['content-type'] || '').toLowerCase() }
 }
 
-function hasValidSignature(buffer, mime) {
-  if (mime === 'image/jpeg') return buffer.length >= 3 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff
-  if (mime === 'image/png') return buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))
-  if (mime === 'image/webp') return buffer.length >= 12 && buffer.subarray(0, 4).toString('ascii') === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WEBP'
-  return false
+function detectImageFormat(buffer) {
+  if (!Buffer.isBuffer(buffer)) return null
+  if (buffer.length >= 4 && buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff && buffer.includes(Buffer.from([0xff, 0xd9]))) {
+    return { mime: 'image/jpeg', extension: '.jpg' }
+  }
+  if (buffer.length >= 8 && buffer.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) {
+    return { mime: 'image/png', extension: '.png' }
+  }
+  if (buffer.length >= 12 && buffer.subarray(0, 4).toString('ascii') === 'RIFF' && buffer.subarray(8, 12).toString('ascii') === 'WEBP') {
+    return { mime: 'image/webp', extension: '.webp' }
+  }
+  return null
 }
 
-module.exports = { router, DEFAULT_MAX_BYTES, validateImage, deleteOldAvatar }
+module.exports = { router, DEFAULT_MAX_BYTES, validateImage, detectImageFormat, deleteOldAvatar }
