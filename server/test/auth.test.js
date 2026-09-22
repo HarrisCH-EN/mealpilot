@@ -6,7 +6,7 @@ const { createToken, readToken } = require('../src/auth')
 
 test('creates a signed token that preserves the user id', () => {
   const token = createToken({ id: 42, openid: 'openid-demo' }, 'test-secret')
-  assert.deepEqual(readToken(token, 'test-secret'), { userId: 42, openid: 'openid-demo' })
+  assert.deepEqual(readToken(token, 'test-secret'), { userId: 42 })
 })
 
 test('JWT signs and verifies only with HS256 while preserving the seven-day expiry', () => {

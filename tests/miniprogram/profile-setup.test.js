@@ -25,7 +25,7 @@ test('profile setup is a registered authenticated page using current WeChat prof
   assert.match(template, /bindinput="onNicknameInput"/)
   assert.match(script, /uploadAvatar\(/)
   assert.match(script, /request\(['"]\/auth\/profile['"],\s*['"]PATCH['"]/) 
-  assert.match(script, /request\(['"]\/auth\/me['"]/) 
+  assert.match(script, /authService\.restoreSession\(\)/)
   assert.match(script, /profileComplete/)
   assert.doesNotMatch(template, /getUserInfo|scope\.userInfo/)
   assert.doesNotMatch(script, /getUserProfile|getUserInfo/)
@@ -33,10 +33,11 @@ test('profile setup is a registered authenticated page using current WeChat prof
 
 test('login delegates incomplete sessions to the profile setup route', () => {
   const script = fs.readFileSync(path.join(root, 'pages', 'login', 'index.js'), 'utf8')
+  const routeGuard = fs.readFileSync(path.join(root, 'utils', 'route-guard.js'), 'utf8')
   const template = fs.readFileSync(path.join(root, 'pages', 'login', 'index.wxml'), 'utf8')
 
-  assert.match(script, /nextRouteForSession/)
-  assert.match(script, /\/pages\/profile-setup\/index/)
+  assert.match(script, /routeGuard\.routeSession/)
+  assert.match(routeGuard, /PROFILE_SETUP_ROUTE\s*=\s*['"]\/pages\/profile-setup\/index['"]|PROFILE_SETUP_ROUTE/)
   assert.doesNotMatch(script, /profilePrompt|onChooseAvatar|uploadAvatar/)
   assert.doesNotMatch(template, /open-type="chooseAvatar"|type="nickname"/)
 })

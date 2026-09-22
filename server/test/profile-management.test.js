@@ -2,7 +2,9 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const express = require('express')
 
-const { router: authFamilyRouter } = require('../src/routes/auth-family')
+const { router: authRouter } = require('../src/routes/auth')
+const { router: familiesRouter } = require('../src/routes/families')
+const { createAuthService } = require('../src/services/auth-service')
 const { router: uploadsRouter, deleteOldAvatar } = require('../src/routes/uploads')
 
 async function withServer(app, callback) {
@@ -43,14 +45,15 @@ function makeProfileDatabase({ failAvatarUpdate = false } = {}) {
 function makeAuthRouterApp(database) {
   const app = express()
   app.use(express.json())
-  app.use('/api', authFamilyRouter({
+  const authService = createAuthService({
     database,
     jwtSecret: 'profile-test-secret',
+    wechatAuthService: { exchangeCodeForSession: async () => ({ openid: 'unused' }) }
+  })
+  app.use('/api', authRouter({
+    authService,
     devAuthEnabled: false,
-    wechatAuthService: { exchangeCodeForSession: async () => ({ openid: 'unused' }) },
     auth: (request, _response, next) => { request.user = database.user; next() },
-    family: (_request, _response, next) => next(),
-    familyAdmin: (_request, _response, next) => next()
   }))
   app.use((error, _request, response, _next) => response.status(error.status || 500).json({ ok: false, message: error.message }))
   return app
@@ -95,7 +98,7 @@ test('current family members expose stable avatarFileId and temporary avatarUrl'
     async resolveValues(values) { return values.map((value) => value ? 'https://temp.test/member-avatar' : '') }
   }
   const app = express()
-  app.use('/api', authFamilyRouter({
+  app.use('/api', familiesRouter({
     database,
     jwtSecret: 'profile-test-secret',
     devAuthEnabled: false,

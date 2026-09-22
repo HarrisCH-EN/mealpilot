@@ -1,7 +1,7 @@
 const test = require('node:test')
 const assert = require('node:assert/strict')
 const express = require('express')
-const { router } = require('../src/routes/auth-family')
+const { router } = require('../src/routes/families')
 const starterRecipes = require('../src/data/starter-recipes')
 const { seedStarterRecipes } = require('../src/services/starter-recipe-service')
 const { systemRecipeCovers } = require('../src/data/system-recipe-covers')

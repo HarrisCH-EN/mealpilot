@@ -6,7 +6,7 @@ const path = require('node:path')
 const root = path.join(__dirname, '..', '..', 'miniprogram')
 const formScript = fs.readFileSync(path.join(root, 'pages', 'recipe-form', 'index.js'), 'utf8')
 const formTemplate = fs.readFileSync(path.join(root, 'pages', 'recipe-form', 'index.wxml'), 'utf8')
-const apiScript = fs.readFileSync(path.join(root, 'utils', 'api.js'), 'utf8')
+const apiScript = fs.readFileSync(path.join(root, 'utils', 'api', 'index.js'), 'utf8')
 
 test('recipe form keeps the returned coverFileId for saving and coverUrl for display', () => {
   assert.match(formScript, /uploadFile/)

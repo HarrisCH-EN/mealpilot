@@ -39,8 +39,8 @@ test('deferred interactions are hidden or static instead of clickable fake actio
 })
 
 test('frontend request errors preserve HTTP status for accurate UX mapping', () => {
-  const apiScript = read('utils', 'api.js')
-  assert.match(apiScript, /error\.status\s*=\s*res\.statusCode/)
+  const httpClientScript = read('utils', 'http-client.js')
+  assert.match(httpClientScript, /error\.status\s*=\s*Number\(response && response\.statusCode\)/)
 })
 
 test('menu and recipe reloads clear stale collections before requesting fresh data', () => {

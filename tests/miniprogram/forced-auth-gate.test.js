@@ -2,22 +2,14 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
-const vm = require('node:vm')
 
 const root = path.join(__dirname, '..', '..', 'miniprogram')
+const { createAuthStore } = require('../../miniprogram/utils/auth-store')
+const { createRouteGuard, LOGIN_ROUTE, PROFILE_SETUP_ROUTE } = require('../../miniprogram/utils/route-guard')
 
 const protectedPages = [
-  'recommend',
-  'menu',
-  'recipes',
-  'settings',
-  'recipe-detail',
-  'recipe-form',
-  'tag-management',
-  'restrictions',
-  'about',
-  'family-management',
-  'account-management'
+  'recommend', 'menu', 'recipes', 'settings', 'recipe-detail', 'recipe-form',
+  'tag-management', 'restrictions', 'about', 'family-management', 'account-management'
 ]
 
 test('the app starts on the login page without a launch-time relaunch', () => {
@@ -28,7 +20,8 @@ test('the app starts on the login page without a launch-time relaunch', () => {
   assert.equal(appConfig.pages[0], 'pages/login/index')
   assert.match(app, /wx\.getStorageSync\(['"]token['"]\)/)
   assert.doesNotMatch(app, /wx\.reLaunch\(/)
-  assert.match(login, /ensureAuthenticated/)
+  assert.match(login, /authService\.bootstrap/)
+  assert.match(login, /routeGuard\.routeSession/)
   assert.match(login, /\/pages\/recommend\/index/)
   assert.match(login, /if \(this\._redirecting\) return/)
 })
@@ -48,76 +41,52 @@ test('business pages no longer render an unauthenticated settings state', () => 
   assert.doesNotMatch(settingsScript, /loggedOut|goLogin\(|retryLogin\(|devLogin/)
 })
 
-test('logout clears the session and relaunches the dedicated login page', () => {
+test('logout delegates clearing the session to the auth service and returns to login', () => {
   const accountScript = fs.readFileSync(path.join(root, 'pages', 'account-management', 'index.js'), 'utf8')
 
-  assert.match(accountScript, /app\.clearSession\(\)/)
+  assert.match(accountScript, /authService\.logout\(\)/)
   assert.match(accountScript, /wx\.reLaunch\(\{\s*url:\s*['"]\/pages\/login\/index['"]\s*\}\)/)
   assert.doesNotMatch(accountScript, /\/pages\/settings\/index\?loggedOut=1/)
 })
 
-function loadApi({ token = '', authReady = Boolean(token) } = {}) {
-  const calls = { redirects: [] }
+function createGuardHarness({ token = '', authenticated = false } = {}) {
   const storage = { token }
-  const app = {
-    globalData: { token, authReady, profileComplete: Boolean(token), user: { id: 1 }, membership: { family_id: 2 } },
-    clearSession() {
-      this.globalData.token = ''
-      this.globalData.user = null
-      this.globalData.membership = null
-      storage.token = ''
-    },
-    setAuthState() {},
-    setSession() {}
-  }
-  const wx = {
-    getStorageSync: () => storage.token,
-    removeStorageSync: () => { storage.token = '' },
-    reLaunch: (options) => calls.redirects.push(options.url)
-  }
-  const module = { exports: {} }
-  vm.runInNewContext(fs.readFileSync(path.join(root, 'utils', 'api.js'), 'utf8'), {
-    module,
-    exports: module.exports,
-    require: (request) => request === '../config' ? { apiBaseUrl: 'http://test/api', allowDevLogin: true } : require(request),
-    getApp: () => app,
-    getCurrentPages: () => [{ route: 'pages/menu/index' }],
-    wx,
-    Promise,
-    Error,
-    Object,
-    Set,
-    URL,
-    encodeURIComponent
-  })
-  return { api: module.exports, app, calls }
+  const store = createAuthStore({ storage })
+  if (authenticated) store.setSession({ token, user: { id: 1 }, profileComplete: false })
+  else store.hydrate()
+  const redirects = []
+  const guard = createRouteGuard({ store, wxApi: { reLaunch: (options) => redirects.push(options.url) } })
+  return { store, guard, redirects }
 }
 
-test('the shared gate redirects unauthenticated direct page access and clears the session', () => {
-  const { api, app, calls } = loadApi({ token: '' })
+test('the shared gate redirects unauthenticated direct page access and keeps token storage empty', () => {
+  const { guard, store, redirects } = createGuardHarness()
 
-  assert.equal(api.requireAuthentication(), false)
-  assert.equal(app.globalData.token, '')
-  assert.deepEqual(calls.redirects, ['/pages/login/index'])
+  assert.equal(guard.requireAuthentication(), false)
+  assert.equal(store.getState().token, '')
+  assert.deepEqual(redirects, [LOGIN_ROUTE])
 })
 
-test('the shared gate allows business pages with a persisted session', () => {
-  const { api } = loadApi({ token: 'jwt-token' })
+test('the shared gate allows a validated incomplete profile session', () => {
+  const { guard, redirects } = createGuardHarness({ token: 'jwt-token', authenticated: true })
 
-  assert.equal(api.requireAuthentication(), true)
+  assert.equal(guard.requireAuthentication(), true)
+  assert.deepEqual(redirects, [])
+  assert.equal(guard.routeSession({ status: 'authenticated', profileComplete: false }), PROFILE_SETUP_ROUTE)
 })
 
-test('the shared gate rejects a token that has not completed session validation', () => {
-  const { api, calls } = loadApi({ token: 'jwt-token', authReady: false })
+test('a persisted token remains blocked until /auth/me validation completes', () => {
+  const { guard, redirects } = createGuardHarness({ token: 'jwt-token' })
 
-  assert.equal(api.requireAuthentication(), false)
-  assert.deepEqual(calls.redirects, ['/pages/login/index'])
+  assert.equal(guard.requireAuthentication(), false)
+  assert.deepEqual(redirects, [LOGIN_ROUTE])
 })
 
-test('an authentication session that remains unauthorized after reauthentication returns to login', () => {
-  const apiSource = fs.readFileSync(path.join(root, 'utils', 'api.js'), 'utf8')
-  const ensureBlock = apiSource.match(/async function ensureAuthenticated[\s\S]*?\n}\n\nasync function devLogin/)
+test('auth service source clears state after reauthentication remains unauthorized', () => {
+  const authSource = fs.readFileSync(path.join(root, 'utils', 'auth-service.js'), 'utf8')
+  const httpSource = fs.readFileSync(path.join(root, 'utils', 'http-client.js'), 'utf8')
 
-  assert.ok(ensureBlock)
-  assert.match(ensureBlock[0], /if \(safeError\.status === 401\) redirectToLogin\(\)/)
+  assert.match(authSource, /store\.clear\(\)/)
+  assert.match(httpSource, /AUTH_SESSION_EXPIRED/)
+  assert.match(httpSource, /retried/)
 })

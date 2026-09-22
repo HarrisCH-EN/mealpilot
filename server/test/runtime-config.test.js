@@ -57,7 +57,7 @@ test('runtime app wiring uses the configured JWT secret for dev-login tokens', a
     })
     assert.equal(response.status, 200)
     const { data } = await response.json()
-    assert.deepEqual(readToken(data.token, 'runtime-secret-a'), { userId: 42, openid: 'runtime-user' })
+    assert.deepEqual(readToken(data.token, 'runtime-secret-a'), { userId: 42 })
     assert.throws(() => readToken(data.token, 'runtime-secret-b'))
   })
 })
@@ -101,7 +101,7 @@ test('DEV_AUTH_ENABLED string parsing treats false as false and true as true', (
 
 test('tokens signed with one secret cannot be verified with another secret', () => {
   const token = createToken({ id: 7, openid: 'secret-check' }, 'secret-a')
-  assert.deepEqual(readToken(token, 'secret-a'), { userId: 7, openid: 'secret-check' })
+  assert.deepEqual(readToken(token, 'secret-a'), { userId: 7 })
   assert.throws(() => readToken(token, 'secret-b'))
 })
 

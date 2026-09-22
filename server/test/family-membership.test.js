@@ -2,7 +2,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const express = require('express')
 const { currentMembership } = require('../src/middleware/authenticate')
-const { router } = require('../src/routes/auth-family')
+const { router } = require('../src/routes/families')
 
 const user = { id: 1, openid: 'user-1', display_name: '测试用户', avatar_url: null }
 
