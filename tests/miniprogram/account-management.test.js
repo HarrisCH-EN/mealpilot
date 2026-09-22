@@ -169,7 +169,7 @@ test('account profile exposes a right-side edit button with avatar and name edit
   const template = fs.readFileSync(path.join(pageRoot, 'index.wxml'), 'utf8')
   const script = fs.readFileSync(path.join(pageRoot, 'index.js'), 'utf8')
   const styles = fs.readFileSync(path.join(pageRoot, 'index.wxss'), 'utf8')
-  const api = fs.readFileSync(path.join(root, 'utils', 'api', 'index.js'), 'utf8')
+  const api = fs.readFileSync(path.join(root, 'utils', 'api.js'), 'utf8')
 
   assert.match(template, /class="account-profile__edit"[^>]*bindtap="editProfile"/)
   assert.match(template, /wx:if="\{\{user\.avatar_url\}\}"/)

@@ -1,5 +1,5 @@
-const { apiBaseUrl } = require('../../config')
-const { httpClient, authService, routeGuard } = require('../auth-runtime')
+const { apiBaseUrl } = require('../config')
+const { httpClient, authService, routeGuard } = require('./auth-runtime')
 
 function resolveCoverUrl(value) {
   const url = String(value || '').trim()
