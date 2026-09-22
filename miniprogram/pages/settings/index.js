@@ -1,5 +1,5 @@
 const { request, ensureAuthenticated, resolveCoverUrl, requireAuthentication } = require('../../utils/api')
-const app = getApp()
+const { store } = require('../../utils/auth-runtime')
 
 const TEMP_CACHE_KEYS = new Set(['recipeImageCache', 'menuPreviewCache', 'settingsCache'])
 
@@ -69,7 +69,7 @@ Page({
     this.setData({ loading: true, error: '', family: null, familyMemberCount: 0, insight: null, insightRangeDays: 7, insightExpanded: false, membersExpanded: false, cacheLabel: '', userRoleLabel: '未加入家庭', canManageFamily: false })
     try {
       const data = await ensureAuthenticated()
-      const user = data.user || app.globalData.user || {}
+      const user = data.user || store.getState().user || {}
       const displayName = getDisplayName(user)
       this.setData({
         user,
@@ -95,9 +95,10 @@ Page({
         })
       }
     } catch (error) {
-      const user = app.globalData.user || {}
+      const session = store.getState()
+      const user = session.user || {}
       const displayName = getDisplayName(user)
-      const membership = app.globalData.membership || null
+      const membership = session.membership || null
       this.setData({
         user,
         userInitial: displayName.slice(0, 1),

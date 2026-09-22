@@ -1,6 +1,6 @@
 const { request, uploadAvatar } = require('../../utils/api')
+const { authService, store } = require('../../utils/auth-runtime')
 const { normalizeDisplayName, validateDisplayName } = require('../../utils/profile')
-const app = getApp()
 
 function getNavigationLayout() {
   const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -49,14 +49,17 @@ Page({
 
   async loadSession() {
     this.setData({ sessionState: 'loadingSession', error: '' })
-    const token = app.globalData.token || wx.getStorageSync('token') || ''
+    const token = store.getState().token
     if (!token) {
       this.redirectToLogin()
       return
     }
     try {
-      const session = await request('/auth/me')
-      app.setSession(session)
+      const session = await authService.restoreSession()
+      if (!session || session.status === 'unauthenticated') {
+        this.redirectToLogin()
+        return
+      }
       if (session.profileComplete === true) {
         this.redirectToHome()
         return
@@ -106,7 +109,7 @@ Page({
 
     this.setData({ submitting: true, error: '' })
     try {
-      if (this.data.avatarPath && !this.data.remoteAvatarFileId) {
+      if (this.data.avatarPath) {
         const uploaded = await uploadAvatar(this.data.avatarPath)
         const uploadedUser = uploaded && uploaded.user
         this.setData({
@@ -114,13 +117,11 @@ Page({
           avatarPreview: getAvatarPreview(uploadedUser) || this.data.avatarPreview,
           remoteAvatarFileId: getRemoteAvatarFileId(uploadedUser)
         })
-        if (uploadedUser) app.setSession({ user: uploadedUser })
       }
 
       await request('/auth/profile', 'PATCH', { displayName })
-      const session = await request('/auth/me')
+      const session = await authService.restoreSession()
       if (session.profileComplete !== true) throw new Error('资料尚未完成，请确认头像和昵称后重试')
-      app.setSession(session)
       this.redirectToHome()
     } catch (error) {
       this.setData({ submitting: false, sessionState: 'editing', error: error.message || '保存资料失败，请重试' })

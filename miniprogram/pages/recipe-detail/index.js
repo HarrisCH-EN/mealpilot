@@ -1,4 +1,5 @@
 const { request, resolveCoverUrl, requireAuthentication } = require('../../utils/api')
+const { store } = require('../../utils/auth-runtime')
 const { getMenuContextStore } = require('../../utils/menu-context')
 const { displayTags } = require('../../utils/tags')
 const {
@@ -137,8 +138,7 @@ Page({
   },
 
   canEditRecipe(recipe) {
-    const app = getApp()
-    const membership = app && app.globalData && app.globalData.membership
+    const membership = store.getState().membership
     if (!membership) return false
     return membership.role === 'owner' || Number(membership.member_id || membership.memberId) === Number(recipe.createdByMemberId)
   },

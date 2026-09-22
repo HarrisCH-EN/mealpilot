@@ -1,6 +1,5 @@
-const { wechatLogin, ensureAuthenticated, devLogin, nextRouteForSession } = require('../../utils/api')
 const { allowDevLogin } = require('../../config')
-const app = getApp()
+const { authService, routeGuard } = require('../../utils/auth-runtime')
 
 function getNavigationLayout() {
   const windowInfo = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync()
@@ -45,23 +44,16 @@ Page({
   },
 
   onReady() {
-    this.setData({
-      navStyle: getNavigationLayout(),
-      redirectUrl: this._redirectUrl || '/pages/recommend/index'
-    })
+    this.setData({ navStyle: getNavigationLayout(), redirectUrl: this._redirectUrl || '/pages/recommend/index' })
     this.restoreSession()
   },
 
   async restoreSession() {
-    const token = app.globalData.token || wx.getStorageSync('token') || ''
-    if (!token) {
-      this.setData({ checkingSession: false, sessionChecked: true })
-      return
-    }
     this.setData({ checkingSession: true, error: '' })
     try {
-      const session = await ensureAuthenticated()
+      const session = await authService.bootstrap()
       this.setData({ checkingSession: false, sessionChecked: true })
+      if (session && session.status === 'unauthenticated') return
       this.routeAfterAuthentication(session)
     } catch (error) {
       this.setData({ checkingSession: false, sessionChecked: true, error: error.message || '登录状态已失效，请重新登录' })
@@ -69,48 +61,29 @@ Page({
   },
 
   async loginWithWechat() {
-  console.log('[MealPilot Login] button tapped')
-
-  if (this.data.loading) {
-    console.log('[MealPilot Login] ignored because loading=true')
-    return
-  }
-
-  await this.login(wechatLogin, '微信登录失败，请重试')
-},
+    if (this.data.loading) return
+    await this.login(() => authService.loginWithWechat(), '微信登录失败，请重试')
+  },
 
   async loginWithDev() {
     if (this.data.loading) return
-    await this.login(devLogin, '本地开发登录失败，请重试')
+    await this.login(() => authService.devLogin(), '本地开发登录失败，请重试')
   },
 
   async login(loginAction, fallbackMessage) {
     this.setData({ loading: true, error: '' })
     try {
       const session = await loginAction()
-      const navigate = () => this.routeAfterAuthentication(session)
       this.setData({ loading: false })
-      if (typeof wx.nextTick === 'function') wx.nextTick(navigate)
-      else setTimeout(navigate, 100)
+      this.routeAfterAuthentication(session)
     } catch (error) {
       this.setData({ loading: false, error: error.message || fallbackMessage })
     }
   },
 
   routeAfterAuthentication(session) {
-    const route = nextRouteForSession(session)
-    if (route === '/pages/profile-setup/index') {
-      if (this._redirecting) return
-      this._redirecting = true
-      wx.reLaunch({ url: route })
-      return
-    }
-    this.redirectToHome()
-  },
-
-  redirectToHome() {
     if (this._redirecting) return
     this._redirecting = true
-    wx.reLaunch({ url: this.data.redirectUrl || '/pages/recommend/index' })
+    routeGuard.routeSession(session, this.data.redirectUrl || '/pages/recommend/index')
   }
 })

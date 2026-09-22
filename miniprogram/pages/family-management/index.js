@@ -1,5 +1,5 @@
 const { request, ensureAuthenticated, resolveCoverUrl, requireAuthentication } = require('../../utils/api')
-const app = getApp()
+const { store } = require('../../utils/auth-runtime')
 
 function isAdminRole(role) {
   return role === 'owner' || role === 'admin'
@@ -84,7 +84,7 @@ Page({
       const inviteCode = String((invite && invite.inviteCode) || '').trim()
       const familyName = family.name || family.family_name || membership.family_name || '我的家庭'
       const syncedMembership = { ...membership, family_name: familyName }
-      app.setSession({ membership: syncedMembership })
+      store.setSession({ membership: syncedMembership })
       this.setData({
         membership: syncedMembership,
         family: { ...family, name: familyName },
@@ -96,7 +96,7 @@ Page({
         isOwner: membership.role === 'owner'
       })
     } catch (error) {
-      const membership = app.globalData.membership || null
+      const membership = store.getState().membership || null
       this.setData({
         membership,
         roleLabel: membership ? getRoleLabel(membership.role) : '未加入家庭',
@@ -210,8 +210,8 @@ Page({
         this.setData({ actionLoading: true })
         try {
           await request('/families/current/name', 'PATCH', { name })
-          const membership = app.globalData.membership || this.data.membership
-          if (membership) app.setSession({ membership: { ...membership, family_name: name } })
+          const membership = store.getState().membership || this.data.membership
+          if (membership) store.setSession({ membership: { ...membership, family_name: name } })
           wx.showToast({ title: '家庭名称已更新', icon: 'success' })
           await this.loadFamily()
         } catch (error) {
@@ -239,7 +239,7 @@ Page({
         this.setData({ actionLoading: true })
         try {
           await request('/families/leave', 'POST')
-          app.setSession({ membership: null })
+          store.setSession({ membership: null })
           wx.showToast({ title: '已退出家庭', icon: 'success' })
           wx.navigateBack({ delta: 1 })
         } catch (error) {

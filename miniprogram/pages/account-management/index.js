@@ -1,7 +1,7 @@
 const { allowDevLogin } = require('../../config')
 const { request, uploadAvatar, resolveCoverUrl, requireAuthentication } = require('../../utils/api')
+const { authService, store } = require('../../utils/auth-runtime')
 const { normalizeDisplayName, validateDisplayName } = require('../../utils/profile')
-const app = getApp()
 
 function getDisplayName(user) {
   return String((user && user.display_name) || '微信用户').trim() || '微信用户'
@@ -48,8 +48,9 @@ Page({
 
   onLoad() {
     if (!requireAuthentication()) return
-    const user = app.globalData.user || {}
-    const membership = app.globalData.membership || null
+    const session = store.getState()
+    const user = session.user || {}
+    const membership = session.membership || null
     const displayName = getDisplayName(user)
     this.setData({
       navStyle: getNavigationLayout(),
@@ -155,7 +156,7 @@ Page({
   applyUser(user) {
     const nextUser = user || {}
     const displayName = getDisplayName(nextUser)
-    app.setSession({ user: nextUser })
+    store.setSession({ user: nextUser })
     this.setData({
       user: nextUser,
       userInitial: displayName.slice(0, 1),
@@ -173,8 +174,7 @@ Page({
       success: (result) => {
         if (!result.confirm) return
         this.setData({ loggingOut: true })
-        app.clearSession()
-        wx.reLaunch({ url: '/pages/login/index' })
+        authService.logout().then(() => wx.reLaunch({ url: '/pages/login/index' }))
       }
     })
   }
