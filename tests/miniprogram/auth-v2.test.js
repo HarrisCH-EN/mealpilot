@@ -4,7 +4,7 @@ const { createAuthStore } = require('../../miniprogram/utils/auth-store')
 const { createHttpClient } = require('../../miniprogram/utils/http-client')
 const { createWechatAuth } = require('../../miniprogram/utils/wechat-auth')
 const { createAuthService } = require('../../miniprogram/utils/auth-service')
-const { nextRouteForSession } = require('../../miniprogram/utils/route-guard')
+const { createRouteGuard, nextRouteForSession } = require('../../miniprogram/utils/route-guard')
 
 function makeStorage(token = '') {
   const values = { token }
@@ -44,6 +44,40 @@ test('Auth V2 bootstrap with no token does not silently call wx.login', async ()
   assert.equal(store.getState().status, 'unauthenticated')
   assert.equal(loginCalls, 0)
   assert.equal(typeof client.request, 'function')
+})
+
+test('refreshing an authenticated session does not let page onShow redirect to login', async () => {
+  const store = createAuthStore({ storage: makeStorage('jwt-token') })
+  store.hydrate()
+  store.setSession({
+    token: 'jwt-token',
+    user: { id: 7 },
+    profileComplete: true,
+    membership: null
+  })
+
+  let resolveSession
+  const auth = createAuthService({
+    store,
+    wechatAuth: {},
+    httpClient: {
+      request: () => new Promise((resolve) => { resolveSession = resolve })
+    }
+  })
+  const redirects = []
+  const guard = createRouteGuard({
+    store,
+    wxApi: { reLaunch: ({ url }) => redirects.push(url) }
+  })
+
+  const refresh = auth.restoreSession()
+
+  assert.equal(store.getState().status, 'authenticated')
+  assert.equal(guard.requireAuthentication(), true)
+  assert.deepEqual(redirects, [])
+
+  resolveSession({ user: { id: 7 }, profileComplete: true, membership: null })
+  await refresh
 })
 
 test('Auth V2 HTTP client shares one reauthentication across concurrent 401 responses and retries once', async () => {

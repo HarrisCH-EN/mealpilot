@@ -32,12 +32,13 @@ function createAuthService({ store, wechatAuth, httpClient, allowDevLogin = fals
   }
 
   async function restoreSession() {
-    const token = store.getState().token
+    const currentSession = store.getState()
+    const token = currentSession.token
     if (!token) {
       store.setUnauthenticated()
       return store.getState()
     }
-    store.setAuthenticating()
+    if (currentSession.status !== 'authenticated') store.setAuthenticating()
     try {
       const session = await httpClient.request('/auth/me', 'GET', {}, { skipReauth: true })
       store.setSession(session)
