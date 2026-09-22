@@ -185,7 +185,7 @@ Page({
         this.setData({ screen: 'no-family', noFamily: true, error: '' })
         return false
       }
-      this.setData({ noFamily: false })
+      this.setData({ screen: 'setup', noFamily: false, error: '', errorType: '' })
       await this.loadTags()
       return true
     } catch (error) {

@@ -41,6 +41,19 @@
         <button class="account-logout" loading="{{loggingOut}}" disabled="{{loggingOut}}" bindtap="logout">退出登录</button>
       </view>
       <view class="account-note">退出登录只会清除当前设备的登录状态，不会删除家庭和菜单数据。</view>
+      <button class="account-delete" loading="{{deletingAccount}}" disabled="{{deletingAccount || loggingOut}}" bindtap="deleteAccount">注销账号</button>
+      <view class="account-delete__note">账号注销后不可恢复</view>
+    </view>
+  </view>
+
+  <view wx:if="{{accountDeletionBlockedVisible}}" class="account-dialog-mask" catchtap="dismissAdminDeletionBlocked">
+    <view class="account-dialog" role="dialog" aria-label="暂时不能注销" catchtap="stopPropagation">
+      <view class="account-dialog__title">暂时不能注销</view>
+      <view class="account-dialog__content">{{accountDeletionBlockedMessage}}</view>
+      <view class="account-dialog__actions">
+        <button class="account-dialog__button account-dialog__button--secondary" bindtap="dismissAdminDeletionBlocked">知道了</button>
+        <button class="account-dialog__button account-dialog__button--primary" bindtap="goToFamilyManagement">前往家庭管理</button>
+      </view>
     </view>
   </view>
 </view>

@@ -32,7 +32,8 @@ test('database migration entry point applies ordered history without forcing the
     '07_remove_cuisine_tags.sql',
     '08_tag_system_v1.sql',
     '09_family-admin-role.sql',
-    '10_family-invite-code.sql'
+    '10_family-invite-code.sql',
+    '11_account_family_lifecycle.sql'
   ]) assert.match(runner, new RegExp(migration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   assert.match(runner, /schema_migrations/)
   assert.match(runner, /GET_LOCK/)
@@ -45,7 +46,8 @@ test('database migration entry point applies ordered history without forcing the
     '07_remove_cuisine_tags.sql',
     '08_tag_system_v1.sql',
     '09_family-admin-role.sql',
-    '10_family-invite-code.sql'
+    '10_family-invite-code.sql',
+    '11_account_family_lifecycle.sql'
   ])
   assert.equal(normalizeMigrationSql('USE mealpilot;\nSELECT 1;'), 'SELECT 1;')
   assert.match(runner, /tag_type|recipe_tags.*tag_id/s)

@@ -2,6 +2,7 @@ const test = require('node:test')
 const assert = require('node:assert/strict')
 const fs = require('node:fs')
 const path = require('node:path')
+const vm = require('node:vm')
 
 const root = path.join(__dirname, '..', '..', 'miniprogram', 'pages', 'recommend')
 const script = fs.readFileSync(path.join(root, 'index.js'), 'utf8')
@@ -139,4 +140,92 @@ test('R4 wheel values stay within the legal preparation range and keep the canon
   assert.equal(request.maxPrepMinutes, 80)
   assert.equal('maxCookMinutes' in request, false)
   assert.equal('mode' in request, false)
+})
+
+test('recommendation immediately leaves the no-family screen after membership becomes available', async () => {
+  let page
+  let state = { user: { id: 1 }, membership: null, profileComplete: true }
+  let tagLoads = 0
+  const structure = { mainCount: 1, vegetableCount: 1, soupCount: 1, stapleCount: 1 }
+
+  vm.runInNewContext(script, {
+    Page(definition) { page = definition },
+    require(requestPath) {
+      if (requestPath === '../../utils/api') {
+        return {
+          request: async () => [],
+          ensureAuthenticated: async () => ({
+            user: state.user,
+            membership: { member_id: 7, family_id: 3, role: 'owner' },
+            profileComplete: true
+          }),
+          resolveCoverUrl: (value) => value || '',
+          isNoActiveFamilyError: () => false,
+          requireAuthentication: () => true
+        }
+      }
+      if (requestPath === '../../utils/auth-runtime') {
+        return {
+          store: {
+            getState: () => ({ ...state }),
+            setSession(session) { state = { ...state, ...session } }
+          }
+        }
+      }
+      if (requestPath === '../../utils/ui') {
+        return {
+          difficultyStars: () => '',
+          getGreeting: () => '晚上好',
+          MEALS: [{ mealType: 'dinner', mealTypeLabel: '晚餐' }],
+          toLocalISODate: () => '2026-09-22'
+        }
+      }
+      if (requestPath === '../../utils/tags') {
+        return { displayTags: () => [], flattenTagCatalog: () => [] }
+      }
+      if (requestPath === './preference-state') {
+        return {
+          DEFAULT_STRUCTURE: structure,
+          PREFERENCE_STORAGE_KEY: 'recommendPreferences',
+          PREP_RULER_TICK_WIDTH_PX: 1,
+          PREP_TIME_OPTIONS: [{ value: 60 }],
+          STRUCTURE_LABELS: [],
+          buildCanonicalRequest: () => ({}),
+          buildPersistedPreferences: () => ({}),
+          normalizeMealType: (value) => value,
+          normalizePeopleCount: (value) => value,
+          normalizeStructure: (value) => value || structure,
+          prepRulerGeometry: () => ({ sidePadding: 0 }),
+          prepRulerScrollLeft: () => 0,
+          prepRulerValueFromScrollLeft: () => 60,
+          restorePersistedPreferences: () => ({ mealType: 'dinner', peopleCount: 2, maxPrepMinutes: 60, structure, preferences: { selectedTagIds: [] } }),
+          structureDishCount: () => 4,
+          structureSummary: () => '',
+          toggleTagId: () => [],
+          validateStructure: () => ({ valid: true, total: 4, message: '' })
+        }
+      }
+      return require(requestPath)
+    },
+    wx: {},
+    Date,
+    Math,
+    Number,
+    String,
+    Set
+  })
+
+  const context = {
+    ...page,
+    data: { ...page.data, screen: 'no-family', noFamily: true },
+    setData(patch) { Object.assign(this.data, patch) },
+    async loadTags() { tagLoads += 1 }
+  }
+
+  const ready = await page.ensureLogin.call(context)
+
+  assert.equal(ready, true)
+  assert.equal(context.data.noFamily, false)
+  assert.equal(context.data.screen, 'setup')
+  assert.equal(tagLoads, 1)
 })

@@ -122,4 +122,23 @@
       </view>
     </view>
   </view>
+
+  <view wx:if="{{showRecoverySheet}}" class="settings-recovery-mask" catchtap="closeRecoverySheet">
+    <view class="settings-recovery" catchtap="stopPropagation">
+      <view class="settings-recovery__handle"></view>
+      <view class="settings-recovery__title">创建家庭</view>
+      <view class="settings-recovery__copy">你有可恢复的家庭，也可以新建一个。</view>
+      <scroll-view class="settings-recovery__list" scroll-y>
+        <button wx:for="{{recoverableFamilies}}" wx:key="id" class="settings-recovery__item" loading="{{familyActionLoading}}" disabled="{{familyActionLoading}}" data-family-id="{{item.id}}" bindtap="restoreFamily">
+          <view class="settings-recovery__item-copy">
+            <text class="settings-recovery__name">{{item.name}}</text>
+            <text class="settings-recovery__days">剩余 {{item.remainingDays}} 天</text>
+          </view>
+          <text class="settings-recovery__action">恢复</text>
+        </button>
+      </scroll-view>
+      <button class="settings-recovery__new" disabled="{{familyActionLoading}}" bindtap="openNewFamily">新建家庭</button>
+      <button class="settings-recovery__cancel" disabled="{{familyActionLoading}}" bindtap="closeRecoverySheet">取消</button>
+    </view>
+  </view>
 </view>

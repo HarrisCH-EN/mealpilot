@@ -59,7 +59,7 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
       await connection.beginTransaction()
       await lockUser(connection, request.user.id)
       if (await currentMembership(connection, request.user.id)) throw new HttpError(409, '你已经加入一个家庭')
-      const [families] = await connection.execute('SELECT id FROM families WHERE invite_code = ?', [normalizedInviteCode])
+      const [families] = await connection.execute("SELECT id FROM families WHERE invite_code = ? AND status = 'active'", [normalizedInviteCode])
       if (!families[0]) throw new HttpError(404, '邀请码不存在')
       const [existingRows] = await connection.execute('SELECT id, status FROM family_members WHERE family_id = ? AND user_id = ? FOR UPDATE', [families[0].id, request.user.id])
       if (existingRows[0]) {
@@ -138,6 +138,79 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
       if (!updated.affectedRows) throw new HttpError(409, '家庭成员状态已变化，请刷新后重试')
       await connection.commit()
       response.json({ ok: true, data: { left: true } })
+    } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
+  }))
+
+  result.get('/families/recoverable', auth, asyncRoute(async (request, response) => {
+    const [rows] = await database.execute(
+      `SELECT id, name, disbanded_at AS disbandedAt, purge_after AS expiresAt,
+              GREATEST(1, CEIL(TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, purge_after) / 86400)) AS remainingDays
+         FROM families
+        WHERE owner_user_id = ? AND status = 'archived' AND purge_after > CURRENT_TIMESTAMP
+        ORDER BY purge_after, id`,
+      [request.user.id]
+    )
+    response.json({ ok: true, data: rows.map((row) => ({ ...row, remainingDays: Number(row.remainingDays) })) })
+  }))
+
+  result.delete('/families/current', auth, familyAdmin, asyncRoute(async (request, response) => {
+    const connection = await database.getConnection()
+    try {
+      await connection.beginTransaction()
+      await lockUser(connection, request.user.id)
+      const membership = await currentMembership(connection, request.user.id)
+      if (!membership || !['owner', 'admin'].includes(membership.role)) throw new HttpError(403, '仅家庭管理员可执行此操作')
+      const [families] = await connection.execute("SELECT id, status FROM families WHERE id = ? FOR UPDATE", [membership.family_id])
+      if (!families[0] || families[0].status !== 'active') throw new HttpError(409, '家庭状态已变化，请刷新后重试', 'FAMILY_STATE_CHANGED')
+      const [updated] = await connection.execute(
+        "UPDATE families SET status = 'archived', disbanded_at = CURRENT_TIMESTAMP, purge_after = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY) WHERE id = ? AND status = 'active'",
+        [membership.family_id]
+      )
+      if (!updated.affectedRows) throw new HttpError(409, '家庭状态已变化，请刷新后重试', 'FAMILY_STATE_CHANGED')
+      await connection.execute("UPDATE family_members SET status = 'left' WHERE family_id = ? AND status = 'active'", [membership.family_id])
+      const [archived] = await connection.execute('SELECT purge_after AS expiresAt FROM families WHERE id = ?', [membership.family_id])
+      await connection.commit()
+      response.json({ ok: true, data: { archived: true, familyId: membership.family_id, expiresAt: archived[0].expiresAt } })
+    } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
+  }))
+
+  result.post('/families/:familyId/restore', auth, asyncRoute(async (request, response) => {
+    requirePositiveInteger(request.params.familyId, '家庭编号')
+    const connection = await database.getConnection()
+    try {
+      await connection.beginTransaction()
+      await lockUser(connection, request.user.id)
+      if (await currentMembership(connection, request.user.id)) throw new HttpError(409, '请先退出当前家庭', 'FAMILY_ACTIVE_MEMBERSHIP_EXISTS')
+      const [families] = await connection.execute(
+        "SELECT id, name, invite_code FROM families WHERE id = ? AND owner_user_id = ? AND status = 'archived' AND purge_after > CURRENT_TIMESTAMP FOR UPDATE",
+        [Number(request.params.familyId), request.user.id]
+      )
+      const archivedFamily = families[0]
+      if (!archivedFamily) throw new HttpError(404, '可恢复家庭不存在或已过期', 'FAMILY_ARCHIVE_UNAVAILABLE')
+      let nextInviteCode = ''
+      for (let attempt = 0; attempt < 5; attempt += 1) {
+        const candidate = inviteCode()
+        try {
+          const [updated] = await connection.execute(
+            "UPDATE families SET status = 'active', disbanded_at = NULL, purge_after = NULL, invite_code = ? WHERE id = ? AND status = 'archived' AND purge_after > CURRENT_TIMESTAMP",
+            [candidate, archivedFamily.id]
+          )
+          if (!updated.affectedRows) throw new HttpError(409, '家庭状态已变化，请刷新后重试', 'FAMILY_STATE_CHANGED')
+          nextInviteCode = candidate
+          break
+        } catch (error) {
+          if (error.code === 'ER_DUP_ENTRY' && attempt < 4) continue
+          if (error.code === 'ER_DUP_ENTRY') throw new HttpError(503, '邀请码生成失败，请稍后重试')
+          throw error
+        }
+      }
+      const [members] = await connection.execute('SELECT id FROM family_members WHERE family_id = ? AND user_id = ? FOR UPDATE', [archivedFamily.id, request.user.id])
+      if (!members[0]) throw new HttpError(409, '创建者记录不存在，无法恢复家庭', 'FAMILY_OWNER_RECORD_MISSING')
+      await connection.execute("UPDATE family_members SET status = 'left' WHERE family_id = ?", [archivedFamily.id])
+      const [restoredOwner] = await connection.execute("UPDATE family_members SET status = 'active', role = 'owner', nickname = ?, joined_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?", [request.user.display_name, members[0].id, request.user.id])
+      if (!restoredOwner.affectedRows) throw new HttpError(409, '创建者状态已变化，请刷新后重试', 'FAMILY_STATE_CHANGED')
+      await connection.commit()
+      response.json({ ok: true, data: { restored: true, familyId: archivedFamily.id, name: archivedFamily.name, inviteCode: nextInviteCode } })
     } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
   }))
 

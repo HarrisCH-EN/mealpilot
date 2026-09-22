@@ -13,7 +13,8 @@
     },
     "useCompilerPlugins": false,
     "minifyWXML": true,
-    "ignoreUploadUnusedFiles": false
+    "ignoreUploadUnusedFiles": false,
+    "ignoreDevUnusedFiles": false
   },
   "compileType": "miniprogram",
   "miniprogramRoot": "miniprogram/",

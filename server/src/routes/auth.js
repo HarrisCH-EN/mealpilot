@@ -26,6 +26,10 @@ function router({ authService, auth, devAuthEnabled }) {
     response.json({ ok: true, data: await authService.updateProfile({ userId: request.user.id, displayName: request.body.displayName }) })
   }))
 
+  result.delete('/auth/account', auth, asyncRoute(async (request, response) => {
+    response.json({ ok: true, data: await authService.deleteAccount({ userId: request.user.id }) })
+  }))
+
   return result
 }
 

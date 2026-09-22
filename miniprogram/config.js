@@ -1,7 +1,7 @@
 const environments = {
   development: {
     apiBaseUrl: 'http://127.0.0.1:3000/api',
-    allowDevLogin: true
+    allowDevLogin: false
   },
   production: {
     apiBaseUrl: 'https://mealpilot-api-315434-10-1423427242.sh.run.tcloudbase.com/api',
@@ -9,7 +9,7 @@ const environments = {
   }
 }
 
-const activeEnvironment = 'production'
+const activeEnvironment = 'development'
 
 function validateEnvironmentConfig(environment, config) {
   if (!config) throw new Error(`未找到环境配置：${environment}`)

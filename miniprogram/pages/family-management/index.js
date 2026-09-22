@@ -66,7 +66,7 @@ Page({
       const session = await ensureAuthenticated()
       const membership = session.membership || null
       if (!membership) {
-        this.setData({ membership: null, family: null, members: [], inviteCode: '', currentMemberId: 0, roleLabel: '未加入家庭', isAdmin: false, isOwner: false })
+        wx.switchTab({ url: '/pages/settings/index' })
         return
       }
       const family = await request('/families/current')
@@ -111,50 +111,6 @@ Page({
 
   goBack() {
     wx.navigateBack({ delta: 1 })
-  },
-
-  createFamily() {
-    wx.showModal({
-      title: '创建家庭',
-      editable: true,
-      placeholderText: '例如：周末饭桌',
-      success: async (result) => {
-        const name = String(result.content || '').trim()
-        if (!result.confirm || !name) return
-        this.setData({ actionLoading: true })
-        try {
-          await request('/families', 'POST', { name })
-          wx.showToast({ title: '家庭已创建', icon: 'success' })
-          await this.loadFamily()
-        } catch (error) {
-          wx.showToast({ title: error.message || '创建失败', icon: 'none' })
-        } finally {
-          this.setData({ actionLoading: false })
-        }
-      }
-    })
-  },
-
-  joinFamily() {
-    wx.showModal({
-      title: '加入家庭',
-      editable: true,
-      placeholderText: '输入 6 位邀请码',
-      success: async (result) => {
-        const inviteCode = String(result.content || '').trim()
-        if (!result.confirm || !inviteCode) return
-        this.setData({ actionLoading: true })
-        try {
-          await request('/families/join', 'POST', { inviteCode })
-          wx.showToast({ title: '加入成功', icon: 'success' })
-          await this.loadFamily()
-        } catch (error) {
-          wx.showToast({ title: error.message || '加入失败', icon: 'none' })
-        } finally {
-          this.setData({ actionLoading: false })
-        }
-      }
-    })
   },
 
   async copyInviteCode() {
@@ -247,6 +203,40 @@ Page({
         } finally {
           this.setData({ actionLoading: false })
         }
+      }
+    })
+  },
+
+  disbandFamily() {
+    if (!this.data.isAdmin || !this.data.membership || this.data.actionLoading) return
+    wx.showModal({
+      title: '解散家庭',
+      content: '所有成员将退出家庭，家庭数据会保留 30 天供创建者恢复。',
+      confirmText: '继续',
+      confirmColor: '#ff4f7b',
+      success: (first) => {
+        if (!first.confirm) return
+        wx.showModal({
+          title: '最终确认',
+          content: '确认解散当前家庭吗？30 天后未恢复的数据将永久删除。',
+          cancelText: '返回',
+          confirmText: '确认解散',
+          confirmColor: '#ff4f7b',
+          success: async (second) => {
+            if (!second.confirm || this.data.actionLoading) return
+            this.setData({ actionLoading: true })
+            try {
+              await request('/families/current', 'DELETE')
+              store.setSession({ membership: null })
+              wx.showToast({ title: '家庭已解散', icon: 'success' })
+              wx.switchTab({ url: '/pages/settings/index' })
+            } catch (error) {
+              wx.showToast({ title: error.message || '家庭解散失败', icon: 'none' })
+            } finally {
+              this.setData({ actionLoading: false })
+            }
+          }
+        })
       }
     })
   },

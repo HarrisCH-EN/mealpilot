@@ -1,6 +1,7 @@
 const { HttpError } = require('../http')
 const { WechatAuthError } = require('./wechat-auth-service')
 const { presentUser, presentSession } = require('./auth-session')
+const { isCloudFileId } = require('./cloud-storage-service')
 
 const MAX_WECHAT_CODE_LENGTH = 256
 
@@ -29,7 +30,7 @@ function assertWechatCode(code) {
   return normalizedCode
 }
 
-function createAuthService({ database, jwtSecret, wechatAuthService, mediaUrlService } = {}) {
+function createAuthService({ database, jwtSecret, wechatAuthService, mediaUrlService, storageFileIdPrefix = '' } = {}) {
   return {
     async loginOrRegister(code) {
       const normalizedCode = assertWechatCode(code)
@@ -74,6 +75,44 @@ function createAuthService({ database, jwtSecret, wechatAuthService, mediaUrlSer
       const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE id = ?', [userId])
       if (!rows[0]) throw new HttpError(401, '登录已失效', 'AUTH_SESSION_EXPIRED')
       return { user: await presentUser(rows[0], mediaUrlService) }
+    },
+
+    async deleteAccount({ userId }) {
+      const connection = await database.getConnection()
+      try {
+        await connection.beginTransaction()
+        const [users] = await connection.execute('SELECT id, avatar_url FROM users WHERE id = ? FOR UPDATE', [userId])
+        if (!users[0]) throw new HttpError(401, '登录已失效', 'AUTH_SESSION_EXPIRED')
+        const [ownedFamilies] = await connection.execute("SELECT id FROM families WHERE owner_user_id = ? AND status = 'active' FOR UPDATE", [userId])
+        const [memberships] = await connection.execute(
+          `SELECT fm.id AS member_id, fm.family_id, fm.role
+             FROM family_members fm JOIN families f ON f.id = fm.family_id
+            WHERE fm.user_id = ? AND fm.status = 'active' AND f.status = 'active'
+            ORDER BY fm.id FOR UPDATE`,
+          [userId]
+        )
+        if (memberships.length > 1) throw new HttpError(500, '账户家庭关系数据冲突')
+        const membership = memberships[0] || null
+        if (ownedFamilies[0] || (membership && ['owner', 'admin'].includes(membership.role))) {
+          throw new HttpError(409, '请先移交或取消管理员身份，或解散家庭', 'ACCOUNT_ADMIN_BLOCKED')
+        }
+        const avatarFileId = String(users[0].avatar_url || '').trim()
+        const normalizedPrefix = String(storageFileIdPrefix || '').replace(/\/+$/, '')
+        const avatarPrefix = `${normalizedPrefix}/users/${userId}/avatars/`
+        if (normalizedPrefix && isCloudFileId(avatarFileId) && avatarFileId.startsWith(avatarPrefix) && !avatarFileId.slice(avatarPrefix.length).includes('/')) {
+          await connection.execute("INSERT IGNORE INTO storage_cleanup_jobs (file_id, kind) VALUES (?, 'avatar')", [avatarFileId])
+        }
+        await connection.execute("UPDATE family_members SET status = 'left', nickname = '已注销成员' WHERE user_id = ?", [userId])
+        const [deleted] = await connection.execute('DELETE FROM users WHERE id = ?', [userId])
+        if (!deleted.affectedRows) throw new HttpError(409, '账号状态已变化，请重新登录', 'ACCOUNT_DELETE_CONFLICT')
+        await connection.commit()
+        return { deleted: true }
+      } catch (error) {
+        await connection.rollback()
+        throw error
+      } finally {
+        connection.release()
+      }
     }
   }
 }

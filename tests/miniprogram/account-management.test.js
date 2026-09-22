@@ -28,7 +28,22 @@ test('account management exposes a confirmed logout action and returns to login'
   assert.match(script, /wx\.reLaunch\(\{\s*url:\s*['"]\/pages\/login\/index['"]\s*\}\)/)
 })
 
-function createAccountPageHarness({ confirm, profileApi = {} } = {}) {
+test('account deletion is visually subtle, double-confirmed, and blocked for administrators', () => {
+  const pageRoot = path.join(root, 'pages', 'account-management')
+  const template = fs.readFileSync(path.join(pageRoot, 'index.wxml'), 'utf8')
+  const script = fs.readFileSync(path.join(pageRoot, 'index.js'), 'utf8')
+  const styles = fs.readFileSync(path.join(pageRoot, 'index.wxss'), 'utf8')
+
+  assert.match(template, /class="account-delete"[^>]*bindtap="deleteAccount"/)
+  assert.match(script, /deleteAccount\(\)/)
+  assert.match(script, /ACCOUNT_ADMIN_BLOCKED/)
+  assert.match(script, /request\('\/auth\/account', 'DELETE'/)
+  assert.match(template, /前往家庭管理/)
+  assert.match(script, /最终确认/)
+  assert.match(styles, /\.account-delete\s*\{[^}]*font-size:\s*2[0-6]rpx;[^}]*background:\s*transparent/s)
+})
+
+function createAccountPageHarness({ confirm, profileApi = {}, membership = null } = {}) {
   const script = fs.readFileSync(path.join(root, 'pages', 'account-management', 'index.js'), 'utf8')
   let page
   let clearSessionCalls = 0
@@ -39,7 +54,7 @@ function createAccountPageHarness({ confirm, profileApi = {} } = {}) {
   const toasts = []
   const storage = { token: 'jwt-token' }
   const store = createAuthStore({ storage })
-  store.setSession({ token: storage.token, user: { openid: 'demo-owner', display_name: '演示用户' } })
+  store.setSession({ token: storage.token, user: { openid: 'demo-owner', display_name: '演示用户' }, membership })
   const app = { globalData: {} }
   const authService = {
     logout: async () => {
@@ -59,6 +74,7 @@ function createAccountPageHarness({ confirm, profileApi = {} } = {}) {
     chooseMedia(options) { chooseMediaCalls.push(options) },
     showToast(options) { toasts.push(options) },
     reLaunch(options) { relaunches.push(options) },
+    navigateTo(options) { relaunches.push(options) },
     navigateBack() {}
   }
   vm.runInNewContext(script, {
@@ -90,7 +106,12 @@ function createAccountPageHarness({ confirm, profileApi = {} } = {}) {
     chooseAvatar: page.chooseAvatar,
     saveAvatar: page.saveAvatar,
     applyUser: page.applyUser,
-    editDisplayName: page.editDisplayName
+    editDisplayName: page.editDisplayName,
+    deleteAccount: page.deleteAccount,
+    showAdminDeletionBlocked: page.showAdminDeletionBlocked,
+    dismissAdminDeletionBlocked: page.dismissAdminDeletionBlocked,
+    goToFamilyManagement: page.goToFamilyManagement,
+    stopPropagation: page.stopPropagation
   }
   return { page, context, app, store, clearSessionCalls: () => clearSessionCalls, relaunches, modals, actionSheets, chooseMediaCalls, toasts }
 }
@@ -105,6 +126,55 @@ test('confirmed logout clears the local session and relaunches the login page', 
   assert.equal(harness.store.getState().token, '')
   assert.equal(harness.relaunches.length, 1)
   assert.equal(harness.relaunches[0].url, '/pages/login/index')
+})
+
+test('account deletion sends no request until both confirmations succeed', async () => {
+  const requests = []
+  const harness = createAccountPageHarness({
+    confirm: false,
+    profileApi: { request: async (...args) => { requests.push(args); return { deleted: true } } }
+  })
+  harness.page.onLoad.call(harness.context)
+  harness.page.deleteAccount.call(harness.context)
+  assert.equal(harness.modals.length, 1)
+  harness.modals[0].success({ confirm: true })
+  assert.equal(harness.modals.length, 2)
+  await harness.modals[1].success({ confirm: true })
+
+  assert.deepEqual(requests[0], ['/auth/account', 'DELETE'])
+  assert.equal(harness.store.getState().token, '')
+  assert.equal(harness.relaunches[0].url, '/pages/login/index')
+})
+
+test('administrator account deletion is blocked before the API request', () => {
+  let requestCalls = 0
+  const harness = createAccountPageHarness({
+    confirm: false,
+    membership: { role: 'admin', family_id: 10 },
+    profileApi: { request: async () => { requestCalls += 1 } }
+  })
+  harness.page.onLoad.call(harness.context)
+  harness.page.deleteAccount.call(harness.context)
+
+  assert.equal(requestCalls, 0)
+  assert.equal(harness.context.data.accountDeletionBlockedVisible, true)
+  assert.equal(harness.modals.length, 0)
+})
+
+test('administrator account deletion opens an in-page explanation dialog', () => {
+  const template = fs.readFileSync(path.join(root, 'pages', 'account-management', 'index.wxml'), 'utf8')
+  const harness = createAccountPageHarness({
+    confirm: false,
+    membership: { role: 'owner', family_id: 10 }
+  })
+
+  harness.page.onLoad.call(harness.context)
+  harness.page.deleteAccount.call(harness.context)
+
+  assert.equal(harness.context.data.accountDeletionBlockedVisible, true)
+  assert.match(harness.context.data.accountDeletionBlockedMessage, /移交创建者身份或解散家庭/)
+  assert.match(template, /wx:if="\{\{accountDeletionBlockedVisible\}\}"/)
+  assert.match(template, /bindtap="goToFamilyManagement"/)
 })
 
 test('cancelling logout leaves the current session untouched', () => {

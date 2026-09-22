@@ -33,7 +33,7 @@ function createApp({ database, jwtSecret = 'local-development-secret-change-me',
     const family = requireFamily(database)
     const familyAdmin = requireFamilyAdmin(database)
     const wechat = wechatAuthService || createWechatAuthService({ appId: wechatAppId, appSecret: wechatAppSecret })
-    const authService = createAuthService({ database, jwtSecret, wechatAuthService: wechat, mediaUrlService: media })
+    const authService = createAuthService({ database, jwtSecret, wechatAuthService: wechat, mediaUrlService: media, storageFileIdPrefix: cloudbaseStorageFileIdPrefix })
     app.use('/api', authRoutes.router({ authService, auth, devAuthEnabled }))
     app.use('/api', families.router({ database, auth, family, familyAdmin, fileIdForPath: cloudStorageService && cloudStorageService.fileIdForPath ? cloudStorageService.fileIdForPath.bind(cloudStorageService) : undefined, mediaUrlService: media }))
     app.use('/api', recipes.router({ database, auth, family, mediaUrlService: media, cloudbaseStorageFileIdPrefix }))

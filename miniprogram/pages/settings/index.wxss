@@ -88,6 +88,21 @@ page {
 .settings-action--primary { background: var(--settings-accent); color: #fff; }
 .settings-action--secondary { border: 1rpx solid rgba(23, 23, 23, .14); background: transparent; color: var(--settings-text-primary); }
 
+.settings-recovery-mask { position: fixed; inset: 0; z-index: 80; display: flex; align-items: flex-end; background: rgba(0, 0, 0, .34); }
+.settings-recovery { width: 100%; box-sizing: border-box; padding: 18rpx 36rpx calc(28rpx + env(safe-area-inset-bottom)); border-radius: 36rpx 36rpx 0 0; background: #fff; }
+.settings-recovery__handle { width: 72rpx; height: 8rpx; margin: 0 auto 26rpx; border-radius: 999rpx; background: #dedede; }
+.settings-recovery__title { font-size: 34rpx; font-weight: 700; }
+.settings-recovery__copy { margin-top: 8rpx; color: var(--settings-text-secondary); font-size: 23rpx; }
+.settings-recovery__list { max-height: 420rpx; margin-top: 24rpx; }
+.settings-recovery__item { display: flex; width: 100%; min-height: 104rpx; align-items: center; justify-content: space-between; margin: 0 0 12rpx; padding: 0 24rpx; border: 1rpx solid rgba(23, 23, 23, .055); border-radius: 22rpx; background: var(--settings-card); text-align: left; }
+.settings-recovery__item::after, .settings-recovery__new::after, .settings-recovery__cancel::after { border: 0; }
+.settings-recovery__item-copy { display: flex; min-width: 0; flex-direction: column; }
+.settings-recovery__name { overflow: hidden; font-size: 27rpx; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.settings-recovery__days { margin-top: 7rpx; color: var(--settings-text-secondary); font-size: 21rpx; }
+.settings-recovery__action { color: var(--settings-accent); font-size: 23rpx; font-weight: 600; }
+.settings-recovery__new { width: 100%; min-height: 76rpx; margin: 10rpx 0 0; border-radius: 999rpx; background: var(--settings-accent); color: #fff; font-size: 25rpx; font-weight: 600; }
+.settings-recovery__cancel { width: 100%; min-height: 64rpx; margin: 10rpx 0 0; background: transparent; color: var(--settings-text-secondary); font-size: 23rpx; }
+
 .settings-loading { animation: settings-enter 200ms ease-out both; }
 .settings-loading__title { width: 176rpx; height: 58rpx; margin: 5rpx 0 16rpx; border-radius: 14rpx; background: #f3f3f3; }
 .settings-loading__subtitle { width: 420rpx; height: 26rpx; margin-bottom: 30rpx; border-radius: 10rpx; background: #f6f6f6; }

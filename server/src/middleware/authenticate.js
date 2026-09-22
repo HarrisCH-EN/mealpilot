@@ -21,7 +21,7 @@ async function currentMembership(database, userId) {
   const [rows] = await database.execute(
     `SELECT fm.id AS member_id, fm.family_id, fm.role, fm.nickname, f.name AS family_name, f.invite_code
      FROM family_members fm JOIN families f ON f.id = fm.family_id
-     WHERE fm.user_id = ? AND fm.status = 'active'
+     WHERE fm.user_id = ? AND fm.status = 'active' AND f.status = 'active'
      ORDER BY fm.id`,
     [userId]
   )
