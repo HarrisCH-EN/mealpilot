@@ -17,11 +17,13 @@
   <view wx:if="{{!noFamily}}" class="menu-calendar-toggle-row"><button class="menu-calendar-toggle {{calendarOpen ? 'menu-calendar-toggle--open' : ''}}" bindtap="toggleCalendar" aria-label="切换日历"><image class="menu-calendar-toggle__glyph" src="/assets/icons/menu/chevron.png" mode="aspectFit"></image></button></view>
   <view wx:if="{{!noFamily}}" class="menu-calendar-region {{calendarOpen ? 'menu-calendar-region--open' : ''}}" style="height: {{calendarPanelHeight}}rpx;"><view class="menu-calendar-panel"><view class="menu-calendar-panel__header"><button class="menu-calendar-panel__month-button" data-step="-1" bindtap="changeCalendarMonth" aria-label="上个月"><image src="/assets/icons/recipes/chevron-left.png" mode="aspectFit" /></button><text>{{calendarTitle}}</text><button class="menu-calendar-panel__month-button" data-step="1" bindtap="changeCalendarMonth" aria-label="下个月"><image src="/assets/icons/recipes/chevron-right.png" mode="aspectFit" /></button></view><view class="menu-calendar-panel__weekdays"><text>日</text><text>一</text><text>二</text><text>三</text><text>四</text><text>五</text><text>六</text></view><view class="menu-calendar-panel__days"><view wx:for="{{calendarDays}}" wx:key="value" class="menu-calendar-day {{!item.isCurrentMonth ? 'menu-calendar-day--outside' : ''}} {{item.value === date ? 'menu-calendar-day--active' : ''}}" data-date="{{item.value}}" bindtap="selectCalendarDate"><text>{{item.day}}</text><view class="menu-calendar-day__marker-slot"><view wx:if="{{item.hasMenu}}" class="menu-calendar-day__marker {{item.isToday ? 'menu-calendar-day__marker--today' : ''}}"></view></view></view></view></view></view>
 
-  <view wx:if="{{noFamily}}" class="menu-family-empty state-panel">
-    <view class="empty-illustration"><image class="empty-search-icon" src="/assets/icons/settings/family.png" mode="aspectFit"></image></view>
-    <view class="state-panel__title">还没有加入家庭</view>
-    <view>先创建家庭或加入已有家庭，才能安排家庭菜单。</view>
-    <button class="button button--primary button--small state-action" bindtap="goFamilySetup">去设置创建或加入</button>
+  <view wx:if="{{noFamily}}" class="family-empty">
+    <view class="family-empty__icon">
+      <image src="/assets/icons/settings/family.png" mode="aspectFit" />
+    </view>
+    <view class="family-empty__title">还没加入家庭</view>
+    <view class="family-empty__copy">先加入家庭，再安排今天的菜单。</view>
+    <button class="family-empty__action" bindtap="goFamilySetup">创建或加入</button>
   </view>
 
   <view wx:if="{{!noFamily}}" class="meal-deck {{deckAnimating ? 'meal-deck--transition' : ''}}" style="height: {{deckHeight}}rpx; --meal-card-height: {{cardHeight}}rpx;">

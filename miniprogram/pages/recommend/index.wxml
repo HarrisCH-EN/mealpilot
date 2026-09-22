@@ -1,9 +1,20 @@
 <view class="page recommend-page">
-  <view wx:if="{{screen === 'no-family'}}" class="state-panel recommend-state">
-    <view class="empty-illustration">家</view>
-    <view class="state-panel__title">你还没有加入家庭</view>
-    <view class="state-panel__text">创建或加入家庭后，才能为这一家人搭配菜单。</view>
-    <button class="button button--primary" bindtap="goFamilySetup">创建或加入家庭</button>
+  <view wx:if="{{screen === 'no-family'}}" class="recommend-empty-page">
+    <view class="page-header recommend-empty-header">
+      <view class="page-header__copy">
+        <view class="page-title recommend-empty-header__title">今天吃什么？</view>
+        <view class="page-subtitle">为一家人，搭配好每一餐。</view>
+      </view>
+    </view>
+
+    <view class="family-empty">
+      <view class="family-empty__icon">
+        <image src="/assets/icons/settings/family.png" mode="aspectFit" />
+      </view>
+      <view class="family-empty__title">还没加入家庭</view>
+      <view class="family-empty__copy">先加入家庭，再为一家人搭配一餐。</view>
+      <button class="family-empty__action" bindtap="goFamilySetup">创建或加入</button>
+    </view>
   </view>
 
   <view wx:if="{{screen === 'setup' || screen === 'loading'}}" class="recommend-setup">

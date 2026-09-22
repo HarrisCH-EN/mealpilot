@@ -128,7 +128,7 @@
 .recipes-page .state-panel--error { border-color: rgba(0, 0, 0, .08); background: #f7f7f7; color: var(--recipe-text-secondary); }
 .recipes-page .empty-illustration { background: #f7f7f7; color: var(--recipe-text-primary); }
 .compact-state { margin: 24rpx 0; padding: 48rpx 20rpx; font-size: 22rpx; }
-.family-empty-state { margin-top: 48rpx; }
+.recipes-page > .family-empty { margin-top: 10rpx; }
 .sheet-head { margin-bottom: 8rpx; }
 .sheet-confirm { margin-top: 32rpx; border-radius: 999rpx; }
 .recipe-sheet { background: #ffffff; }

@@ -7,11 +7,13 @@
     <button wx:if="{{!noFamily}}" class="page-header__action add-recipe-button" aria-label="新增菜谱" bindtap="addRecipe"><image class="add-recipe-button__icon" src="/assets/icons/recipes/add-white.png" mode="aspectFit" /></button>
   </view>
 
-  <view wx:if="{{noFamily}}" class="state-panel family-empty-state">
-    <view class="empty-illustration"><image class="empty-search-icon" src="/assets/icons/settings/family.png" mode="aspectFit"></image></view>
-    <view class="state-panel__title">还没有加入家庭</view>
-    <view>先创建家庭或加入已有家庭，才能管理家庭菜谱。</view>
-    <button class="button button--primary button--small state-action" bindtap="goFamilySetup">去设置创建或加入</button>
+  <view wx:if="{{noFamily}}" class="family-empty">
+    <view class="family-empty__icon">
+      <image src="/assets/icons/settings/family.png" mode="aspectFit" />
+    </view>
+    <view class="family-empty__title">还没加入家庭</view>
+    <view class="family-empty__copy">先加入家庭，再收好家里的拿手菜。</view>
+    <button class="family-empty__action" bindtap="goFamilySetup">创建或加入</button>
   </view>
 
   <view wx:if="{{!noFamily}}" class="recipe-search">
