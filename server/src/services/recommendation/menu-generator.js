@@ -1,18 +1,20 @@
 const { MAX_RAW_MENU_CANDIDATES } = require('./constants')
 const { expandMealStructure, validateMealStructure } = require('./menu-structure')
 
-function generateRawMenuCandidates({ pools, structure, maxCandidates = MAX_RAW_MENU_CANDIDATES }) {
+function generateRawMenuCandidates({ pools, structure, maxCandidates = MAX_RAW_MENU_CANDIDATES, requiredTagIds = [] }) {
   const normalized = validateMealStructure(structure)
   const slots = expandMealStructure(normalized)
   const candidates = []
   const chosen = []
   const usedIds = new Set()
   const lastIndexBySlot = new Map()
+  const required = new Set(requiredTagIds.map(Number).filter(Number.isInteger))
 
   function visit(slotIndex) {
     if (candidates.length >= maxCandidates) return
     if (slotIndex === slots.length) {
-      candidates.push([...chosen])
+      const covered = new Set(chosen.flatMap((item) => Array.isArray(item.tagIds) ? item.tagIds.map(Number) : []))
+      if ([...required].every((tagId) => covered.has(tagId))) candidates.push([...chosen])
       return
     }
     const slot = slots[slotIndex]

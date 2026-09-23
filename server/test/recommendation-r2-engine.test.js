@@ -22,7 +22,7 @@ const { filterEligibleRecipes } = require('../src/services/recommendation/recipe
 const { generateRawMenuCandidates } = require('../src/services/recommendation/menu-generator')
 const { calculateRecentNoveltyScore } = require('../src/services/recommendation/recent-history')
 const { selectDiverseCandidates, selectQualityWindow } = require('../src/services/recommendation/diversifier')
-const { generateMenuCandidates } = require('../src/services/recommendation/menu-recommendation-engine')
+const { generateMenuCandidates, getAvailableTagIds } = require('../src/services/recommendation/menu-recommendation-engine')
 const { loadRecipeDomainData } = require('../src/services/recommendation/recipe-candidate-loader')
 
 function ingredient(id, protein = 10, seasonalMonths = [8]) {
@@ -150,6 +150,37 @@ test('session preference matching uses stored tags and saturates menu-level matc
   assert.throws(() => validateSessionPreferences({ cuisineTags: ['home'] }), (error) => error.code === 'INVALID_SESSION_PREFERENCE')
 })
 
+test('canonical selected tags are hard requirements for every generated menu', () => {
+  const input = explorationInput({
+    preferences: { selectedTagIds: [101, 102] },
+    recipes: [
+      recipe(1, '荤菜', { tagIds: [101] }),
+      recipe(2, '荤菜', { tagIds: [102] }),
+      recipe(3, '素菜', { tagIds: [101, 102] }),
+      recipe(4, '汤', { tagIds: [] })
+    ],
+    structure: { meat: 1, vegetable: 1, soup: 1, staple: 0 }
+  })
+  const result = generateMenuCandidates(input)
+  assert.ok(result.candidates.length > 0)
+  assert.ok(result.candidates.every((candidate) => candidate.recipeIds.includes(3)))
+  assert.ok(result.candidates.every((candidate) => candidate.scoreBreakdown.tagPreference.matchedTagIds.sort((a, b) => a - b).join(',') === '101,102'))
+})
+
+test('canonical tag availability only includes tags that can complete the current structure', () => {
+  const input = explorationInput({
+    recipes: [
+      recipe(1, '荤菜', { tagIds: [101] }),
+      recipe(2, '素菜', { tagIds: [102] }),
+      recipe(3, '汤', { tagIds: [] })
+    ],
+    structure: { meat: 1, vegetable: 1, soup: 1, staple: 0 },
+    preferences: { selectedTagIds: [] }
+  })
+  assert.deepEqual(getAvailableTagIds(input, [101, 102, 103]), [101, 102])
+  assert.deepEqual(getAvailableTagIds({ ...input, preferences: { selectedTagIds: [101] } }, [101, 102, 103]), [101, 102])
+})
+
 test('prep time uses longest path plus half of remaining cook time', () => {
   assert.deepEqual(estimateMenuPrepTime([{ cookMinutes: 30 }, { cookMinutes: 20 }, { cookMinutes: 10 }]), {
     sumCookMinutes: 60,
@@ -210,6 +241,17 @@ test('diversifier prefers overlap at most one and reports deterministic relaxati
   assert.equal(selected.candidates[0].totalScore, 99)
   assert.ok(selected.candidates[1].recipeIds.filter((id) => selected.candidates[0].recipeIds.includes(id)).length <= 1)
   assert.equal(selected.relaxationLevel, 0)
+})
+
+test('diversifier prefers completely disjoint recommendation groups before relaxing', () => {
+  const make = (ids, score) => ({ recipeIds: ids, totalScore: score, withinTimeLimit: true, timeOverageMinutes: 0 })
+  const selected = selectDiverseCandidates([
+    make([1, 2, 3], 99),
+    make([1, 4, 5], 98),
+    make([6, 7, 8], 90),
+    make([9, 10, 11], 89)
+  ], { maxCandidates: 3, maxOverlap: 0 })
+  assert.deepEqual(selected.candidates.map((candidate) => candidate.recipeIds), [[1, 2, 3], [6, 7, 8], [9, 10, 11]])
 })
 
 test('engine returns exact structure, preferred-time candidates first, diagnostics, and bounded output', () => {
@@ -308,6 +350,26 @@ test('engine keeps restriction filtering ahead of preference scoring and protect
   assert.equal(result.candidates[0].recipeIds.includes(2), true)
   assert.throws(() => generateMenuCandidates({ ...input, activeMember: { id: 101, familyId: 1, status: 'left' } }), (error) => error.code === 'INACTIVE_MEMBER_CONTEXT')
   assert.throws(() => generateMenuCandidates({ ...input, activeMember: { id: 101, familyId: 2, status: 'active' } }), (error) => error.code === 'FAMILY_CONTEXT_MISMATCH')
+})
+
+test('engine excludes only the current member low-rated recipes before ranking', () => {
+  const result = generateMenuCandidates({
+    familyId: 1,
+    memberId: 101,
+    activeMember: { id: 101, familyId: 1, status: 'active' },
+    menuDate: '2026-08-08',
+    mealType: 'dinner',
+    peopleCount: 2,
+    maxPrepMinutes: 60,
+    structure: { meat: 1, vegetable: 1, soup: 1, staple: 0 },
+    preferences: {},
+    recipes: [recipe(1, '荤菜'), recipe(2, '荤菜'), recipe(3, '素菜'), recipe(4, '汤')],
+    restrictedIngredientIds: [],
+    lowRatedRecipeIds: [1]
+  })
+  assert.ok(result.candidates.length > 0)
+  assert.equal(result.candidates.every((candidate) => !candidate.recipeIds.includes(1)), true)
+  assert.equal(result.excludedCounts.lowRated, 1)
 })
 
 test('recipe candidate loader uses bulk queries and groups recipe metadata without N+1 access', async () => {

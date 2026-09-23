@@ -140,6 +140,14 @@ function scoreCanonicalMenuPreferenceMatch(recipes, preferences) {
   }
 }
 
+function canonicalMenuMatchesSelectedTags(recipes, preferences = {}) {
+  if (!isCanonicalPreferences(preferences)) return true
+  const selectedTagIds = normalizeTagIds(preferences.selectedTagIds) || []
+  if (!selectedTagIds.length) return true
+  const candidateTagIds = new Set(recipes.flatMap((recipe) => canonicalRecipeTagIds(recipe)))
+  return selectedTagIds.every((tagId) => candidateTagIds.has(tagId))
+}
+
 function saturatingCoverageScore(matchedCount, totalCount) {
   if (matchedCount === 0 || totalCount === 0) return 0
   return Math.min(100, Math.round((matchedCount / totalCount) * 100 + Math.min(30, matchedCount * 15)))
@@ -176,6 +184,7 @@ function scoreFamilyCategoryPreference(recipes, familyCategoryPreferenceScores =
 
 module.exports = {
   isCanonicalPreferences,
+  canonicalMenuMatchesSelectedTags,
   normalizePreferences,
   saturatingCoverageScore,
   scoreFamilyCategoryPreference,

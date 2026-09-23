@@ -51,18 +51,15 @@ test('T3 canonical menu coverage uses tag identity, equal weights, and a 0-30 sc
   assert.equal(scoreRecipePreferenceMatch(recipe(1, '荤菜', [1]), { selectedTagIds: [1, 101] }).score, 50)
 })
 
-test('T3 canonical preferences do not require a match and preserve hard-feasible generation', () => {
-  const result = generateMenuCandidates({
+test('T3 canonical preferences require every selected tag to match a complete menu', () => {
+  assert.throws(() => generateMenuCandidates({
     familyId: 1, memberId: 101, activeMember: { id: 101, familyId: 1, status: 'active' },
     menuDate: '2026-08-08', mealType: 'dinner', peopleCount: 2, maxPrepMinutes: 60,
     structure: { meat: 1, vegetable: 1, soup: 1, staple: 0 },
     preferences: { selectedTagIds: [999] },
     recipes: [recipe(1, '荤菜'), recipe(2, '素菜'), recipe(3, '汤')],
     restrictedIngredientIds: []
-  })
-  assert.equal(result.ok, true)
-  assert.equal(result.candidates[0].scoreBreakdown.tagPreference.score, 0)
-  assert.deepEqual(result.candidates[0].scoreBreakdown.tagPreference.selectedTagIds, [999])
+  }), (error) => error.code === 'NO_TAG_MATCHING_MENU')
 })
 
 test('T3 canonical validator rejects mixed legacy preference fields', () => {

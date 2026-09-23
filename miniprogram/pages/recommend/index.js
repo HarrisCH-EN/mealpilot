@@ -42,9 +42,9 @@ function dateCaption(date) {
   return `${month}月${day}日 · ${WEEKDAYS[new Date(year, month - 1, day).getDay()]}`
 }
 
-function tagOptions(tags = [], selected = []) {
+function tagOptions(tags = [], selected = [], availability = {}) {
   const selectedIds = new Set(selected.map(Number))
-  return tags.map((item) => ({ ...item, selected: selectedIds.has(Number(item.id)) }))
+  return tags.map((item) => ({ ...item, available: availability[item.id] !== false, selected: selectedIds.has(Number(item.id)) }))
 }
 
 function normalizeCandidate(candidate = {}) {
@@ -105,6 +105,9 @@ Page({
     tagLoading: false,
     tagReady: false,
     tagError: '',
+    tagAvailabilityLoading: false,
+    tagAvailabilityError: '',
+    selectedTagMatchText: '',
     preferences: { selectedTagIds: [] },
     loading: false,
     switching: false,
@@ -216,6 +219,7 @@ Page({
         tagReady: true
       })
       this.persistPreferences({ preferences: { selectedTagIds } })
+      await this.refreshTagAvailability(tagCatalog, selectedTagIds)
     } catch (error) {
       this.setData({
         tagCatalog: [],
@@ -231,6 +235,32 @@ Page({
 
   retryTags() {
     this.loadTags()
+  },
+
+  async refreshTagAvailability(tagCatalog = this.data.tagCatalog, selectedTagIds = this.data.preferences.selectedTagIds) {
+    if (!tagCatalog.length) return
+    const requestId = (this._tagAvailabilityRequestId || 0) + 1
+    this._tagAvailabilityRequestId = requestId
+    this.setData({ tagAvailabilityLoading: true, tagAvailabilityError: '' })
+    try {
+      const data = await request('/recommendations/tag-availability', 'POST', this.buildRequest())
+      if (requestId !== this._tagAvailabilityRequestId) return
+      const availability = Object.fromEntries((data.tags || []).map((tag) => [Number(tag.id), tag.available !== false]))
+      const availableSelected = selectedTagIds.filter((id) => availability[Number(id)] !== false)
+      const nextTagOptions = tagOptions(tagCatalog, availableSelected, availability)
+      this.setData({
+        tagOptions: nextTagOptions,
+        'preferences.selectedTagIds': availableSelected,
+        selectedTagMatchText: availableSelected.length ? `已匹配 ${availableSelected.length}/${availableSelected.length}` : '',
+        tagAvailabilityError: ''
+      })
+      if (availableSelected.length !== selectedTagIds.length) this.persistPreferences({ preferences: { selectedTagIds: availableSelected } })
+    } catch (error) {
+      if (requestId !== this._tagAvailabilityRequestId) return
+      this.setData({ tagAvailabilityError: error.message || '标签状态暂时无法更新' })
+    } finally {
+      if (requestId === this._tagAvailabilityRequestId) this.setData({ tagAvailabilityLoading: false })
+    }
   },
 
   togglePreferences() {
@@ -274,6 +304,7 @@ Page({
     const peopleCount = normalizePeopleCount(this.data.peopleCount + delta)
     this.setData({ peopleCount })
     this.persistPreferences({ peopleCount })
+    this.refreshTagAvailability()
   },
 
   selectMealType(event) {
@@ -282,6 +313,7 @@ Page({
     if (!selectedMeal || mealType === this.data.mealType) return
     this.setData({ mealType, mealTypeLabel: selectedMeal.mealTypeLabel })
     this.persistPreferences({ mealType })
+    this.refreshTagAvailability()
   },
 
   syncPrepRuler() {
@@ -322,6 +354,7 @@ Page({
       prepScrollLeft: prepRulerScrollLeft(PREP_TICKS[index].value)
     })
     this.persistPreferences({ maxPrepMinutes: PREP_TICKS[index].value })
+    this.refreshTagAvailability()
   },
 
   changeStructure(event) {
@@ -338,17 +371,31 @@ Page({
       structureMessage: validation.message
     })
     this.persistPreferences({ structure })
+    this.refreshTagAvailability()
   },
 
   togglePreferenceTag(event) {
     const tagId = Number(event.currentTarget.dataset.tagId)
-    if (!this.data.tagCatalog.some((tag) => tag.id === tagId)) return
+    const tag = this.data.tagOptions.find((item) => Number(item.id) === tagId)
+    if (!tag || tag.available === false) return
     const selectedTagIds = toggleTagId(this.data.preferences.selectedTagIds, tagId)
     this.setData({
       'preferences.selectedTagIds': selectedTagIds,
       tagOptions: tagOptions(this.data.tagCatalog, selectedTagIds)
     })
     this.persistPreferences({ preferences: { selectedTagIds } })
+    this.refreshTagAvailability(this.data.tagCatalog, selectedTagIds)
+  },
+
+  clearPreferenceTags() {
+    if (!this.data.preferences.selectedTagIds.length) return
+    this.setData({
+      'preferences.selectedTagIds': [],
+      tagOptions: tagOptions(this.data.tagCatalog, []),
+      selectedTagMatchText: ''
+    })
+    this.persistPreferences({ preferences: { selectedTagIds: [] } })
+    this.refreshTagAvailability(this.data.tagCatalog, [])
   },
 
   buildRequest() {

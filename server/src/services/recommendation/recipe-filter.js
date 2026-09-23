@@ -5,10 +5,11 @@ function recipeIngredientIds(recipe) {
   return Array.isArray(recipe.ingredientIds) ? recipe.ingredientIds.map(Number).filter(Number.isInteger) : []
 }
 
-function filterEligibleRecipes(recipes, { familyId, restrictedIngredientIds = [] } = {}) {
+function filterEligibleRecipes(recipes, { familyId, restrictedIngredientIds = [], excludedRecipeIds = [] } = {}) {
   const pools = { meat: [], vegetable: [], soup: [], staple: [] }
-  const excluded = { family: 0, inactive: 0, restricted: 0, category: 0 }
+  const excluded = { family: 0, inactive: 0, restricted: 0, lowRated: 0, category: 0 }
   const restricted = new Set(restrictedIngredientIds.map(Number))
+  const excludedIds = new Set(excludedRecipeIds.map(Number))
   const categoryToSlot = Object.fromEntries(Object.entries(CATEGORY_BY_SLOT).map(([slot, category]) => [category, slot]))
   for (const recipe of recipes || []) {
     if (Number(recipe.familyId ?? recipe.family_id) !== Number(familyId)) {
@@ -21,6 +22,10 @@ function filterEligibleRecipes(recipes, { familyId, restrictedIngredientIds = []
     }
     if (recipeIngredientIds(recipe).some((id) => restricted.has(id))) {
       excluded.restricted += 1
+      continue
+    }
+    if (excludedIds.has(Number(recipe.id))) {
+      excluded.lowRated += 1
       continue
     }
     const slot = categoryToSlot[recipe.category]

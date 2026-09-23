@@ -28,4 +28,15 @@ async function loadRecentRecipeUsage(connection, { familyId, targetDate }) {
   return Object.fromEntries(rows.map((row) => [Number(row.recipeId), Number(row.daysAgo)]))
 }
 
-module.exports = { calculateRecentNoveltyScore, loadRecentRecipeUsage }
+async function loadLowRatedRecipeIds(connection, { familyId, memberId }) {
+  const [rows] = await connection.execute(`
+    SELECT DISTINCT mi.recipe_id AS recipeId
+    FROM menus m
+    INNER JOIN menu_items mi ON mi.menu_id = m.id
+    INNER JOIN menu_feedback f ON f.menu_item_id = mi.id
+    WHERE f.member_id = ? AND m.family_id = ? AND f.rating <= 2
+  `, [memberId, familyId])
+  return rows.map((row) => Number(row.recipeId))
+}
+
+module.exports = { calculateRecentNoveltyScore, loadRecentRecipeUsage, loadLowRatedRecipeIds }

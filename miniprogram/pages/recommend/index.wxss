@@ -46,9 +46,11 @@
 .recommend-tag-row { display: flex; flex-wrap: wrap; gap: 12rpx; margin-top: 12rpx; }
 .recommend-chip { display: flex; min-height: 58rpx; align-items: center; justify-content: center; padding: 0 22rpx; border: 1rpx solid #e8e2df; border-radius: 999rpx; background: #ffffff; color: #625b58; font-size: 24rpx; }
 .recommend-chip--selected { border-color: #d96c7d; background: #fff0f2; color: #a63d50; font-weight: 600; }
+.recommend-chip--disabled { border-color: #f0edeb; background: #f7f6f5; color: #c3bfbc; }
 .recommend-tag-state { margin-top: 18rpx; color: #9a9390; font-size: 23rpx; line-height: 1.55; }
 .recommend-tag-state--error { color: #b55362; }
 .recommend-tag-retry { margin-left: 14rpx; color: #d6566d; font-weight: 600; }
+.recommend-tag-clear { margin-left: 18rpx; color: #ff385c; font-weight: 600; }
 .recommend-session-note { margin-top: 22rpx; color: #a39d9a; font-size: 22rpx; line-height: 1.5; }
 .recommend-cta, .recommend-primary-cta, .recommend-secondary-cta, .recommend-reset-cta { display: flex; min-height: 88rpx; align-items: center; justify-content: center; margin: 26rpx 0 0; padding: 0 28rpx; border-radius: var(--radius-rect); font-size: 29rpx; font-weight: 600; line-height: 1.3; }
 .recommend-cta, .recommend-primary-cta { border: 0; background: #222222; color: #ffffff; }

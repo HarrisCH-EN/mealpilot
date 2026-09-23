@@ -4,7 +4,9 @@ const { HttpError, requireFields, requirePositiveInteger, requireDateOnly, requi
 const { aggregateFamilyPreferences, buildRecommendation } = require('../services/recommendation-service')
 const { addMenuItem } = require('../services/menu-item-service')
 const { RecommendationDomainError } = require('../services/recommendation/constants')
-const { generateMenuCandidatesFromDatabase } = require('../services/recommendation/menu-recommendation-engine')
+const { generateMenuCandidatesFromDatabase, getAvailableTagIds } = require('../services/recommendation/menu-recommendation-engine')
+const { loadActiveFamilyRestrictionIds, loadRecipeDomainData } = require('../services/recommendation/recipe-candidate-loader')
+const { loadLowRatedRecipeIds } = require('../services/recommendation/recent-history')
 const { loadPersistedCandidate, persistCanonicalRecommendationRun, persistRecommendationRun, applyRecommendationRequest } = require('../services/recommendation-run-service')
 const { validatePreferenceTagIds } = require('../services/tag-service')
 const asyncRoute = (handler) => (request, response, next) => Promise.resolve(handler(request, response, next)).catch(next)
@@ -21,7 +23,7 @@ function isCanonicalRecommendationRequest(body) {
 
 function mapRecommendationError(error) {
   if (!(error instanceof RecommendationDomainError)) return error
-  if (error.code === 'INSUFFICIENT_CATEGORY_CAPACITY' || error.code === 'NO_COMPLETE_MENU') return new HttpError(422, error.message)
+  if (error.code === 'INSUFFICIENT_CATEGORY_CAPACITY' || error.code === 'NO_COMPLETE_MENU' || error.code === 'NO_TAG_MATCHING_MENU') return new HttpError(422, error.message)
   return new HttpError(400, error.message)
 }
 
@@ -160,6 +162,43 @@ function router({ database, auth, family, mediaUrlService }) {
       const runId = await persistRecommendationRun({ connection, familyId: request.membership.family_id, memberId: request.membership.member_id, menuDate, mealType, peopleCount: Number(peopleCount), maxCookMinutes: Number(maxCookMinutes), mode, recommendation })
       await connection.commit()
       response.json({ ok: true, data: await resolveRecommendationCovers({ ...recommendation, runId }, mediaUrlService) })
+    } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
+  }))
+  result.post('/recommendations/tag-availability', auth, family, asyncRoute(async (request, response) => {
+    const body = request.body || {}
+    requireFields(body, ['maxPrepMinutes', 'structure'])
+    requireDateOnly(body.menuDate === undefined ? new Date().toISOString().slice(0, 10) : body.menuDate, '菜单日期')
+    requireEnum(body.mealType === undefined ? 'dinner' : body.mealType, ['breakfast', 'lunch', 'dinner'], '餐次')
+    requireIntegerRange(body.peopleCount === undefined ? 2 : body.peopleCount, 1, 12, '用餐人数')
+    requireIntegerRange(body.maxPrepMinutes, 10, 480, '最大准备时间')
+    const connection = await database.getConnection()
+    try {
+      await connection.beginTransaction()
+      const preferences = await validatePreferenceTagIds(connection, request.membership.family_id, body.preferences === undefined ? {} : body.preferences)
+      const [tagRows] = await connection.execute(`
+        SELECT id, name, code, kind
+        FROM tag_definitions
+        WHERE status = 'active' AND (family_id IS NULL OR family_id = ?)
+        ORDER BY kind, id
+      `, [request.membership.family_id])
+      const [recipes, restrictedIngredientIds, lowRatedRecipeIds] = await Promise.all([
+        loadRecipeDomainData(connection, { familyId: request.membership.family_id }),
+        loadActiveFamilyRestrictionIds(connection, { familyId: request.membership.family_id }),
+        loadLowRatedRecipeIds(connection, { familyId: request.membership.family_id, memberId: request.membership.member_id })
+      ])
+      const availableIds = new Set(getAvailableTagIds({
+        familyId: request.membership.family_id,
+        structure: body.structure,
+        preferences,
+        recipes,
+        restrictedIngredientIds,
+        lowRatedRecipeIds
+      }, tagRows.map((row) => Number(row.id))))
+      await connection.rollback()
+      response.json({ ok: true, data: {
+        selectedTagIds: preferences.selectedTagIds,
+        tags: tagRows.map((row) => ({ id: Number(row.id), name: row.name, code: row.code || null, kind: row.kind, available: availableIds.has(Number(row.id)) }))
+      } })
     } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
   }))
   result.get('/recommendations/:id/candidates/:rank', auth, family, asyncRoute(async (request, response) => {

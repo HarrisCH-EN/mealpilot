@@ -137,9 +137,12 @@
           <view wx:if="{{tagLoading || !tagReady}}" class="recommend-tag-state">正在加载标签…</view>
           <view wx:elif="{{tagError}}" class="recommend-tag-state recommend-tag-state--error">{{tagError}}<text class="recommend-tag-retry" bindtap="retryTags">重试</text></view>
           <view wx:elif="{{tagOptions.length}}" class="recommend-tag-row">
-            <view wx:for="{{tagOptions}}" wx:key="id" class="recommend-chip {{item.selected ? 'recommend-chip--selected' : ''}}" data-tag-id="{{item.id}}" bindtap="togglePreferenceTag">{{item.name}}</view>
+            <view wx:for="{{tagOptions}}" wx:key="id" class="recommend-chip {{item.selected ? 'recommend-chip--selected' : ''}} {{item.available ? '' : 'recommend-chip--disabled'}}" data-tag-id="{{item.id}}" bindtap="togglePreferenceTag">{{item.name}}</view>
           </view>
-          <view wx:else class="recommend-tag-state">暂无可选标签，也可以直接生成推荐。</view>
+          <view wx:if="{{selectedTagMatchText}}" class="recommend-tag-state">{{selectedTagMatchText}}<text class="recommend-tag-clear" bindtap="clearPreferenceTags">清空</text></view>
+          <view wx:if="{{tagAvailabilityLoading}}" class="recommend-tag-state">正在检查可用菜品…</view>
+          <view wx:if="{{tagAvailabilityError}}" class="recommend-tag-state recommend-tag-state--error">{{tagAvailabilityError}}</view>
+          <view wx:if="{{tagReady && !tagError && !tagOptions.length}}" class="recommend-tag-state">暂无可选标签，也可以直接生成推荐。</view>
         </view>
 
         <button class="recommend-cta" disabled="{{loading || structureMessage}}" loading="{{loading}}" bindtap="generate">{{loading ? '正在搭配…' : '帮我搭一桌'}}</button>

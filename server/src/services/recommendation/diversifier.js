@@ -35,7 +35,7 @@ function selectQualityWindow(candidates, { scoreDelta = 2, topK = 20 } = {}) {
   return [...tierOneWindow, ...tierTwoWindow]
 }
 
-function selectDiverseCandidates(candidates, { maxCandidates = 3, maxOverlap = 1, presorted = false } = {}) {
+function selectDiverseCandidates(candidates, { maxCandidates = 3, maxOverlap = 0, presorted = false } = {}) {
   const orderedCandidates = presorted ? [...candidates] : rankCandidates(candidates)
   const tierOne = orderedCandidates.filter((candidate) => candidate.withinTimeLimit)
   const tierTwo = orderedCandidates.filter((candidate) => !candidate.withinTimeLimit)
@@ -54,8 +54,8 @@ function selectDiverseCandidates(candidates, { maxCandidates = 3, maxOverlap = 1
     }
   }
 
-  fill(tierOne, [maxOverlap, 2, Infinity])
-  fill(tierTwo, [maxOverlap, 2, Infinity])
+  fill(tierOne, [maxOverlap, Math.max(1, maxOverlap), Infinity])
+  fill(tierTwo, [maxOverlap, Math.max(1, maxOverlap), Infinity])
   return {
     candidates: selected,
     relaxationLevel,
