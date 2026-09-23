@@ -39,7 +39,6 @@
         <view class="family-section__heading">
           <view>
             <view class="family-section__title">家庭邀请码</view>
-            <view class="family-section__subtitle">用于邀请家人加入这个家庭</view>
           </view>
           <image class="family-section__icon" src="/assets/icons/settings/invite.png" mode="aspectFit" />
         </view>
@@ -56,7 +55,6 @@
         <view class="family-section__heading">
           <view>
             <view class="family-section__title">家庭成员</view>
-            <view class="family-section__subtitle">查看成员与家庭权限</view>
           </view>
           <image class="family-section__icon" src="/assets/icons/settings/member.png" mode="aspectFit" />
         </view>

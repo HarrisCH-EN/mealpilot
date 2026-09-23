@@ -71,7 +71,6 @@
         </view>
       </view>
       <view class="form-card tag-card">
-        <view class="tag-helper">选择这道菜最有代表性的特点，最多选择 3 个。</view>
         <view wx:if="{{tagLoading}}" class="tag-state">正在加载标签…</view>
         <view wx:elif="{{tagError}}" class="tag-state tag-state--error">{{tagError}}<text class="tag-retry" bindtap="retryTags">重试</text></view>
         <view wx:else class="tag-options">

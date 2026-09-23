@@ -173,7 +173,7 @@ Page({
       title: '退出登录',
       content: '退出后需要重新登录才能查看家庭数据。',
       confirmText: '退出登录',
-      confirmColor: '#FF4F7B',
+      confirmColor: '#FF385C',
       success: (result) => {
         if (!result.confirm) return
         this.setData({ loggingOut: true })
@@ -191,7 +191,7 @@ Page({
         ? '如果你是家庭唯一成员，注销时会自动解散家庭；如果还有其他成员，请先转移管理员身份。'
         : '注销后将退出当前家庭，个人资料会被删除，家庭共享内容仍会保留。',
       confirmText: '继续',
-      confirmColor: '#ff4f7b',
+      confirmColor: '#FF385C',
       success: (first) => {
         if (!first.confirm) return
         wx.showModal({
@@ -201,7 +201,7 @@ Page({
             : '账号资料将永久删除且无法恢复，确定注销吗？',
           cancelText: '返回',
           confirmText: '确认注销',
-          confirmColor: '#ff4f7b',
+          confirmColor: '#FF385C',
           success: async (second) => {
             if (!second.confirm || this.data.deletingAccount) return
             this.setData({ deletingAccount: true })

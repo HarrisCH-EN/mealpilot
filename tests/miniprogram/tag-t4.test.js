@@ -32,7 +32,7 @@ test('T4 recipe list uses list response tags inline and limits badges to three',
   assert.match(template, /recipe-card__title-row/)
   assert.match(template, /wx:for="\{\{item\.displayTags\}\}"/)
   assert.match(styles, /linear-gradient\(135deg,\s*#FBE7A2,\s*#F3C75F\)/i)
-  assert.match(styles, /\.recipe-card__badge\s*\{[^}]*border-radius:\s*8rpx;[^}]*padding:\s*3rpx 10rpx;/s)
+  assert.match(styles, /\.recipe-card__badge\s*\{[^}]*border-radius:\s*var\(--radius-full\);[^}]*padding:\s*3rpx 10rpx;/s)
   assert.deepEqual(tags.displayTags([{ id: 1, name: '一' }, { id: 2, name: '二' }, { id: 3, name: '三' }, { id: 4, name: '四' }], 3).map((tag) => tag.id), [1, 2, 3])
   assert.deepEqual(tags.displayTags([], 3), [])
   assert.doesNotMatch(template, /无标签|更多标签|\+\d/)
@@ -80,7 +80,7 @@ test('T4 recipe form limits tags to three representative choices', () => {
   assert.match(script, /createCustomTag\(\)[\s\S]*selectedTagIds\.length\s*>=\s*3/)
   assert.match(script, /最多选择3个最有代表性的标签/)
   assert.match(template, /\{\{selectedTagIds\.length\}\}\/3/)
-  assert.match(template, /最多选择 3 个/)
+  assert.match(template, /\{\{selectedTagIds\.length\}\}\/3/)
 })
 
 test('T4 tag management is a shared registered page for Settings and Recipe Form', () => {

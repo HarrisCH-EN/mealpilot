@@ -1,6 +1,6 @@
 .menu-page { overflow: visible; padding-top: 44rpx; }
 .menu-header { margin: 0 8rpx 28rpx; }
-.menu-header__title { font-size: 52rpx; font-weight: 600; letter-spacing: -1.5rpx; line-height: 1.15; }
+.menu-header__title { font-size: var(--font-page-title); font-weight: 600; letter-spacing: -1.5rpx; line-height: 1.15; }
 .menu-header .page-subtitle { margin-top: 12rpx; font-size: 25rpx; }
 .menu-add { display: flex; width: 72rpx; max-width: 72rpx; height: 72rpx; min-width: 72rpx; min-height: 72rpx; flex: 0 0 72rpx; align-items: center; justify-content: center; margin: 0; padding: 0; border: 1rpx solid #d6d4d0; border-radius: 50%; background: #fff; }
 .menu-add image { display: block; width: 32rpx; height: 32rpx; }

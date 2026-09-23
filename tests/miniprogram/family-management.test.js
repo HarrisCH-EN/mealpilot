@@ -225,7 +225,7 @@ test('settings recovery sheet keeps compact centered footer actions', () => {
 
   assert.match(styles, /\.settings-recovery__list\s*\{[^}]*display:\s*block[^}]*width:\s*calc\(100% \+ 72rpx\)[^}]*box-sizing:\s*border-box[^}]*margin-left:\s*-36rpx/s)
   assert.match(styles, /\.settings-recovery__item-shell\s*\{[^}]*display:\s*block[^}]*width:\s*100%/s)
-  assert.match(styles, /\.settings-recovery__item\s*\{[^}]*width:\s*100%[^}]*max-width:\s*none[^}]*box-sizing:\s*border-box[^}]*border-radius:\s*0/s)
+  assert.match(styles, /\.settings-recovery__item\s*\{[^}]*width:\s*100%[^}]*max-width:\s*none[^}]*box-sizing:\s*border-box[^}]*border-radius:\s*(?:var\(--radius-rect\)|28rpx)/s)
   assert.match(styles, /\.settings-recovery__actions\s*\{[^}]*display:\s*flex[^}]*width:\s*100%/s)
   assert.match(styles, /\.settings-recovery__actions\s*\{[^}]*justify-content:\s*center/s)
   assert.match(styles, /\.settings-recovery__new,\s*\.settings-recovery__cancel\s*\{[^}]*width:\s*220rpx[^}]*flex:\s*0 0 220rpx[^}]*align-items:\s*center[^}]*justify-content:\s*center/s)

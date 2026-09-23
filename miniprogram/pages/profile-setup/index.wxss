@@ -1,7 +1,7 @@
 page {
   height: 100%;
   overflow: hidden;
-  background: #fffafb;
+  background: var(--color-primary-soft);
 }
 
 .profile-setup-page {
@@ -41,9 +41,9 @@ page {
 .profile-setup-brand__logo {
   width: 112rpx;
   height: 112rpx;
-  border-radius: 28rpx;
+  border-radius: var(--radius-rect);
   background: #fff0f4;
-  box-shadow: 0 12rpx 32rpx rgba(255, 79, 123, .12);
+  box-shadow: 0 12rpx 32rpx rgba(255, 56, 92, .12);
 }
 
 .profile-setup-brand__title {
@@ -65,7 +65,7 @@ page {
   margin-top: 44rpx;
   padding: 32rpx 24rpx 28rpx;
   border: 1rpx solid #f0e8ea;
-  border-radius: 28rpx;
+  border-radius: var(--radius-rect);
   background: #fff;
   box-shadow: 0 16rpx 44rpx rgba(75, 32, 46, .06);
 }
@@ -96,7 +96,7 @@ page {
   border-radius: 50% !important;
   overflow: hidden;
   background: transparent;
-  color: #ff4f7b;
+  color: var(--color-primary);
   font-size: 24rpx;
   line-height: 1;
 }
@@ -140,7 +140,7 @@ page {
   box-sizing: border-box;
   padding: 0 24rpx;
   border: 1rpx solid #ebebeb;
-  border-radius: 16rpx;
+  border-radius: var(--radius-rect);
   color: #222;
   font-size: 28rpx;
 }
@@ -164,7 +164,7 @@ page {
   margin: 28rpx auto 0;
   padding: 0;
   border-radius: 999rpx;
-  background: #ff4f7b;
+  background: var(--color-primary);
   color: #fff;
   font-size: 28rpx;
   line-height: 1;

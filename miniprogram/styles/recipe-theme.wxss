@@ -1,8 +1,8 @@
 .recipe-cloud-page,
 .recipe-module-layer {
-  --recipe-primary: #ff385c;
-  --recipe-primary-active: #e91e4d;
-  --recipe-primary-soft: #fff0f3;
+  --recipe-primary: var(--color-primary);
+  --recipe-primary-active: var(--color-primary-active);
+  --recipe-primary-soft: var(--color-primary-soft);
   --recipe-primary-muted: #f3b8c3;
   --recipe-text-primary: #151515;
   --recipe-text-secondary: #777777;
@@ -12,10 +12,10 @@
   --recipe-border: #f0f0f0;
   --recipe-shadow-card: 0 6rpx 20rpx rgba(0, 0, 0, .045);
   --recipe-shadow-float: 0 8rpx 22rpx rgba(0, 0, 0, .06);
-  --recipe-radius-shell: 38rpx;
-  --recipe-radius-card: 28rpx;
-  --recipe-radius-image: 22rpx;
-  --recipe-radius-control: 18rpx;
+  --recipe-radius-shell: var(--radius-rect);
+  --recipe-radius-card: var(--radius-rect);
+  --recipe-radius-image: var(--radius-rect);
+  --recipe-radius-control: var(--radius-rect);
 }
 
 .recipe-cloud-page {

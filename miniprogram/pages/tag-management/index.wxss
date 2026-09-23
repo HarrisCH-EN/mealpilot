@@ -1,8 +1,8 @@
 page {
-  --tag-page-text: #171717;
-  --tag-page-muted: #979797;
+  --tag-page-text: var(--color-ink);
+  --tag-page-muted: var(--color-muted);
   --tag-page-soft: #fff1f4;
-  --tag-page-accent: #f14d70;
+  --tag-page-accent: var(--color-primary);
   --tag-page-divider: #eeeeee;
 }
 
@@ -13,16 +13,16 @@ page {
 .tag-management-nav__button { display: flex; width: 72rpx; height: 72rpx; align-items: center; justify-content: center; margin: 0; padding: 0; border: 0; background: transparent; }
 .tag-management-nav__button::after { border: 0; }
 .tag-management-nav__icon { display: block; width: 36rpx; height: 36rpx; }
-.tag-management-nav__title { flex: 1; overflow: hidden; color: #111111; font-size: 36rpx; font-weight: 700; line-height: 1.3; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.tag-management-nav__title { flex: 1; overflow: hidden; color: #111111; font-size: var(--font-nav-title); font-weight: 700; line-height: 1.3; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .tag-management-subtitle { margin: 24rpx 28rpx 68rpx; color: var(--tag-page-muted); font-size: 27rpx; line-height: 1.55; }
 .tag-management-content { animation: tag-management-enter 220ms ease-out both; }
 .tag-management-section-head { display: flex; min-height: 68rpx; align-items: center; justify-content: space-between; gap: 16rpx; }
 .tag-management-section-head--system { margin-top: 70rpx; }
-.tag-management-section-title { color: #111111; font-size: 38rpx; font-weight: 700; line-height: 1.35; }
+.tag-management-section-title { color: #111111; font-size: var(--font-section-title); font-weight: 700; line-height: 1.35; }
 .tag-management-count { display: inline-flex; min-width: 52rpx; height: 52rpx; align-items: center; justify-content: center; margin-left: 10rpx; padding: 0 10rpx; box-sizing: border-box; border-radius: 999rpx; background: var(--tag-page-soft); color: var(--tag-page-accent); font-size: 29rpx; font-weight: 700; vertical-align: 4rpx; }
 .tag-management-create { flex: 0 0 auto; margin: 0; padding: 15rpx 24rpx; border: 0; border-radius: 999rpx; background: var(--tag-page-soft); color: var(--tag-page-accent); font-size: 27rpx; font-weight: 600; line-height: 1.35; }
 .tag-management-create::after, .tag-management-empty__button::after, .tag-management-retry::after { border: 0; }
-.tag-management-card { border: 1rpx solid #ededed; border-radius: 30rpx; background: #ffffff; }
+.tag-management-card { border: 1rpx solid #ededed; border-radius: var(--radius-rect); background: #ffffff; }
 .tag-management-card--custom { margin-top: 20rpx; padding: 12rpx 30rpx; }
 .tag-management-row { display: flex; min-height: 112rpx; align-items: center; justify-content: space-between; gap: 20rpx; border-bottom: 1rpx solid var(--tag-page-divider); }
 .tag-management-row:last-child { border-bottom: 0; }
@@ -39,13 +39,13 @@ page {
 .tag-management-card--system { margin-top: 20rpx; padding: 30rpx; }
 .tag-management-system-list { display: flex; flex-wrap: wrap; gap: 20rpx; }
 .tag-management-system-chip { min-width: 108rpx; padding: 16rpx 20rpx; box-sizing: border-box; border-radius: 999rpx; background: #fff4f6; color: var(--tag-page-accent); font-size: 27rpx; line-height: 1.25; text-align: center; }
-.tag-management-about { display: flex; gap: 22rpx; margin-top: 64rpx; padding: 30rpx; border-radius: 28rpx; background: #fafbfc; }
+.tag-management-about { display: flex; gap: 22rpx; margin-top: 64rpx; padding: 30rpx; border-radius: var(--radius-rect); background: #fafbfc; }
 .tag-management-about__icon { display: flex; width: 44rpx; height: 44rpx; flex: 0 0 44rpx; align-items: center; justify-content: center; border: 3rpx solid #8f949a; border-radius: 50%; color: #8f949a; font-size: 28rpx; font-weight: 600; }
 .tag-management-about__copy { min-width: 0; }
 .tag-management-about__title { color: #333333; font-size: 29rpx; font-weight: 600; }
 .tag-management-about__text { margin-top: 14rpx; color: var(--tag-page-muted); font-size: 24rpx; line-height: 1.6; }
 .tag-management-loading { padding-top: 12rpx; }
-.tag-management-skeleton { border-radius: 28rpx; background: #f6f6f6; }
+.tag-management-skeleton { border-radius: var(--radius-rect); background: #f6f6f6; }
 .tag-management-skeleton--intro { width: 82%; height: 54rpx; margin: 44rpx 0 72rpx 28rpx; }
 .tag-management-skeleton--card { height: 300rpx; margin-top: 22rpx; }
 .tag-management-error { padding: 180rpx 36rpx; text-align: center; }
@@ -58,7 +58,7 @@ page {
 @media (max-width: 350px) {
   .tag-management-page { padding-right: 28rpx; padding-left: 28rpx; }
   .tag-management-subtitle { margin-right: 18rpx; margin-left: 18rpx; font-size: 25rpx; }
-  .tag-management-section-title { font-size: 35rpx; }
+  .tag-management-section-title { font-size: var(--font-section-title); }
   .tag-management-create { padding-right: 18rpx; padding-left: 18rpx; font-size: 24rpx; }
   .tag-management-readonly { font-size: 20rpx; }
 }

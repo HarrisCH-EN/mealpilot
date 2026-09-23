@@ -1,11 +1,11 @@
 page {
   --account-bg: #ffffff;
   --account-card: #fafafa;
-  --account-text-primary: #171717;
-  --account-text-secondary: #8f8f8f;
-  --account-text-tertiary: #b0b0b0;
-  --account-accent: #ff4f7b;
-  --account-accent-soft: #fff0f4;
+  --account-text-primary: var(--color-ink);
+  --account-text-secondary: var(--color-muted);
+  --account-text-tertiary: var(--color-muted-soft);
+  --account-accent: var(--color-primary);
+  --account-accent-soft: var(--color-primary-soft);
   --account-divider: rgba(23, 23, 23, .055);
 }
 
@@ -48,7 +48,7 @@ page {
 
 .account-header__title {
   color: var(--account-text-primary);
-  font-size: 32rpx;
+  font-size: var(--font-nav-title);
   font-weight: 600;
 }
 
@@ -63,7 +63,7 @@ page {
   gap: 24rpx;
   padding: 28rpx;
   border: 1rpx solid rgba(23, 23, 23, .035);
-  border-radius: 28rpx;
+  border-radius: var(--radius-rect);
   background: var(--account-card);
 }
 
@@ -145,14 +145,14 @@ page {
 .account-section__title {
   margin: 0 4rpx 16rpx;
   color: var(--account-text-primary);
-  font-size: 32rpx;
+  font-size: var(--font-section-title);
   font-weight: 700;
 }
 
 .account-group {
   overflow: hidden;
   border: 1rpx solid rgba(23, 23, 23, .025);
-  border-radius: 24rpx;
+  border-radius: var(--radius-rect);
   background: var(--account-card);
 }
 
@@ -245,7 +245,7 @@ page {
   width: 100%;
   max-width: 620rpx;
   padding: 42rpx 36rpx 32rpx;
-  border-radius: 32rpx;
+  border-radius: var(--radius-rect);
   background: #fff;
   box-shadow: 0 20rpx 60rpx rgba(17, 17, 17, .14);
   text-align: center;
@@ -253,7 +253,7 @@ page {
 
 .account-dialog__title {
   color: var(--account-text-primary);
-  font-size: 32rpx;
+  font-size: var(--font-nav-title);
   font-weight: 700;
 }
 
@@ -298,6 +298,6 @@ page {
   .account-page { padding-right: 24rpx; padding-left: 24rpx; }
   .account-profile { gap: 18rpx; padding-right: 22rpx; padding-left: 22rpx; }
   .account-profile__avatar { width: 92rpx; height: 92rpx; flex-basis: 92rpx; }
-  .account-profile__name { font-size: 32rpx; }
+  .account-profile__name { font-size: var(--font-nav-title); }
   .account-row { padding-right: 18rpx; padding-left: 18rpx; }
 }

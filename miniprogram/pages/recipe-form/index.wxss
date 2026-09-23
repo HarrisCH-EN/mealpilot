@@ -105,7 +105,7 @@
   max-width: calc(100% - 420rpx);
   overflow: hidden;
   color: var(--form-primary);
-  font-size: 32rpx;
+  font-size: var(--font-nav-title);
   font-weight: 600;
   line-height: 1.2;
   text-align: center;
@@ -144,7 +144,7 @@
   width: 100%;
   overflow: hidden;
   aspect-ratio: 4 / 3;
-  border-radius: 36rpx;
+  border-radius: var(--radius-rect);
   background: #f7f7f7;
 }
 
@@ -219,7 +219,7 @@
   box-sizing: border-box;
   margin-top: 30rpx;
   padding: 30rpx;
-  border-radius: 30rpx;
+  border-radius: var(--radius-rect);
   background: var(--form-card);
 }
 
@@ -288,7 +288,7 @@
 
 .form-field__input--title {
   min-height: 64rpx;
-  font-size: 32rpx;
+  font-size: var(--font-nav-title);
   font-weight: 600;
 }
 
@@ -323,7 +323,7 @@
   box-sizing: border-box;
   padding: 18rpx 20rpx;
   border: 1rpx solid var(--form-divider);
-  border-radius: 20rpx;
+  border-radius: var(--radius-rect);
   background: var(--form-sub-card);
 }
 
@@ -400,7 +400,7 @@
 
 .section-title {
   color: var(--form-primary);
-  font-size: 36rpx;
+  font-size: var(--font-section-title);
   font-weight: 700;
   line-height: 1.25;
 }
@@ -462,7 +462,7 @@
 .ingredient-list {
   overflow: hidden;
   margin-top: 16rpx;
-  border-radius: 28rpx;
+  border-radius: var(--radius-rect);
   background: #fafafa;
 }
 
@@ -610,7 +610,7 @@
 
 .step-card {
   margin-top: 16rpx;
-  border-radius: 26rpx;
+  border-radius: var(--radius-rect);
   background: #fafafa;
 }
 
@@ -653,7 +653,7 @@
 
 .form-skeleton {
   width: 100%;
-  border-radius: 30rpx;
+  border-radius: var(--radius-rect);
 }
 
 .form-skeleton--hero {
@@ -694,7 +694,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 0 24rpx;
-  border-radius: 18rpx;
+  border-radius: var(--radius-rect);
   color: var(--form-body);
   font-size: 27rpx;
 }
@@ -746,7 +746,7 @@
   margin: 0;
   padding: 0 18rpx;
   border-radius: 999rpx;
-  font-size: 30rpx;
+  font-size: var(--font-section-title);
   font-weight: 600;
   line-height: 1;
   text-align: center;
@@ -767,7 +767,7 @@
 
 @media (max-width: 340px) {
   .form-page { --page-padding: 24rpx; }
-  .form-nav__title { max-width: calc(100% - 300rpx); font-size: 30rpx; }
+  .form-nav__title { max-width: calc(100% - 300rpx); font-size: var(--font-nav-title); }
   .form-card { padding: 24rpx; }
   .ingredient-card,
   .steps-card { padding: 0; }

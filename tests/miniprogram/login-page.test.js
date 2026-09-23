@@ -22,7 +22,7 @@ test('login page is registered and presents the app identity plus every configur
   assert.match(script, /authService\.loginWithWechat/)
   assert.match(script, /authService\.devLogin/)
   assert.match(script, /routeGuard\.routeSession/)
-  assert.match(styles, /\.login-brand__logo\s*\{[^}]*border-radius:\s*32rpx;/s)
+  assert.match(styles, /\.login-brand__logo\s*\{[^}]*border-radius:\s*(?:var\(--radius-rect\)|28rpx);/s)
 })
 
 test('business settings uses the shared gate instead of rendering a login state', () => {
