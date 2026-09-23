@@ -49,5 +49,5 @@ test('member pages prefer the global username and family rename updates global m
   assert.doesNotMatch(settings.template, /\{\{item\.nickname \|\| item\.displayName\}\}/)
   assert.doesNotMatch(family.template, /\{\{item\.nickname \|\| item\.displayName\}\}/)
   assert.match(restrictions.script, /name:\s*member\.displayName \|\| member\.nickname/)
-  assert.match(family.script, /store\.setSession\(\{\s*membership:/)
+  assert.match(family.script, /store\.setSession\(\{\s*membership\s*\}\)/)
 })

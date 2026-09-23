@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const express = require('express')
 const { router: tagRouter } = require('../src/routes/tags')
 
-const ownerMembership = { family_id: 1, member_id: 101, role: 'owner' }
+const ownerMembership = { family_id: 1, member_id: 101, role: 'admin' }
 const memberMembership = { family_id: 1, member_id: 102, role: 'member' }
 
 const SYSTEM_TAGS = [

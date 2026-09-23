@@ -12,11 +12,13 @@ const MIGRATION_FILES = [
   '08_tag_system_v1.sql',
   '09_family-admin-role.sql',
   '10_family-invite-code.sql',
-  '11_account_family_lifecycle.sql'
+  '11_account_family_lifecycle.sql',
+  '12_single_admin_role.sql'
 ]
 
 function normalizeMigrationSql(sql) {
   return String(sql || '')
+    .replace(/\r\n?/g, '\n')
     .replace(/^\s*USE\s+`?mealpilot`?\s*;\s*/gim, '')
     .trim()
 }

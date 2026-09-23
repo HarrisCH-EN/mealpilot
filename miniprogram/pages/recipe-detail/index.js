@@ -140,7 +140,7 @@ Page({
   canEditRecipe(recipe) {
     const membership = store.getState().membership
     if (!membership) return false
-    return membership.role === 'owner' || Number(membership.member_id || membership.memberId) === Number(recipe.createdByMemberId)
+    return membership.role === 'admin' || Number(membership.member_id || membership.memberId) === Number(recipe.createdByMemberId)
   },
 
   async loadTodayMenuStatus() {

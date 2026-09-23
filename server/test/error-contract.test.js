@@ -6,7 +6,7 @@ const { createApp } = require('../src/app')
 const { router: menuRouter } = require('../src/routes/menus')
 const { router: recipeRouter } = require('../src/routes/recipes')
 
-const membership = { family_id: 1, member_id: 101, role: 'owner' }
+const membership = { family_id: 1, member_id: 101, role: 'admin' }
 
 function makeRouteApp(route, database) {
   const app = express()

@@ -1,4 +1,4 @@
-const ROLE_COLUMN_SQL = "ALTER TABLE family_members MODIFY COLUMN role ENUM('owner', 'admin', 'member') NOT NULL DEFAULT 'member'"
+const ROLE_COLUMN_SQL = "ALTER TABLE family_members MODIFY COLUMN role ENUM('admin', 'member') NOT NULL DEFAULT 'member'"
 const INVITE_CODE_COLUMN_SQL = 'ALTER TABLE families MODIFY COLUMN invite_code CHAR(6) CHARACTER SET ascii COLLATE ascii_bin NOT NULL'
 
 async function readColumn(database, tableName, columnName) {
@@ -14,7 +14,10 @@ async function ensureFamilyManagementSchema(database) {
   const roleColumn = await readColumn(database, 'family_members', 'role')
   if (!roleColumn) throw new Error('family_members.role 列不存在，请先初始化数据库')
   const changes = []
-  if (!String(roleColumn.COLUMN_TYPE || '').toLowerCase().includes("'admin'")) {
+  if (String(roleColumn.COLUMN_TYPE || '').toLowerCase() !== "enum('admin','member')") {
+    if (String(roleColumn.COLUMN_TYPE || '').toLowerCase().includes("'owner'")) {
+      await database.execute("UPDATE family_members SET role = 'admin' WHERE role = 'owner'")
+    }
     await database.execute(ROLE_COLUMN_SQL)
     changes.push('family_members.role')
   }

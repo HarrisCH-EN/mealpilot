@@ -9,7 +9,7 @@ function getDisplayName(user) {
 
 function getRoleLabel(membership) {
   if (!membership) return '未加入家庭'
-  return membership.role === 'owner' || membership.role === 'admin' ? '管理员' : '成员'
+  return membership.role === 'admin' ? '管理员' : '成员'
 }
 
 function getAvatarUrl(user) {
@@ -185,20 +185,20 @@ Page({
   deleteAccount() {
     if (this.data.deletingAccount || this.data.loggingOut) return
     const role = this.data.membership && this.data.membership.role
-    if (role === 'owner' || role === 'admin') {
-      this.showAdminDeletionBlocked(role)
-      return
-    }
     wx.showModal({
       title: '注销账号',
-      content: '注销后将退出当前家庭，个人资料会被删除，家庭共享内容仍会保留。',
+      content: role === 'admin'
+        ? '如果你是家庭唯一成员，注销时会自动解散家庭；如果还有其他成员，请先转移管理员身份。'
+        : '注销后将退出当前家庭，个人资料会被删除，家庭共享内容仍会保留。',
       confirmText: '继续',
       confirmColor: '#ff4f7b',
       success: (first) => {
         if (!first.confirm) return
         wx.showModal({
           title: '最终确认',
-          content: '账号资料将永久删除且无法恢复，确定注销吗？',
+          content: role === 'admin'
+            ? '账号资料将永久删除且无法恢复；若你是唯一成员，家庭也会进入解散流程。确定注销吗？'
+            : '账号资料将永久删除且无法恢复，确定注销吗？',
           cancelText: '返回',
           confirmText: '确认注销',
           confirmColor: '#ff4f7b',
@@ -211,7 +211,7 @@ Page({
               wx.reLaunch({ url: '/pages/login/index' })
             } catch (error) {
               if (error && error.code === 'ACCOUNT_ADMIN_BLOCKED') {
-                this.showAdminDeletionBlocked(role)
+                this.showAdminDeletionBlocked()
               } else {
                 wx.showToast({ title: error.message || '账号注销失败', icon: 'none' })
               }
@@ -224,10 +224,8 @@ Page({
     })
   },
 
-  showAdminDeletionBlocked(role) {
-    const content = role === 'owner'
-      ? '请先移交创建者身份或解散家庭，再注销账号。'
-      : '请先退出家庭、取消管理员身份或解散家庭，再注销账号。'
+  showAdminDeletionBlocked() {
+    const content = '当前家庭还有其他成员，请先转移管理员身份，再注销账号。'
     this.setData({
       accountDeletionBlockedVisible: true,
       accountDeletionBlockedMessage: content

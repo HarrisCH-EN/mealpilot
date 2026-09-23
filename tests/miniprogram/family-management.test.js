@@ -35,12 +35,12 @@ test('family management is a registered real page with family and member actions
   assert.match(script, /families\/current\/name/)
   assert.match(script, /renameFamily\(/)
   assert.match(script, /request\('\/families\/leave', 'POST'/)
-  assert.match(script, /\/families\/current\/members\/\$\{memberId\}\/role/)
+  assert.match(script, /\/families\/current\/transfer-admin/)
   assert.match(script, /\/families\/current\/members\/\$\{memberId\}/)
-  assert.match(script, /families\/current\/transfer-ownership/)
+  assert.doesNotMatch(script, /transfer-ownership/)
   assert.match(script, /request\('\/families\/current\/invite-code\/refresh', 'POST'/)
   assert.match(script, /refreshInviteCode\(/)
-  assert.match(script, /loading: true, error: '', membership: null, family: null, members: \[\]/)
+  assert.match(script, /loading: true[\s\S]*membership: null[\s\S]*members: \[\]/)
   assert.match(script, /管理员/)
   assert.match(script, /成员/)
   assert.match(styles, /\.family-invite__refresh\s*\{[^}]*border:[^}]*background:\s*transparent/s)
@@ -148,6 +148,88 @@ test('family management redirects family-less users to settings instead of rende
 
   assert.match(
     script,
-    /if \(!membership\) \{[\s\S]*wx\.switchTab\(\{ url: '\/pages\/settings\/index' \}\)[\s\S]*return/
+    /if \(!membership \|\| !membership\.role\) \{[\s\S]*wx\.switchTab\(\{ url: '\/pages\/settings\/index' \}\)[\s\S]*return/
   )
+})
+
+test('family management accepts the flattened current-family response shape', async () => {
+  const script = fs.readFileSync(path.join(pageRoot, 'index.js'), 'utf8')
+  let page
+  const switchedTabs = []
+
+  vm.runInNewContext(script, {
+    Page(definition) { page = definition },
+    require(requestPath) {
+      if (requestPath === '../../utils/api') {
+        return {
+          request: async () => ({
+            member_id: 7,
+            family_id: 10,
+            role: 'admin',
+            family_name: '周末饭桌',
+            invite_code: 'ABC123',
+            members: []
+          }),
+          resolveCoverUrl: value => value || '',
+          requireAuthentication: () => true
+        }
+      }
+      if (requestPath === '../../utils/auth-runtime') {
+        return { store: { setSession() {}, getState: () => ({}) } }
+      }
+      return require(requestPath)
+    },
+    wx: { switchTab(options) { switchedTabs.push(options) } },
+    Number,
+    String
+  })
+
+  const context = {
+    ...page,
+    data: { ...page.data },
+    setData(patch) { Object.assign(this.data, patch) }
+  }
+  await page.loadFamily.call(context)
+
+  assert.equal(context.data.membership.role, 'admin')
+  assert.equal(context.data.isAdmin, true)
+  assert.equal(context.data.inviteCode, 'ABC123')
+  assert.equal(switchedTabs.length, 0)
+})
+
+test('settings recovery sheet presents a cloud restore icon and horizontal footer actions', () => {
+  const template = fs.readFileSync(path.join(root, 'pages', 'settings', 'index.wxml'), 'utf8')
+
+  assert.match(
+    template,
+    /<image class="settings-recovery__action-icon" src="\/assets\/icons\/settings\/cloud download\.png" mode="aspectFit" \/>/
+  )
+  assert.doesNotMatch(template, /class="settings-recovery__action">恢复<\/text>/)
+  assert.match(
+    template,
+    /<view class="settings-recovery__actions">[\s\S]*settings-recovery__new[\s\S]*settings-recovery__cancel[\s\S]*<\/view>/
+  )
+  assert.match(template, /class="settings-recovery__item-shell"/)
+  assert.match(
+    template,
+    /<view class="settings-recovery__item[^\"]*"[^>]*role="button"[^>]*bindtap="restoreFamily"/
+  )
+  assert.match(template, /class="settings-recovery__meta"/)
+  assert.match(template, /class="settings-recovery__days-badge"/)
+  assert.match(template, /class="settings-recovery__restore-orb"/)
+  assert.doesNotMatch(template, /<button class="settings-recovery__item"/)
+})
+
+test('settings recovery sheet keeps compact centered footer actions', () => {
+  const styles = fs.readFileSync(path.join(root, 'pages', 'settings', 'index.wxss'), 'utf8')
+
+  assert.match(styles, /\.settings-recovery__list\s*\{[^}]*display:\s*block[^}]*width:\s*calc\(100% \+ 72rpx\)[^}]*box-sizing:\s*border-box[^}]*margin-left:\s*-36rpx/s)
+  assert.match(styles, /\.settings-recovery__item-shell\s*\{[^}]*display:\s*block[^}]*width:\s*100%/s)
+  assert.match(styles, /\.settings-recovery__item\s*\{[^}]*width:\s*100%[^}]*max-width:\s*none[^}]*box-sizing:\s*border-box[^}]*border-radius:\s*0/s)
+  assert.match(styles, /\.settings-recovery__actions\s*\{[^}]*display:\s*flex[^}]*width:\s*100%/s)
+  assert.match(styles, /\.settings-recovery__actions\s*\{[^}]*justify-content:\s*center/s)
+  assert.match(styles, /\.settings-recovery__new,\s*\.settings-recovery__cancel\s*\{[^}]*width:\s*220rpx[^}]*flex:\s*0 0 220rpx[^}]*align-items:\s*center[^}]*justify-content:\s*center/s)
+  assert.match(styles, /\.settings-recovery__meta\s*\{[^}]*display:\s*flex[^}]*align-items:\s*center/s)
+  assert.match(styles, /\.settings-recovery__days-badge\s*\{[^}]*border-radius:\s*999rpx[^}]*background:\s*var\(--settings-accent-soft\)/s)
+  assert.match(styles, /\.settings-recovery__restore-orb\s*\{[^}]*align-items:\s*center[^}]*justify-content:\s*center[^}]*border-radius:\s*50%/s)
 })

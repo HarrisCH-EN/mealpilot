@@ -3,10 +3,10 @@ USE mealpilot;
 INSERT INTO users (openid, display_name) VALUES ('demo-owner', '演示用户')
 ON DUPLICATE KEY UPDATE id = LAST_INSERT_ID(id);
 SET @user_id = (SELECT id FROM users WHERE openid = 'demo-owner');
-INSERT INTO families (name, invite_code, owner_user_id) VALUES ('示例家庭', 'MEAL26', @user_id)
+INSERT INTO families (name, invite_code, admin_user_id) VALUES ('示例家庭', 'MEAL26', @user_id)
 ON DUPLICATE KEY UPDATE name = VALUES(name);
 SET @family_id = (SELECT id FROM families WHERE invite_code = 'MEAL26');
-INSERT INTO family_members (family_id, user_id, role, nickname) VALUES (@family_id, @user_id, 'owner', '家人')
+INSERT INTO family_members (family_id, user_id, role, nickname) VALUES (@family_id, @user_id, 'admin', '家人')
 ON DUPLICATE KEY UPDATE nickname = '家人';
 SET @member_id = (SELECT id FROM family_members WHERE family_id = @family_id AND user_id = @user_id LIMIT 1);
 

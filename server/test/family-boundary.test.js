@@ -8,7 +8,7 @@ const { persistRecommendationRun, applyRecommendationRun } = require('../src/ser
 
 const familyA = { id: 1, name: '家庭 A' }
 const familyB = { id: 2, name: '家庭 B' }
-const memberA = { id: 101, family_id: familyA.id, role: 'owner', status: 'active' }
+const memberA = { id: 101, family_id: familyA.id, role: 'admin', status: 'active' }
 const recipeA = { id: 11, family_id: familyA.id, title: '菜谱 A' }
 const recipeB = { id: 22, family_id: familyB.id, title: '菜谱 B' }
 const menuA = { id: 31, family_id: familyA.id }

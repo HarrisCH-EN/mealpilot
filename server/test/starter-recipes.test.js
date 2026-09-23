@@ -60,13 +60,13 @@ function makeDatabase({ families = [], memberships = [], missingIngredientIds = 
     }
     if (/INSERT INTO families/i.test(sql)) {
       const [name, inviteCode, ownerUserId] = params
-      const family = { id: state.nextFamilyId++, name, invite_code: inviteCode, owner_user_id: ownerUserId }
+      const family = { id: state.nextFamilyId++, name, invite_code: inviteCode, admin_user_id: ownerUserId }
       state.families.push(family)
       return [{ insertId: family.id }]
     }
     if (/INSERT INTO family_members/i.test(sql)) {
       const [familyId, userId, nickname] = params
-      const member = { id: state.nextMemberId++, family_id: familyId, user_id: userId, role: /'owner'/i.test(sql) ? 'owner' : 'member', nickname, status: 'active' }
+      const member = { id: state.nextMemberId++, family_id: familyId, user_id: userId, role: /'admin'/i.test(sql) ? 'admin' : 'member', nickname, status: 'active' }
       state.memberships.push(member)
       return [{ insertId: member.id, affectedRows: 1 }]
     }
@@ -102,7 +102,7 @@ function makeDatabase({ families = [], memberships = [], missingIngredientIds = 
       if (member) Object.assign(member, { nickname, role: 'member', status: 'active' })
       return [{ affectedRows: member ? 1 : 0 }]
     }
-    if (/SELECT id, name, invite_code, owner_user_id FROM families WHERE id =/i.test(sql)) {
+    if (/SELECT id, name, invite_code, admin_user_id, created_at AS createdAt FROM families WHERE id =/i.test(sql)) {
       const family = state.families.find((item) => item.id === params[0])
       return [family ? [family] : []]
     }
@@ -181,7 +181,7 @@ test('new family receives 48 independent starter recipes with exact seed relatio
   const database = makeDatabase()
   await withServer(makeApp(database), async (baseUrl) => {
     const result = await post(baseUrl, '/api/families', { name: 'Starter 家庭' })
-    assert.equal(result.response.status, 201)
+    assert.equal(result.response.status, 201, result.body.message || JSON.stringify(result.body))
     assert.equal(result.body.data.id, 900)
   })
 
@@ -231,7 +231,7 @@ test('new family receives 48 independent starter recipes with exact seed relatio
 })
 
 test('joining an existing family does not initialize starter recipes', async () => {
-  const existingFamily = { id: 10, name: '已有家庭', invite_code: 'ABC123', owner_user_id: 7 }
+  const existingFamily = { id: 10, name: '已有家庭', invite_code: 'ABC123', admin_user_id: 7 }
   const database = makeDatabase({ families: [existingFamily] })
   let seedCalls = 0
   await withServer(makeApp(database, { seed: async () => { seedCalls += 1 } }), async (baseUrl) => {
@@ -263,7 +263,7 @@ test('starter service validates all ingredients and system tags before inserting
   const missingIngredientConnection = await missingIngredientDatabase.getConnection()
   await missingIngredientConnection.beginTransaction()
   await assert.rejects(
-    () => seedStarterRecipes(missingIngredientConnection, { familyId: 900, ownerMemberId: 901 }),
+    () => seedStarterRecipes(missingIngredientConnection, { familyId: 900, adminMemberId: 901 }),
     (error) => error.code === 'STARTER_RECIPE_INITIALIZATION_FAILED' && /53/.test(error.message)
   )
   assert.equal(missingIngredientDatabase.state.recipes.length, 0)
@@ -275,7 +275,7 @@ test('starter service validates all ingredients and system tags before inserting
   const missingTagConnection = await missingTagDatabase.getConnection()
   await missingTagConnection.beginTransaction()
   await assert.rejects(
-    () => seedStarterRecipes(missingTagConnection, { familyId: 900, ownerMemberId: 901 }),
+    () => seedStarterRecipes(missingTagConnection, { familyId: 900, adminMemberId: 901 }),
     (error) => error.code === 'STARTER_RECIPE_INITIALIZATION_FAILED' && /sweet/.test(error.message)
   )
   assert.equal(missingTagDatabase.state.recipes.length, 0)

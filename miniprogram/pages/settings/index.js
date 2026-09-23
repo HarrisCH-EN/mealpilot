@@ -8,7 +8,13 @@ function getDisplayName(user) {
 }
 
 function isAdminRole(role) {
-  return role === 'owner' || role === 'admin'
+  return role === 'admin'
+}
+
+function formatRecoveryDate(value) {
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '未知'
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`
 }
 
 function getRoleLabel(membership) {
@@ -128,7 +134,7 @@ Page({
     try {
       const recoverableFamilies = await request('/families/recoverable')
       if (Array.isArray(recoverableFamilies) && recoverableFamilies.length) {
-        this.setData({ recoverableFamilies, showRecoverySheet: true })
+        this.setData({ recoverableFamilies: recoverableFamilies.map(item => ({ ...item, createdAtLabel: formatRecoveryDate(item.createdAt) })), showRecoverySheet: true })
         return
       }
       this.openNewFamily()

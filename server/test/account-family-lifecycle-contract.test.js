@@ -7,19 +7,23 @@ const root = path.join(__dirname, '..', '..')
 
 test('schema supports archived families and nullable historical member identities', () => {
   const schema = fs.readFileSync(path.join(root, 'database', '01_schema.sql'), 'utf8')
-  const migration = fs.readFileSync(path.join(root, 'database', '11_account_family_lifecycle.sql'), 'utf8')
+  const lifecycleMigration = fs.readFileSync(path.join(root, 'database', '11_account_family_lifecycle.sql'), 'utf8')
+  const roleMigration = fs.readFileSync(path.join(root, 'database', '12_single_admin_role.sql'), 'utf8')
 
-  for (const sql of [schema, migration]) {
+  for (const sql of [schema]) {
     assert.match(sql, /status\s+ENUM\('active',\s*'archived'\)/i)
     assert.match(sql, /disbanded_at\s+DATETIME\s+NULL/i)
     assert.match(sql, /purge_after\s+DATETIME\s+NULL/i)
-    assert.match(sql, /owner_user_id\s+BIGINT\s+UNSIGNED\s+NULL/i)
-    assert.match(sql, /FOREIGN KEY \(owner_user_id\).*ON DELETE SET NULL/is)
+    assert.match(sql, /admin_user_id\s+BIGINT\s+UNSIGNED\s+NULL/i)
+    assert.match(sql, /FOREIGN KEY \(admin_user_id\).*ON DELETE SET NULL/is)
     assert.match(sql, /user_id\s+BIGINT\s+UNSIGNED\s+NULL/i)
     assert.match(sql, /FOREIGN KEY \(user_id\).*ON DELETE SET NULL/is)
   }
-  assert.doesNotMatch(migration, /DROP FOREIGN KEY fk_family_owner,/i)
-  assert.doesNotMatch(migration, /DROP FOREIGN KEY fk_member_user,/i)
+  assert.match(lifecycleMigration, /owner_user_id\s+BIGINT\s+UNSIGNED\s+NULL/i)
+  assert.match(lifecycleMigration, /DROP FOREIGN KEY fk_family_owner/i)
+  assert.match(roleMigration, /CHANGE COLUMN owner_user_id admin_user_id BIGINT UNSIGNED NULL/i)
+  assert.match(roleMigration, /MODIFY COLUMN role ENUM\('admin', 'member'\)/i)
+  assert.match(roleMigration, /FOREIGN KEY \(admin_user_id\).*ON DELETE SET NULL/is)
 })
 
 test('server exposes account deletion plus archive, recovery, restore and purge services', () => {

@@ -4,7 +4,7 @@ const express = require('express')
 
 const { router } = require('../src/routes/recipes')
 
-const membership = { family_id: 7, member_id: 70, role: 'owner' }
+const membership = { family_id: 7, member_id: 70, role: 'admin' }
 const stableCover = 'cloud://test.bucket/families/7/recipes/cover.jpg'
 
 function makeDatabase({ coverFileId = stableCover } = {}) {

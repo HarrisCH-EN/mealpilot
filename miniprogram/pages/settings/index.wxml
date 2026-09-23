@@ -54,7 +54,7 @@
           </view>
           <view class="settings-member__copy">
             <view class="settings-member__name">{{item.displayName || item.nickname}}</view>
-            <view class="settings-member__role">{{item.role === 'owner' || item.role === 'admin' ? '管理员' : '成员'}}</view>
+          <view class="settings-member__role">{{item.role === 'admin' ? '管理员' : '成员'}}</view>
           </view>
         </view>
       </view>
@@ -129,16 +129,25 @@
       <view class="settings-recovery__title">创建家庭</view>
       <view class="settings-recovery__copy">你有可恢复的家庭，也可以新建一个。</view>
       <scroll-view class="settings-recovery__list" scroll-y>
-        <button wx:for="{{recoverableFamilies}}" wx:key="id" class="settings-recovery__item" loading="{{familyActionLoading}}" disabled="{{familyActionLoading}}" data-family-id="{{item.id}}" bindtap="restoreFamily">
-          <view class="settings-recovery__item-copy">
-            <text class="settings-recovery__name">{{item.name}}</text>
-            <text class="settings-recovery__days">剩余 {{item.remainingDays}} 天</text>
+        <view wx:for="{{recoverableFamilies}}" wx:key="id" class="settings-recovery__item-shell">
+          <view class="settings-recovery__item {{familyActionLoading ? 'settings-recovery__item--disabled' : ''}}" role="button" aria-label="从云端恢复家庭" aria-disabled="{{familyActionLoading}}" data-family-id="{{item.id}}" bindtap="restoreFamily" hover-class="settings-recovery__item--pressed">
+            <view class="settings-recovery__item-copy">
+              <text class="settings-recovery__name">{{item.name}}</text>
+              <view class="settings-recovery__meta">
+                <text class="settings-recovery__created">创建于 {{item.createdAtLabel}}</text>
+                <text class="settings-recovery__days-badge">剩余 {{item.remainingDays}} 天</text>
+              </view>
+            </view>
+            <view class="settings-recovery__restore-orb">
+              <image class="settings-recovery__action-icon" src="/assets/icons/settings/cloud download.png" mode="aspectFit" />
+            </view>
           </view>
-          <text class="settings-recovery__action">恢复</text>
-        </button>
+        </view>
       </scroll-view>
-      <button class="settings-recovery__new" disabled="{{familyActionLoading}}" bindtap="openNewFamily">新建家庭</button>
-      <button class="settings-recovery__cancel" disabled="{{familyActionLoading}}" bindtap="closeRecoverySheet">取消</button>
+      <view class="settings-recovery__actions">
+        <button class="settings-recovery__new" disabled="{{familyActionLoading}}" bindtap="openNewFamily">新建家庭</button>
+        <button class="settings-recovery__cancel" disabled="{{familyActionLoading}}" bindtap="closeRecoverySheet">取消</button>
+      </view>
     </view>
   </view>
 </view>

@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const express = require('express')
 const { router } = require('../src/routes/feedback')
 
-const membership = { family_id: 1, member_id: 101, role: 'owner' }
+const membership = { family_id: 1, member_id: 101, role: 'admin' }
 
 function makeDatabase({ menuFamilyId = 1, fail = false } = {}) {
   const state = { feedback: [], menuItem: { id: 7, familyId: menuFamilyId } }

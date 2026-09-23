@@ -79,12 +79,12 @@ function makeDatabase({ memberships = [], families = [] } = {}) {
 
     if (/INSERT INTO families/i.test(sql)) {
       const [name, inviteCode, ownerUserId] = params
-      const family = { id: state.nextFamilyId++, name, invite_code: inviteCode, owner_user_id: ownerUserId }
+      const family = { id: state.nextFamilyId++, name, invite_code: inviteCode, admin_user_id: ownerUserId }
       state.families.push(family)
       return [{ insertId: family.id }]
     }
 
-    if (/SELECT id, name, invite_code, owner_user_id FROM families WHERE id =/i.test(sql)) {
+    if (/SELECT id, name, invite_code, admin_user_id.*FROM families WHERE id =/i.test(sql)) {
       const family = state.families.find((item) => item.id === params[0])
       return [family ? [family] : []]
     }
@@ -96,7 +96,7 @@ function makeDatabase({ memberships = [], families = [] } = {}) {
         id: state.nextMemberId++,
         family,
         user_id: userId,
-        role: /'owner'/i.test(sql) ? 'owner' : 'member',
+        role: /'admin'/i.test(sql) ? 'admin' : 'member',
         nickname,
         status: 'active'
       })
@@ -284,7 +284,7 @@ test('create family succeeds when the user has no active family', async () => {
     })
     assert.equal(response.status, 201)
     assert.equal(database.state.memberships.filter((member) => member.status === 'active').length, 1)
-    assert.equal(database.state.memberships[0].role, 'owner')
+    assert.equal(database.state.memberships[0].role, 'admin')
   })
 })
 

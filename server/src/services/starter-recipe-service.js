@@ -44,10 +44,10 @@ async function querySystemTags(connection, codes) {
   return new Map(rows.map((row) => [row.code, row.id]))
 }
 
-async function seedStarterRecipes(connection, { familyId, ownerMemberId, fileIdForPath }) {
+async function seedStarterRecipes(connection, { familyId, adminMemberId, fileIdForPath }) {
   if (!connection || typeof connection.execute !== 'function') throw fail('缺少事务数据库连接')
   assertPositiveId(familyId, '家庭编号')
-  assertPositiveId(ownerMemberId, '家庭成员编号')
+  assertPositiveId(adminMemberId, '家庭成员编号')
   validateTemplates()
 
   const ingredientIds = [...new Set(starterRecipes.flatMap((recipe) => recipe.ingredients.map((ingredient) => Number(ingredient.ingredientId))))]
@@ -71,7 +71,7 @@ async function seedStarterRecipes(connection, { familyId, ownerMemberId, fileIdF
       `INSERT INTO recipes
        (family_id, created_by_member_id, title, category, description, steps, cook_minutes, difficulty, servings, cover_url)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [familyId, ownerMemberId, recipe.title, recipe.category, recipe.description, recipe.steps, recipe.cookMinutes, recipe.difficulty, recipe.servings, coverFileId]
+      [familyId, adminMemberId, recipe.title, recipe.category, recipe.description, recipe.steps, recipe.cookMinutes, recipe.difficulty, recipe.servings, coverFileId]
     )
     if (!inserted || !inserted.insertId) throw fail(`Starter Recipe 插入失败：${recipe.title}`)
     const recipeId = inserted.insertId

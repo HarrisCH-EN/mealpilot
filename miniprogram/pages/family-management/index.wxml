@@ -68,16 +68,16 @@
             </view>
             <view class="family-member__copy">
               <view class="family-member__name">{{item.displayName || item.nickname}}<text wx:if="{{item.isCurrent}}" class="family-member__self">我</text></view>
-              <view class="family-member__meta">{{item.roleLabel}}<text wx:if="{{item.isOwner}}"> · 创建者</text></view>
+              <view class="family-member__meta">{{item.roleLabel}}</view>
             </view>
-            <button wx:if="{{isAdmin && !item.isOwner && !item.isCurrent}}" class="family-member__manage" data-member-id="{{item.id}}" bindtap="manageMember">管理</button>
+            <button wx:if="{{isAdmin && !item.isAdminMember && !item.isCurrent}}" class="family-member__manage" data-member-id="{{item.id}}" bindtap="manageMember">管理</button>
           </view>
         </view>
       </view>
 
       <view class="family-actions">
-        <button class="family-button family-button--danger" loading="{{actionLoading}}" disabled="{{actionLoading || isOwner}}" bindtap="leaveFamily">{{isOwner ? '创建者暂不能退出' : '退出家庭'}}</button>
-        <view class="family-actions__note">创建者需要先移交创建者身份后才能退出家庭。</view>
+        <button class="family-button family-button--danger" loading="{{actionLoading}}" disabled="{{actionLoading}}" bindtap="leaveFamily">退出家庭</button>
+        <view wx:if="{{isAdmin}}" class="family-actions__note">管理员需先转移管理员身份后才能退出家庭。</view>
       </view>
 
       <view wx:if="{{isAdmin}}" class="family-danger">

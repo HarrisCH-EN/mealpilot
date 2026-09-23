@@ -15,23 +15,23 @@ CREATE TABLE families (
   id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   name VARCHAR(40) NOT NULL,
   invite_code CHAR(6) CHARACTER SET ascii COLLATE ascii_bin NOT NULL,
-  owner_user_id BIGINT UNSIGNED NULL,
+  admin_user_id BIGINT UNSIGNED NULL,
   status ENUM('active', 'archived') NOT NULL DEFAULT 'active',
   disbanded_at DATETIME NULL,
   purge_after DATETIME NULL,
   created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY uq_family_invite_code (invite_code),
-  KEY idx_family_recovery (owner_user_id, status, purge_after),
+  KEY idx_family_recovery (admin_user_id, status, purge_after),
   KEY idx_family_purge (status, purge_after),
-  CONSTRAINT fk_family_owner FOREIGN KEY (owner_user_id) REFERENCES users(id) ON DELETE SET NULL
+  CONSTRAINT fk_family_admin FOREIGN KEY (admin_user_id) REFERENCES users(id) ON DELETE SET NULL
 ) ENGINE=InnoDB;
 
 CREATE TABLE family_members (
   id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
   family_id BIGINT UNSIGNED NOT NULL,
   user_id BIGINT UNSIGNED NULL,
-  role ENUM('owner', 'admin', 'member') NOT NULL DEFAULT 'member',
+  role ENUM('admin', 'member') NOT NULL DEFAULT 'member',
   nickname VARCHAR(40) NOT NULL,
   status ENUM('active', 'left') NOT NULL DEFAULT 'active',
   joined_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,

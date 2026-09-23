@@ -35,7 +35,7 @@ function requireFamilyTag(tag, familyId) {
 
 function assertCanMutate(request, tag) {
   if (tag.kind === 'system') throw new HttpError(403, '系统标签不可修改')
-  if (request.membership.role !== 'owner' && Number(tag.createdByMemberId) !== Number(request.membership.member_id)) throw new HttpError(403, '无权修改该标签')
+  if (request.membership.role !== 'admin' && Number(tag.createdByMemberId) !== Number(request.membership.member_id)) throw new HttpError(403, '无权修改该标签')
 }
 
 function isDuplicateError(error) {

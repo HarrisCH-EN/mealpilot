@@ -146,7 +146,7 @@ test('account deletion sends no request until both confirmations succeed', async
   assert.equal(harness.relaunches[0].url, '/pages/login/index')
 })
 
-test('administrator account deletion is blocked before the API request', () => {
+test('administrator account deletion starts with a clear confirmation', () => {
   let requestCalls = 0
   const harness = createAccountPageHarness({
     confirm: false,
@@ -157,22 +157,22 @@ test('administrator account deletion is blocked before the API request', () => {
   harness.page.deleteAccount.call(harness.context)
 
   assert.equal(requestCalls, 0)
-  assert.equal(harness.context.data.accountDeletionBlockedVisible, true)
-  assert.equal(harness.modals.length, 0)
+  assert.equal(harness.context.data.accountDeletionBlockedVisible, false)
+  assert.equal(harness.modals.length, 1)
 })
 
-test('administrator account deletion opens an in-page explanation dialog', () => {
+test('administrator account deletion keeps the transfer explanation for server rejection', () => {
   const template = fs.readFileSync(path.join(root, 'pages', 'account-management', 'index.wxml'), 'utf8')
   const harness = createAccountPageHarness({
     confirm: false,
-    membership: { role: 'owner', family_id: 10 }
+    membership: { role: 'admin', family_id: 10 }
   })
 
   harness.page.onLoad.call(harness.context)
   harness.page.deleteAccount.call(harness.context)
 
-  assert.equal(harness.context.data.accountDeletionBlockedVisible, true)
-  assert.match(harness.context.data.accountDeletionBlockedMessage, /移交创建者身份或解散家庭/)
+  assert.equal(harness.context.data.accountDeletionBlockedVisible, false)
+  assert.match(fs.readFileSync(path.join(root, 'pages', 'account-management', 'index.js'), 'utf8'), /ACCOUNT_ADMIN_BLOCKED/)
   assert.match(template, /wx:if="\{\{accountDeletionBlockedVisible\}\}"/)
   assert.match(template, /bindtap="goToFamilyManagement"/)
 })

@@ -18,7 +18,7 @@ async function findActiveMember(database, memberId, familyId) {
 
 function assertCanManage(request, member) {
   const currentMemberId = Number(request.membership.member_id)
-  if (request.membership.role !== 'owner' && currentMemberId !== Number(member.id)) {
+  if (request.membership.role !== 'admin' && currentMemberId !== Number(member.id)) {
     throw new HttpError(403, '无权管理该成员的口味偏好')
   }
 }

@@ -46,7 +46,11 @@ function requireFamilyAdmin(database) {
     try {
       const membership = await currentMembership(database, request.user.id)
       if (!membership) throw new HttpError(403, '请先创建或加入家庭')
-      if (!['owner', 'admin'].includes(membership.role)) throw new HttpError(403, '仅家庭管理员可执行此操作')
+      if (membership.role !== 'admin') throw new HttpError(403, '仅家庭管理员可执行此操作')
+      const [families] = await database.execute("SELECT admin_user_id FROM families WHERE id = ? AND status = 'active'", [membership.family_id])
+      if (!families[0] || Number(families[0].admin_user_id) !== Number(request.user.id)) {
+        throw new HttpError(409, '家庭管理员状态异常，请刷新后重试', 'FAMILY_ADMIN_STATE_INVALID')
+      }
       request.membership = membership
       next()
     } catch (error) { next(error) }

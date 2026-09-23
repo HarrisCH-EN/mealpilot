@@ -7,7 +7,7 @@ const { router } = require('../src/routes/preferences')
 function makeDatabase() {
   const state = {
     members: [
-      { id: 101, user_id: 1, family_id: 1, role: 'owner', status: 'active' },
+      { id: 101, user_id: 1, family_id: 1, role: 'admin', status: 'active' },
       { id: 102, user_id: 2, family_id: 1, role: 'member', status: 'active' },
       { id: 201, user_id: 3, family_id: 2, role: 'member', status: 'active' },
       { id: 103, user_id: 4, family_id: 1, role: 'member', status: 'left' }
@@ -74,7 +74,7 @@ async function withServer(app, callback) {
 
 test('owner can read another active family member preferences and summary stays family scoped', async () => {
   const database = makeDatabase()
-  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'owner' }), async (baseUrl) => {
+  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'admin' }), async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/family-members/102/preferences`)
     assert.equal(response.status, 200)
     assert.deepEqual((await response.json()).data, [{ category: '荤菜', preferenceScore: 5 }])
@@ -102,7 +102,7 @@ test('normal member can read and update only their own active preference', async
 
 test('cross-family and left members cannot be read or edited', async () => {
   const database = makeDatabase()
-  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'owner' }), async (baseUrl) => {
+  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'admin' }), async (baseUrl) => {
     for (const memberId of [201, 103, 999]) {
       const response = await fetch(`${baseUrl}/api/family-members/${memberId}/preferences`)
       assert.equal(response.status, 404)
@@ -116,7 +116,7 @@ test('cross-family and left members cannot be read or edited', async () => {
 
 test('preference PUT is idempotent, updates instead of duplicating, and validates category and score', async () => {
   const database = makeDatabase()
-  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'owner' }), async (baseUrl) => {
+  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'admin' }), async (baseUrl) => {
     const first = await fetch(`${baseUrl}/api/family-members/101/preferences/汤`, {
       method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ preferenceScore: 3 })
     })

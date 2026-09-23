@@ -36,7 +36,7 @@ test('starter seeding writes stable CloudBase file IDs and leaves the missing im
       throw new Error(`unexpected SQL: ${sql}`)
     }
   }
-  await seedStarterRecipes(connection, { familyId: 7, ownerMemberId: 70, fileIdForPath: (cloudPath) => `cloud://test.bucket/${cloudPath}` })
+  await seedStarterRecipes(connection, { familyId: 7, adminMemberId: 70, fileIdForPath: (cloudPath) => `cloud://test.bucket/${cloudPath}` })
   assert.equal(covers.length, 48)
   assert.equal(covers.filter(Boolean).length, 47)
   assert.equal(covers.find((value) => value === ''), '')

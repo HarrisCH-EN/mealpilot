@@ -128,7 +128,7 @@ test('deleting the last MenuItem keeps the Menu and Recipe', async () => {
   app.use('/api', menuRouter({
     database,
     auth: (_request, _response, next) => next(),
-    family: (request, _response, next) => { request.membership = { family_id: familyA, member_id: memberA, role: 'owner' }; next() }
+    family: (request, _response, next) => { request.membership = { family_id: familyA, member_id: memberA, role: 'admin' }; next() }
   }))
   app.use((error, _request, response, _next) => response.status(error.status || 500).json({ message: error.message }))
 

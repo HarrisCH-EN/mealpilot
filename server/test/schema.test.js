@@ -11,7 +11,7 @@ test('schema defines the required relational tables and menu uniqueness constrai
   }
   assert.match(sql, /UNIQUE KEY uq_menu_slot \(family_id, menu_date, meal_type\)/)
   assert.match(sql, /FOREIGN KEY \(recipe_id\) REFERENCES recipes\(id\)/)
-  assert.match(sql, /role ENUM\('owner', 'admin', 'member'\) NOT NULL DEFAULT 'member'/)
+  assert.match(sql, /role ENUM\('admin', 'member'\) NOT NULL DEFAULT 'member'/)
   assert.match(sql, /invite_code CHAR\(6\) CHARACTER SET ascii COLLATE ascii_bin NOT NULL/)
 
   const migration = fs.readFileSync(path.join(__dirname, '../../database/09_family-admin-role.sql'), 'utf8')
@@ -33,7 +33,8 @@ test('database migration entry point applies ordered history without forcing the
     '08_tag_system_v1.sql',
     '09_family-admin-role.sql',
     '10_family-invite-code.sql',
-    '11_account_family_lifecycle.sql'
+    '11_account_family_lifecycle.sql',
+    '12_single_admin_role.sql'
   ]) assert.match(runner, new RegExp(migration.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')))
   assert.match(runner, /schema_migrations/)
   assert.match(runner, /GET_LOCK/)
@@ -47,8 +48,10 @@ test('database migration entry point applies ordered history without forcing the
     '08_tag_system_v1.sql',
     '09_family-admin-role.sql',
     '10_family-invite-code.sql',
-    '11_account_family_lifecycle.sql'
+    '11_account_family_lifecycle.sql',
+    '12_single_admin_role.sql'
   ])
   assert.equal(normalizeMigrationSql('USE mealpilot;\nSELECT 1;'), 'SELECT 1;')
+  assert.equal(normalizeMigrationSql('USE mealpilot;\r\nSELECT 1;\r\n'), 'SELECT 1;')
   assert.match(runner, /tag_type|recipe_tags.*tag_id/s)
 })

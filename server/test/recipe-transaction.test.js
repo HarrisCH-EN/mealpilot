@@ -3,7 +3,7 @@ const assert = require('node:assert/strict')
 const express = require('express')
 const { router: recipeRouter } = require('../src/routes/recipes')
 
-const membership = { family_id: 1, member_id: 101, role: 'owner' }
+const membership = { family_id: 1, member_id: 101, role: 'admin' }
 
 function clone(value) {
   return JSON.parse(JSON.stringify(value))

@@ -22,6 +22,7 @@ async function deleteArchivedFamily(connection, familyId, now, storageFileIdPref
   await connection.execute('DELETE FROM menus WHERE family_id = ?', [familyId])
   await connection.execute('DELETE FROM recommendation_runs WHERE family_id = ?', [familyId])
   await connection.execute('DELETE rt FROM recipe_tags rt JOIN recipes r ON r.id = rt.recipe_id WHERE r.family_id = ?', [familyId])
+  await connection.execute('DELETE rtl FROM recipe_tags_legacy rtl JOIN recipes r ON r.id = rtl.recipe_id WHERE r.family_id = ?', [familyId])
   await connection.execute('DELETE FROM tag_definitions WHERE family_id = ?', [familyId])
   await connection.execute('DELETE FROM recipes WHERE family_id = ?', [familyId])
   const [deleted] = await connection.execute("DELETE FROM families WHERE id = ? AND status = 'archived' AND purge_after <= ?", [familyId, now])

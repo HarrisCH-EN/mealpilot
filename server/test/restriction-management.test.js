@@ -7,7 +7,7 @@ const { router } = require('../src/routes/restrictions')
 function makeDatabase() {
   const state = {
     members: [
-      { id: 101, user_id: 1, family_id: 1, role: 'owner', status: 'active' },
+      { id: 101, user_id: 1, family_id: 1, role: 'admin', status: 'active' },
       { id: 102, user_id: 2, family_id: 1, role: 'member', status: 'active' },
       { id: 201, user_id: 3, family_id: 2, role: 'member', status: 'active' },
       { id: 103, user_id: 4, family_id: 1, role: 'member', status: 'left' }
@@ -85,7 +85,7 @@ async function withServer(app, callback) {
 
 test('owner can read another active family member restrictions', async () => {
   const database = makeDatabase()
-  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'owner' }), async (baseUrl) => {
+  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'admin' }), async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/family-members/102/restrictions`)
     assert.equal(response.status, 200)
     assert.deepEqual((await response.json()).data, [{ ingredientId: 1, ingredientName: '花生' }])
@@ -113,7 +113,7 @@ test('normal member cannot manage another family member restriction', async () =
 
 test('cross-family and left members are indistinguishable from missing members', async () => {
   const database = makeDatabase()
-  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'owner' }), async (baseUrl) => {
+  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'admin' }), async (baseUrl) => {
     for (const memberId of [201, 103, 999]) {
       const response = await fetch(`${baseUrl}/api/family-members/${memberId}/restrictions`)
       assert.equal(response.status, 404)
@@ -123,7 +123,7 @@ test('cross-family and left members are indistinguishable from missing members',
 
 test('adding a restriction is idempotent and uses the existing ingredient', async () => {
   const database = makeDatabase()
-  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'owner' }), async (baseUrl) => {
+  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'admin' }), async (baseUrl) => {
     const first = await fetch(`${baseUrl}/api/family-members/102/restrictions`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ingredientId: 2 })
     })
@@ -140,7 +140,7 @@ test('adding a restriction is idempotent and uses the existing ingredient', asyn
 
 test('invalid ingredient is rejected without creating a restriction', async () => {
   const database = makeDatabase()
-  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'owner' }), async (baseUrl) => {
+  await withServer(makeApp(database, { user_id: 1, family_id: 1, member_id: 101, role: 'admin' }), async (baseUrl) => {
     const response = await fetch(`${baseUrl}/api/family-members/102/restrictions`, {
       method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ ingredientId: 999 })
     })

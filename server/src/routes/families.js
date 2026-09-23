@@ -34,7 +34,7 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
       let created
       for (let attempt = 0; attempt < 5; attempt += 1) {
         try {
-          [created] = await connection.execute('INSERT INTO families (name, invite_code, owner_user_id) VALUES (?, ?, ?)', [familyName, inviteCode(), request.user.id])
+          [created] = await connection.execute('INSERT INTO families (name, invite_code, admin_user_id) VALUES (?, ?, ?)', [familyName, inviteCode(), request.user.id])
           break
         } catch (error) {
           if (error.code !== 'ER_DUP_ENTRY' || attempt === 4) {
@@ -43,10 +43,10 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
           }
         }
       }
-      const [ownerMember] = await connection.execute("INSERT INTO family_members (family_id, user_id, role, nickname) VALUES (?, ?, 'owner', ?)", [created.insertId, request.user.id, request.user.display_name])
-      await seedStarterRecipes(connection, { familyId: created.insertId, ownerMemberId: ownerMember.insertId, fileIdForPath })
+      const [adminMember] = await connection.execute("INSERT INTO family_members (family_id, user_id, role, nickname) VALUES (?, ?, 'admin', ?)", [created.insertId, request.user.id, request.user.display_name])
+      await seedStarterRecipes(connection, { familyId: created.insertId, adminMemberId: adminMember.insertId, fileIdForPath })
       await connection.commit()
-      const [rows] = await database.execute('SELECT id, name, invite_code, owner_user_id FROM families WHERE id = ?', [created.insertId])
+      const [rows] = await database.execute('SELECT id, name, invite_code, admin_user_id, created_at AS createdAt FROM families WHERE id = ?', [created.insertId])
       response.status(201).json({ ok: true, data: rows[0] })
     } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
   }))
@@ -73,11 +73,11 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
   }))
 
   result.get('/families/current', auth, family, asyncRoute(async (request, response) => {
-    const [members] = await database.execute(`SELECT fm.id, fm.user_id AS userId, fm.role, fm.nickname, u.display_name AS displayName, u.avatar_url AS avatarUrl FROM family_members fm JOIN users u ON u.id = fm.user_id WHERE fm.family_id = ? AND fm.status = 'active' ORDER BY CASE fm.role WHEN 'owner' THEN 0 WHEN 'admin' THEN 1 ELSE 2 END, fm.id`, [request.membership.family_id])
+    const [members] = await database.execute(`SELECT fm.id, fm.user_id AS userId, fm.role, fm.nickname, u.display_name AS displayName, u.avatar_url AS avatarUrl FROM family_members fm JOIN users u ON u.id = fm.user_id WHERE fm.family_id = ? AND fm.status = 'active' ORDER BY CASE fm.role WHEN 'admin' THEN 0 ELSE 1 END, fm.id`, [request.membership.family_id])
     const { invite_code: _inviteCode, ...membership } = request.membership
     const avatarUrls = mediaUrlService ? await mediaUrlService.resolveValues(members.map((member) => member.avatarUrl)) : members.map((member) => member.avatarUrl)
     const resolvedMembers = members.map((member, index) => ({ ...member, avatarFileId: String(member.avatarUrl || '').trim(), avatarUrl: avatarUrls[index] }))
-    response.json({ ok: true, data: { ...membership, members: resolvedMembers } })
+      response.json({ ok: true, data: { ...membership, members: resolvedMembers } })
   }))
 
   result.patch('/families/current/name', auth, familyAdmin, asyncRoute(async (request, response) => {
@@ -99,7 +99,7 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
       await lockUser(connection, request.user.id)
       const membership = await currentMembership(connection, request.user.id)
       if (!membership) throw new HttpError(403, '请先创建或加入家庭')
-      if (!['owner', 'admin'].includes(membership.role)) throw new HttpError(403, '仅家庭管理员可执行此操作')
+      if (membership.role !== 'admin') throw new HttpError(403, '仅家庭管理员可执行此操作')
       const [families] = await connection.execute('SELECT id, invite_code FROM families WHERE id = ? FOR UPDATE', [membership.family_id])
       const currentFamily = families[0]
       if (!currentFamily) throw new HttpError(404, '家庭不存在')
@@ -133,7 +133,9 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
       await lockUser(connection, request.user.id)
       const membership = await currentMembership(connection, request.user.id)
       if (!membership) throw new HttpError(403, '请先创建或加入家庭')
-      if (membership.role === 'owner') throw new HttpError(409, '创建者不能直接退出家庭，请先移交创建者身份')
+      if (membership.role === 'admin') {
+        throw new HttpError(409, '请先转移管理员身份，再退出家庭', 'FAMILY_ADMIN_TRANSFER_REQUIRED')
+      }
       const [updated] = await connection.execute(`UPDATE family_members SET status = 'left' WHERE id = ? AND user_id = ? AND status = 'active'`, [membership.member_id, request.user.id])
       if (!updated.affectedRows) throw new HttpError(409, '家庭成员状态已变化，请刷新后重试')
       await connection.commit()
@@ -144,9 +146,10 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
   result.get('/families/recoverable', auth, asyncRoute(async (request, response) => {
     const [rows] = await database.execute(
       `SELECT id, name, disbanded_at AS disbandedAt, purge_after AS expiresAt,
+              created_at AS createdAt,
               GREATEST(1, CEIL(TIMESTAMPDIFF(SECOND, CURRENT_TIMESTAMP, purge_after) / 86400)) AS remainingDays
          FROM families
-        WHERE owner_user_id = ? AND status = 'archived' AND purge_after > CURRENT_TIMESTAMP
+        WHERE admin_user_id = ? AND status = 'archived' AND purge_after > CURRENT_TIMESTAMP
         ORDER BY purge_after, id`,
       [request.user.id]
     )
@@ -159,7 +162,7 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
       await connection.beginTransaction()
       await lockUser(connection, request.user.id)
       const membership = await currentMembership(connection, request.user.id)
-      if (!membership || !['owner', 'admin'].includes(membership.role)) throw new HttpError(403, '仅家庭管理员可执行此操作')
+      if (!membership || membership.role !== 'admin') throw new HttpError(403, '仅家庭管理员可执行此操作')
       const [families] = await connection.execute("SELECT id, status FROM families WHERE id = ? FOR UPDATE", [membership.family_id])
       if (!families[0] || families[0].status !== 'active') throw new HttpError(409, '家庭状态已变化，请刷新后重试', 'FAMILY_STATE_CHANGED')
       const [updated] = await connection.execute(
@@ -182,7 +185,7 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
       await lockUser(connection, request.user.id)
       if (await currentMembership(connection, request.user.id)) throw new HttpError(409, '请先退出当前家庭', 'FAMILY_ACTIVE_MEMBERSHIP_EXISTS')
       const [families] = await connection.execute(
-        "SELECT id, name, invite_code FROM families WHERE id = ? AND owner_user_id = ? AND status = 'archived' AND purge_after > CURRENT_TIMESTAMP FOR UPDATE",
+        "SELECT id, name, invite_code FROM families WHERE id = ? AND admin_user_id = ? AND status = 'archived' AND purge_after > CURRENT_TIMESTAMP FOR UPDATE",
         [Number(request.params.familyId), request.user.id]
       )
       const archivedFamily = families[0]
@@ -205,16 +208,16 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
         }
       }
       const [members] = await connection.execute('SELECT id FROM family_members WHERE family_id = ? AND user_id = ? FOR UPDATE', [archivedFamily.id, request.user.id])
-      if (!members[0]) throw new HttpError(409, '创建者记录不存在，无法恢复家庭', 'FAMILY_OWNER_RECORD_MISSING')
+      if (!members[0]) throw new HttpError(409, '管理员记录不存在，无法恢复家庭', 'FAMILY_ADMIN_RECORD_MISSING')
       await connection.execute("UPDATE family_members SET status = 'left' WHERE family_id = ?", [archivedFamily.id])
-      const [restoredOwner] = await connection.execute("UPDATE family_members SET status = 'active', role = 'owner', nickname = ?, joined_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?", [request.user.display_name, members[0].id, request.user.id])
-      if (!restoredOwner.affectedRows) throw new HttpError(409, '创建者状态已变化，请刷新后重试', 'FAMILY_STATE_CHANGED')
+      const [restoredAdmin] = await connection.execute("UPDATE family_members SET status = 'active', role = 'admin', nickname = ?, joined_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?", [request.user.display_name, members[0].id, request.user.id])
+      if (!restoredAdmin.affectedRows) throw new HttpError(409, '管理员状态已变化，请刷新后重试', 'FAMILY_STATE_CHANGED')
       await connection.commit()
       response.json({ ok: true, data: { restored: true, familyId: archivedFamily.id, name: archivedFamily.name, inviteCode: nextInviteCode } })
     } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
   }))
 
-  result.post('/families/current/transfer-ownership', auth, family, asyncRoute(async (request, response) => {
+  result.post('/families/current/transfer-admin', auth, familyAdmin, asyncRoute(async (request, response) => {
     requirePositiveInteger(request.body && request.body.memberId, '成员编号')
     const connection = await database.getConnection()
     try {
@@ -222,39 +225,24 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
       await lockUser(connection, request.user.id)
       const membership = await currentMembership(connection, request.user.id)
       if (!membership) throw new HttpError(403, '请先创建或加入家庭')
-      if (membership.role !== 'owner') throw new HttpError(403, '仅创建者可移交创建者身份')
+      if (membership.role !== 'admin') throw new HttpError(403, '仅家庭管理员可转移管理员身份')
+      const [activeAdmins] = await connection.execute("SELECT id, user_id FROM family_members WHERE family_id = ? AND role = 'admin' AND status = 'active' FOR UPDATE", [membership.family_id])
+      if (activeAdmins.length !== 1 || Number(activeAdmins[0].user_id) !== Number(request.user.id)) {
+        throw new HttpError(409, '家庭管理员状态异常，请刷新后重试', 'FAMILY_ADMIN_STATE_INVALID')
+      }
       const [rows] = await connection.execute(`SELECT id, user_id, role, status FROM family_members WHERE id = ? AND family_id = ? AND status = 'active' FOR UPDATE`, [Number(request.body.memberId), membership.family_id])
       const target = rows[0]
       if (!target) throw new HttpError(404, '家庭成员不存在')
       if (target.user_id === request.user.id) throw new HttpError(409, '不能移交给自己')
-      const [updatedFamily] = await connection.execute('UPDATE families SET owner_user_id = ? WHERE id = ? AND owner_user_id = ?', [target.user_id, membership.family_id, request.user.id])
-      if (!updatedFamily.affectedRows) throw new HttpError(409, '家庭创建者状态已变化，请刷新后重试')
-      const [updatedTarget] = await connection.execute(`UPDATE family_members SET role = 'owner' WHERE id = ? AND family_id = ? AND status = 'active'`, [target.id, membership.family_id])
+      if (target.role !== 'member') throw new HttpError(409, '目标成员已经是管理员')
+      const [updatedFamily] = await connection.execute('UPDATE families SET admin_user_id = ? WHERE id = ? AND admin_user_id = ?', [target.user_id, membership.family_id, request.user.id])
+      if (!updatedFamily.affectedRows) throw new HttpError(409, '家庭管理员状态已变化，请刷新后重试')
+      const [updatedTarget] = await connection.execute(`UPDATE family_members SET role = 'admin' WHERE id = ? AND family_id = ? AND status = 'active'`, [target.id, membership.family_id])
       if (!updatedTarget.affectedRows) throw new HttpError(409, '目标成员状态已变化，请刷新后重试')
-      const [updatedPreviousOwner] = await connection.execute(`UPDATE family_members SET role = 'member' WHERE id = ? AND family_id = ? AND status = 'active'`, [membership.member_id, membership.family_id])
-      if (!updatedPreviousOwner.affectedRows) throw new HttpError(409, '当前创建者状态已变化，请刷新后重试')
+      const [updatedPreviousAdmin] = await connection.execute(`UPDATE family_members SET role = 'member' WHERE id = ? AND family_id = ? AND status = 'active'`, [membership.member_id, membership.family_id])
+      if (!updatedPreviousAdmin.affectedRows) throw new HttpError(409, '当前管理员状态已变化，请刷新后重试')
       await connection.commit()
-      response.json({ ok: true, data: { familyId: membership.family_id, previousOwnerMemberId: membership.member_id, newOwnerMemberId: target.id, role: 'member' } })
-    } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
-  }))
-
-  result.patch('/families/current/members/:memberId/role', auth, familyAdmin, asyncRoute(async (request, response) => {
-    requirePositiveInteger(request.params.memberId, '成员编号')
-    requireEnum(request.body && request.body.role, ['admin', 'member'], '权限')
-    const connection = await database.getConnection()
-    try {
-      await connection.beginTransaction()
-      await lockUser(connection, request.user.id)
-      const membership = await currentMembership(connection, request.user.id)
-      if (!membership) throw new HttpError(403, '请先创建或加入家庭')
-      const [rows] = await connection.execute(`SELECT id, user_id, role, status FROM family_members WHERE id = ? AND family_id = ? AND status = 'active' FOR UPDATE`, [Number(request.params.memberId), membership.family_id])
-      const target = rows[0]
-      if (!target) throw new HttpError(404, '家庭成员不存在')
-      if (target.role === 'owner') throw new HttpError(409, '创建者权限不可修改')
-      if (target.user_id === request.user.id) throw new HttpError(409, '不能修改自己的管理员权限')
-      await connection.execute(`UPDATE family_members SET role = ? WHERE id = ? AND family_id = ? AND status = 'active'`, [request.body.role, target.id, membership.family_id])
-      await connection.commit()
-      response.json({ ok: true, data: { memberId: target.id, role: request.body.role } })
+      response.json({ ok: true, data: { familyId: membership.family_id, previousAdminMemberId: membership.member_id, newAdminMemberId: target.id, role: 'member' } })
     } catch (error) { await connection.rollback(); throw error } finally { connection.release() }
   }))
 
@@ -269,7 +257,7 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
       const [rows] = await connection.execute(`SELECT id, user_id, role, status FROM family_members WHERE id = ? AND family_id = ? AND status = 'active' FOR UPDATE`, [Number(request.params.memberId), membership.family_id])
       const target = rows[0]
       if (!target) throw new HttpError(404, '家庭成员不存在')
-      if (target.role === 'owner') throw new HttpError(409, '创建者不能被移除')
+      if (target.role === 'admin') throw new HttpError(409, '管理员不能被移除，请先转移管理员身份')
       if (target.user_id === request.user.id) throw new HttpError(409, '请使用“退出家庭”操作')
       const [updated] = await connection.execute(`UPDATE family_members SET status = 'left' WHERE id = ? AND family_id = ? AND status = 'active'`, [target.id, membership.family_id])
       if (!updated.affectedRows) throw new HttpError(409, '家庭成员状态已变化，请刷新后重试')

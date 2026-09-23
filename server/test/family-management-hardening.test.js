@@ -5,12 +5,11 @@ const { requireFamily } = require('../src/middleware/authenticate')
 const { router } = require('../src/routes/families')
 const { ensureFamilyManagementSchema } = require('../src/scripts/family-management-schema')
 
-const family = { id: 10, name: '家庭 A', invite_code: 'aB3xY9', owner_user_id: 1 }
-const owner = { id: 1, openid: 'owner', display_name: '创建者', avatar_url: null }
-const admin = { id: 2, openid: 'admin', display_name: '管理员', avatar_url: null }
+const family = { id: 10, name: '家庭 A', invite_code: 'aB3xY9', admin_user_id: 1 }
+const administrator = { id: 1, openid: 'admin', display_name: '管理员', avatar_url: null }
 const member = { id: 3, openid: 'member', display_name: '成员', avatar_url: null }
 
-function makeDatabase({ memberships = [], families = [family], users = [owner, admin, member], duplicateFamilyInsert = false, duplicateInviteRefresh = false } = {}) {
+function makeDatabase({ memberships = [], families = [family], users = [administrator, member], duplicateFamilyInsert = false, duplicateInviteRefresh = false } = {}) {
   const state = {
     families: families.map((item) => ({ ...item })),
     users: users.map((item) => ({ ...item })),
@@ -80,14 +79,14 @@ function makeDatabase({ memberships = [], families = [family], users = [owner, a
         error.code = 'ER_DUP_ENTRY'
         throw error
       }
-      const [name, inviteCode, ownerUserId] = params
-      const created = { id: state.nextFamilyId++, name, invite_code: inviteCode, owner_user_id: ownerUserId }
+      const [name, inviteCode, adminUserId] = params
+      const created = { id: state.nextFamilyId++, name, invite_code: inviteCode, admin_user_id: adminUserId }
       state.families.push(created)
       return [{ insertId: created.id }]
     }
     if (/INSERT INTO family_members/i.test(sql)) {
       const [familyId, userId, nickname] = params
-      state.memberships.push({ id: state.nextMemberId++, family_id: familyId, user_id: userId, role: /'owner'/i.test(sql) ? 'owner' : 'member', nickname, status: 'active' })
+      state.memberships.push({ id: state.nextMemberId++, family_id: familyId, user_id: userId, role: /'admin'/i.test(sql) ? 'admin' : 'member', nickname, status: 'active' })
       return [{ affectedRows: 1 }]
     }
     if (/UPDATE family_members SET status = 'active'/i.test(sql)) {
@@ -101,11 +100,20 @@ function makeDatabase({ memberships = [], families = [family], users = [owner, a
       if (found) found.status = 'left'
       return [{ affectedRows: found ? 1 : 0 }]
     }
-    if (/UPDATE families SET owner_user_id =/i.test(sql)) {
-      const [ownerUserId, familyId] = params
+    if (/SELECT admin_user_id FROM families WHERE id = \? AND status = 'active'/i.test(sql)) {
+      const currentFamily = state.families.find((item) => item.id === Number(params[0]))
+      return [currentFamily ? [{ admin_user_id: currentFamily.admin_user_id }] : []]
+    }
+    if (/SELECT id, user_id FROM family_members WHERE family_id = \? AND role = 'admin' AND status = 'active' FOR UPDATE/i.test(sql)) {
+      return [state.memberships
+        .filter((item) => item.family_id === Number(params[0]) && item.role === 'admin' && item.status === 'active')
+        .map((item) => ({ id: item.id, user_id: item.user_id }))]
+    }
+    if (/UPDATE families SET admin_user_id =/i.test(sql)) {
+      const [adminUserId, familyId] = params
       const currentFamily = state.families.find((item) => item.id === Number(familyId))
-      if (!currentFamily || currentFamily.owner_user_id !== Number(params[2])) return [{ affectedRows: 0 }]
-      currentFamily.owner_user_id = Number(ownerUserId)
+      if (!currentFamily || currentFamily.admin_user_id !== Number(params[2])) return [{ affectedRows: 0 }]
+      currentFamily.admin_user_id = Number(adminUserId)
       return [{ affectedRows: 1 }]
     }
     if (/UPDATE families SET invite_code =/i.test(sql)) {
@@ -125,9 +133,9 @@ function makeDatabase({ memberships = [], families = [family], users = [owner, a
       if (found) found.role = 'member'
       return [{ affectedRows: found ? 1 : 0 }]
     }
-    if (/UPDATE family_members SET role = 'owner'/i.test(sql)) {
+    if (/UPDATE family_members SET role = 'admin'/i.test(sql)) {
       const found = state.memberships.find((item) => item.id === Number(params[0]) && item.status === 'active')
-      if (found) found.role = 'owner'
+      if (found) found.role = 'admin'
       return [{ affectedRows: found ? 1 : 0 }]
     }
     if (/UPDATE family_members SET role = \?/i.test(sql)) {
@@ -136,7 +144,7 @@ function makeDatabase({ memberships = [], families = [family], users = [owner, a
       if (found) found.role = role
       return [{ affectedRows: found ? 1 : 0 }]
     }
-    if (/SELECT id, name, invite_code, owner_user_id FROM families/i.test(sql)) {
+    if (/SELECT id, name, invite_code, admin_user_id, created_at AS createdAt FROM families/i.test(sql)) {
       return [state.families.filter((item) => item.id === Number(params[0]))]
     }
     throw new Error(`Unexpected SQL: ${sql}`)
@@ -205,35 +213,33 @@ test('every active member can read the invite code without leaking it from curre
   })
 })
 
-test('admins can refresh the invite code, immediately invalidating the old code', async () => {
-  for (const actor of [owner, admin]) {
-    const database = makeDatabase({ memberships: [{ id: actor.id + 10, family, user_id: actor.id, role: actor === owner ? 'owner' : 'admin' }] })
-    const oldCode = family.invite_code
-    let newCode = ''
-    await withServer(makeApp(database, actor), async (baseUrl) => {
-      const refreshed = await call(baseUrl, '/api/families/current/invite-code/refresh', { method: 'POST' })
-      assert.equal(refreshed.response.status, 200)
-      assert.match(refreshed.body.data.inviteCode, /^[0-9A-Za-z]{6}$/)
-      assert.notEqual(refreshed.body.data.inviteCode, oldCode)
-      assert.equal(database.state.families[0].invite_code, refreshed.body.data.inviteCode)
-      assert.equal(database.state.committed, true)
-      newCode = refreshed.body.data.inviteCode
-    })
+test('the sole administrator can refresh the invite code and immediately invalidate the old code', async () => {
+  const database = makeDatabase({ memberships: [{ id: 11, family, user_id: administrator.id, role: 'admin' }] })
+  const oldCode = family.invite_code
+  let newCode = ''
+  await withServer(makeApp(database, administrator), async (baseUrl) => {
+    const refreshed = await call(baseUrl, '/api/families/current/invite-code/refresh', { method: 'POST' })
+    assert.equal(refreshed.response.status, 200)
+    assert.match(refreshed.body.data.inviteCode, /^[0-9A-Za-z]{6}$/)
+    assert.notEqual(refreshed.body.data.inviteCode, oldCode)
+    assert.equal(database.state.families[0].invite_code, refreshed.body.data.inviteCode)
+    assert.equal(database.state.committed, true)
+    newCode = refreshed.body.data.inviteCode
+  })
 
-    await withServer(makeApp(database, member), async (baseUrl) => {
-      const joinWithOldCode = await call(baseUrl, '/api/families/join', {
-        method: 'POST',
-        body: JSON.stringify({ inviteCode: oldCode })
-      })
-      assert.equal(joinWithOldCode.response.status, 404)
-
-      const joinWithNewCode = await call(baseUrl, '/api/families/join', {
-        method: 'POST',
-        body: JSON.stringify({ inviteCode: newCode })
-      })
-      assert.equal(joinWithNewCode.response.status, 201)
+  await withServer(makeApp(database, member), async (baseUrl) => {
+    const joinWithOldCode = await call(baseUrl, '/api/families/join', {
+      method: 'POST',
+      body: JSON.stringify({ inviteCode: oldCode })
     })
-  }
+    assert.equal(joinWithOldCode.response.status, 404)
+
+    const joinWithNewCode = await call(baseUrl, '/api/families/join', {
+      method: 'POST',
+      body: JSON.stringify({ inviteCode: newCode })
+    })
+    assert.equal(joinWithNewCode.response.status, 201)
+  })
 })
 
 test('ordinary members cannot refresh the invite code and duplicate updates retry', async () => {
@@ -244,29 +250,29 @@ test('ordinary members cannot refresh the invite code and duplicate updates retr
     assert.equal(memberDatabase.state.families[0].invite_code, family.invite_code)
   })
 
-  const ownerDatabase = makeDatabase({ memberships: [{ id: 42, family, user_id: owner.id, role: 'owner' }], duplicateInviteRefresh: true })
-  await withServer(makeApp(ownerDatabase, owner), async (baseUrl) => {
+  const adminDatabase = makeDatabase({ memberships: [{ id: 42, family, user_id: administrator.id, role: 'admin' }], duplicateInviteRefresh: true })
+  await withServer(makeApp(adminDatabase, administrator), async (baseUrl) => {
     const result = await call(baseUrl, '/api/families/current/invite-code/refresh', { method: 'POST' })
     assert.equal(result.response.status, 200)
-    assert.equal(ownerDatabase.state.inviteRefreshAttempts, 2)
-    assert.notEqual(ownerDatabase.state.families[0].invite_code, family.invite_code)
+    assert.equal(adminDatabase.state.inviteRefreshAttempts, 2)
+    assert.notEqual(adminDatabase.state.families[0].invite_code, family.invite_code)
   })
 })
 
-test('owner can transfer ownership atomically and then leave as a normal member', async () => {
+test('administrator can transfer the administrator identity atomically and then leave as a member', async () => {
   const database = makeDatabase({ memberships: [
-    { id: 21, family, user_id: owner.id, role: 'owner' },
+    { id: 21, family, user_id: administrator.id, role: 'admin' },
     { id: 22, family, user_id: member.id, role: 'member' }
   ] })
-  await withServer(makeApp(database, owner), async (baseUrl) => {
-    const transferred = await call(baseUrl, '/api/families/current/transfer-ownership', {
+  await withServer(makeApp(database, administrator), async (baseUrl) => {
+    const transferred = await call(baseUrl, '/api/families/current/transfer-admin', {
       method: 'POST',
       body: JSON.stringify({ memberId: 22 })
     })
     assert.equal(transferred.response.status, 200)
-    assert.equal(database.state.families[0].owner_user_id, member.id)
+    assert.equal(database.state.families[0].admin_user_id, member.id)
     assert.equal(database.state.memberships.find((item) => item.id === 21).role, 'member')
-    assert.equal(database.state.memberships.find((item) => item.id === 22).role, 'owner')
+    assert.equal(database.state.memberships.find((item) => item.id === 22).role, 'admin')
     assert.equal(database.state.committed, true)
 
     const left = await call(baseUrl, '/api/families/leave', { method: 'POST' })
@@ -275,18 +281,18 @@ test('owner can transfer ownership atomically and then leave as a normal member'
   })
 })
 
-test('delegated admins cannot transfer ownership and cross-family targets are rejected', async () => {
-  const database = makeDatabase({ memberships: [{ id: 31, family, user_id: admin.id, role: 'admin' }] })
-  await withServer(makeApp(database, admin), async (baseUrl) => {
-    let result = await call(baseUrl, '/api/families/current/transfer-ownership', {
+test('members cannot transfer the administrator identity and cross-family targets are rejected', async () => {
+  const database = makeDatabase({ memberships: [{ id: 31, family, user_id: member.id, role: 'member' }] })
+  await withServer(makeApp(database, member), async (baseUrl) => {
+    let result = await call(baseUrl, '/api/families/current/transfer-admin', {
       method: 'POST',
       body: JSON.stringify({ memberId: 31 })
     })
     assert.equal(result.response.status, 403)
 
-    const ownerDatabase = makeDatabase({ memberships: [{ id: 32, family, user_id: owner.id, role: 'owner' }] })
-    await withServer(makeApp(ownerDatabase, owner), async (ownerBaseUrl) => {
-      result = await call(ownerBaseUrl, '/api/families/current/transfer-ownership', {
+    const adminDatabase = makeDatabase({ memberships: [{ id: 32, family, user_id: administrator.id, role: 'admin' }] })
+    await withServer(makeApp(adminDatabase, administrator), async (adminBaseUrl) => {
+      result = await call(adminBaseUrl, '/api/families/current/transfer-admin', {
         method: 'POST',
         body: JSON.stringify({ memberId: 999 })
       })
@@ -297,7 +303,7 @@ test('delegated admins cannot transfer ownership and cross-family targets are re
 
 test('joining preserves invite-code case and generated codes use six mixed-case alphanumeric characters', async () => {
   const joinDatabase = makeDatabase()
-  await withServer(makeApp(joinDatabase, admin), async (baseUrl) => {
+  await withServer(makeApp(joinDatabase, member), async (baseUrl) => {
     let result = await call(baseUrl, '/api/families/join', {
       method: 'POST',
       body: JSON.stringify({ inviteCode: family.invite_code.toLowerCase() })
@@ -312,7 +318,7 @@ test('joining preserves invite-code case and generated codes use six mixed-case 
   })
 
   const createDatabase = makeDatabase({ families: [], memberships: [], duplicateFamilyInsert: true })
-  await withServer(makeApp(createDatabase, owner), async (baseUrl) => {
+  await withServer(makeApp(createDatabase, administrator), async (baseUrl) => {
     const result = await call(baseUrl, '/api/families', {
       method: 'POST',
       body: JSON.stringify({ name: '新家庭' })
@@ -333,9 +339,13 @@ test('family schema upgrade only alters drifted columns and is safe to rerun', a
     execute: async (sql) => {
       if (/column_name = 'role'/i.test(sql)) return [[columns.role]]
       if (/column_name = 'invite_code'/i.test(sql)) return [[columns.invite]]
+      if (/UPDATE family_members SET role = 'admin' WHERE role = 'owner'/i.test(sql)) {
+        altered.push('owner-data')
+        return [{ affectedRows: 1 }]
+      }
       if (/MODIFY COLUMN role/i.test(sql)) {
         altered.push('role')
-        columns.role.COLUMN_TYPE = "enum('owner','admin','member')"
+        columns.role.COLUMN_TYPE = "enum('admin','member')"
         return [{ affectedRows: 0 }]
       }
       if (/MODIFY COLUMN invite_code/i.test(sql)) {
@@ -350,5 +360,5 @@ test('family schema upgrade only alters drifted columns and is safe to rerun', a
 
   await ensureFamilyManagementSchema(database)
   await ensureFamilyManagementSchema(database)
-  assert.deepEqual(altered, ['role', 'invite'])
+  assert.deepEqual(altered, ['owner-data', 'role', 'invite'])
 })

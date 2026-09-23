@@ -83,7 +83,7 @@ function createAuthService({ database, jwtSecret, wechatAuthService, mediaUrlSer
         await connection.beginTransaction()
         const [users] = await connection.execute('SELECT id, avatar_url FROM users WHERE id = ? FOR UPDATE', [userId])
         if (!users[0]) throw new HttpError(401, '登录已失效', 'AUTH_SESSION_EXPIRED')
-        const [ownedFamilies] = await connection.execute("SELECT id FROM families WHERE owner_user_id = ? AND status = 'active' FOR UPDATE", [userId])
+        const [adminFamilies] = await connection.execute("SELECT id FROM families WHERE admin_user_id = ? AND status = 'active' FOR UPDATE", [userId])
         const [memberships] = await connection.execute(
           `SELECT fm.id AS member_id, fm.family_id, fm.role
              FROM family_members fm JOIN families f ON f.id = fm.family_id
@@ -93,8 +93,25 @@ function createAuthService({ database, jwtSecret, wechatAuthService, mediaUrlSer
         )
         if (memberships.length > 1) throw new HttpError(500, '账户家庭关系数据冲突')
         const membership = memberships[0] || null
-        if (ownedFamilies[0] || (membership && ['owner', 'admin'].includes(membership.role))) {
-          throw new HttpError(409, '请先移交或取消管理员身份，或解散家庭', 'ACCOUNT_ADMIN_BLOCKED')
+        if (adminFamilies.length) {
+          if (!membership || membership.role !== 'admin' || Number(membership.family_id) !== Number(adminFamilies[0].id)) {
+            throw new HttpError(500, '家庭管理员关系数据冲突')
+          }
+          const [otherMembers] = await connection.execute(
+            "SELECT id FROM family_members WHERE family_id = ? AND status = 'active' AND id <> ? FOR UPDATE",
+            [membership.family_id, membership.member_id]
+          )
+          if (otherMembers.length) {
+            throw new HttpError(409, '请先转移管理员身份，再注销账号', 'ACCOUNT_ADMIN_BLOCKED')
+          }
+          const [archived] = await connection.execute(
+            "UPDATE families SET status = 'archived', disbanded_at = CURRENT_TIMESTAMP, purge_after = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 30 DAY) WHERE id = ? AND admin_user_id = ? AND status = 'active'",
+            [membership.family_id, userId]
+          )
+          if (!archived.affectedRows) throw new HttpError(409, '家庭状态已变化，请重试', 'FAMILY_STATE_CHANGED')
+          await connection.execute("UPDATE family_members SET status = 'left' WHERE family_id = ? AND status = 'active'", [membership.family_id])
+        } else if (membership && membership.role === 'admin') {
+          throw new HttpError(500, '家庭管理员关系数据冲突')
         }
         const avatarFileId = String(users[0].avatar_url || '').trim()
         const normalizedPrefix = String(storageFileIdPrefix || '').replace(/\/+$/, '')

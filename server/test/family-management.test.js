@@ -4,8 +4,8 @@ const express = require('express')
 const { requireFamily } = require('../src/middleware/authenticate')
 const { router } = require('../src/routes/families')
 
-const familyA = { id: 10, name: '家庭 A', invite_code: 'AAAAAA', owner_user_id: 1 }
-const familyB = { id: 20, name: '家庭 B', invite_code: 'BBBBBB', owner_user_id: 4 }
+const familyA = { id: 10, name: '家庭 A', invite_code: 'AAAAAA', admin_user_id: 1 }
+const familyB = { id: 20, name: '家庭 B', invite_code: 'BBBBBB', admin_user_id: 4 }
 const owner = { id: 1, openid: 'owner', display_name: '家庭创建者', avatar_url: null }
 const admin = { id: 2, openid: 'admin', display_name: '家庭管理员', avatar_url: null }
 const member = { id: 3, openid: 'member', display_name: '普通成员', avatar_url: null }
@@ -45,6 +45,10 @@ function makeDatabase({ families = [familyA, familyB], memberships = [] } = {}) 
   async function execute(sql, params) {
     if (/SELECT id FROM users WHERE id = \? FOR UPDATE/i.test(sql)) return [[{ id: params[0] }]]
     if (/FROM family_members fm JOIN families f/i.test(sql)) return [rowsForUser(params[0])]
+    if (/SELECT admin_user_id FROM families WHERE id = .*status = 'active'/i.test(sql)) {
+      const family = state.families.find((item) => item.id === Number(params[0]))
+      return [family ? [{ admin_user_id: family.admin_user_id }] : []]
+    }
     if (/SELECT id, status FROM family_members WHERE family_id = \? AND user_id = \? FOR UPDATE/i.test(sql)) {
       const found = state.memberships.find((item) => item.family_id === params[0] && item.user_id === params[1])
       return [found ? [{ id: found.id, status: found.status }] : []]
@@ -53,13 +57,16 @@ function makeDatabase({ families = [familyA, familyB], memberships = [] } = {}) 
       const found = state.memberships.find((item) => item.id === Number(params[0]) && item.family_id === Number(params[1]) && item.status === 'active')
       return [found ? [{ id: found.id, user_id: found.user_id, role: found.role, status: found.status }] : []]
     }
+    if (/SELECT id, user_id FROM family_members WHERE family_id = .*role = 'admin'/i.test(sql)) {
+      return [state.memberships.filter((item) => item.family_id === Number(params[0]) && item.role === 'admin' && item.status === 'active').map((item) => ({ id: item.id, user_id: item.user_id }))]
+    }
     if (/SELECT id FROM families WHERE invite_code =/i.test(sql)) {
       const found = state.families.find((family) => family.invite_code === params[0])
       return [found ? [{ id: found.id }] : []]
     }
     if (/INSERT INTO family_members/i.test(sql)) {
       const [familyId, userId, nickname] = params
-      state.memberships.push({ id: state.nextMemberId++, family_id: familyId, family: state.families.find((family) => family.id === familyId), user_id: userId, role: /'owner'/i.test(sql) ? 'owner' : 'member', nickname, status: 'active' })
+      state.memberships.push({ id: state.nextMemberId++, family_id: familyId, family: state.families.find((family) => family.id === familyId), user_id: userId, role: /'admin'/i.test(sql) ? 'admin' : 'member', nickname, status: 'active' })
       return [{ affectedRows: 1 }]
     }
     if (/UPDATE family_members SET status = 'active'/i.test(sql)) {
@@ -78,6 +85,22 @@ function makeDatabase({ families = [familyA, familyB], memberships = [] } = {}) 
       const [role, memberId] = params
       const found = state.memberships.find((item) => item.id === Number(memberId) && item.status === 'active')
       if (found) found.role = role
+      return [{ affectedRows: found ? 1 : 0 }]
+    }
+    if (/UPDATE family_members SET role = 'admin'/i.test(sql)) {
+      const found = state.memberships.find((item) => item.id === Number(params[0]) && item.status === 'active')
+      if (found) found.role = 'admin'
+      return [{ affectedRows: found ? 1 : 0 }]
+    }
+    if (/UPDATE family_members SET role = 'member'/i.test(sql)) {
+      const found = state.memberships.find((item) => item.id === Number(params[0]) && item.status === 'active')
+      if (found) found.role = 'member'
+      return [{ affectedRows: found ? 1 : 0 }]
+    }
+    if (/UPDATE families SET admin_user_id =/i.test(sql)) {
+      const [adminUserId, familyId] = params
+      const found = state.families.find((item) => item.id === Number(familyId))
+      if (found) found.admin_user_id = adminUserId
       return [{ affectedRows: found ? 1 : 0 }]
     }
     if (/UPDATE families SET name =/i.test(sql)) {
@@ -138,7 +161,7 @@ async function call(baseUrl, path, options = {}) {
   return { response, body: await response.json() }
 }
 
-test('ordinary members can leave while owners cannot orphan a family', async () => {
+test('ordinary members can leave while administrators cannot orphan a family', async () => {
   const database = makeDatabase({ memberships: [{ id: 11, family: familyA, user_id: member.id }] })
   await withServer(makeApp(database, member), async (baseUrl) => {
     const result = await call(baseUrl, '/api/families/leave', { method: 'POST' })
@@ -146,7 +169,7 @@ test('ordinary members can leave while owners cannot orphan a family', async () 
     assert.equal(database.state.memberships[0].status, 'left')
   })
 
-  const ownerDatabase = makeDatabase({ memberships: [{ id: 12, family: familyA, user_id: owner.id, role: 'owner' }] })
+  const ownerDatabase = makeDatabase({ memberships: [{ id: 12, family: familyA, user_id: owner.id, role: 'admin' }] })
   await withServer(makeApp(ownerDatabase, owner), async (baseUrl) => {
     const result = await call(baseUrl, '/api/families/leave', { method: 'POST' })
     assert.equal(result.response.status, 409)
@@ -170,7 +193,7 @@ test('a left member can rejoin without creating a duplicate row', async () => {
 
 test('all active members can access the invite code', async () => {
   for (const actor of [owner, admin, member]) {
-    const database = makeDatabase({ memberships: [{ family: familyA, user_id: actor.id, role: actor === owner ? 'owner' : 'admin' }] })
+    const database = makeDatabase({ memberships: [{ family: familyA, user_id: actor.id, role: actor === member ? 'member' : 'admin' }] })
     await withServer(makeApp(database, actor), async (baseUrl) => {
       const result = await call(baseUrl, '/api/families/current/invite-code')
       assert.equal(result.response.status, 200)
@@ -179,9 +202,12 @@ test('all active members can access the invite code', async () => {
   }
 })
 
-test('owners and delegated admins can rename the current family while members cannot', async () => {
+test('the current administrator can rename the family while members cannot', async () => {
   for (const actor of [owner, admin]) {
-    const database = makeDatabase({ memberships: [{ family: familyA, user_id: actor.id, role: actor === owner ? 'owner' : 'admin' }] })
+    const database = makeDatabase({
+      families: [{ ...familyA, admin_user_id: actor.id }],
+      memberships: [{ family: { ...familyA, admin_user_id: actor.id }, user_id: actor.id, role: 'admin' }]
+    })
     await withServer(makeApp(database, actor), async (baseUrl) => {
       let result = await call(baseUrl, '/api/families/current/name', {
         method: 'PATCH',
@@ -211,30 +237,30 @@ test('owners and delegated admins can rename the current family while members ca
   })
 })
 
-test('admins can promote, demote, and remove active members', async () => {
-  const database = makeDatabase({ memberships: [
-    { id: 21, family: familyA, user_id: admin.id, role: 'admin' },
-    { id: 22, family: familyA, user_id: member.id, role: 'member' }
+test('admins can transfer administrator identity and remove active members', async () => {
+  const currentFamily = { ...familyA, admin_user_id: admin.id }
+  const database = makeDatabase({ families: [currentFamily], memberships: [
+    { id: 21, family: currentFamily, user_id: admin.id, role: 'admin' },
+    { id: 22, family: currentFamily, user_id: member.id, role: 'member' }
   ] })
   await withServer(makeApp(database, admin), async (baseUrl) => {
-    let result = await call(baseUrl, '/api/families/current/members/22/role', { method: 'PATCH', body: JSON.stringify({ role: 'admin' }) })
+    const result = await call(baseUrl, '/api/families/current/transfer-admin', { method: 'POST', body: JSON.stringify({ memberId: 22 }) })
     assert.equal(result.response.status, 200)
     assert.equal(database.state.memberships.find((item) => item.id === 22).role, 'admin')
+    assert.equal(database.state.memberships.find((item) => item.id === 21).role, 'member')
+  })
 
-    result = await call(baseUrl, '/api/families/current/members/22/role', { method: 'PATCH', body: JSON.stringify({ role: 'member' }) })
+  await withServer(makeApp(database, member), async (baseUrl) => {
+    const result = await call(baseUrl, '/api/families/current/members/21', { method: 'DELETE' })
     assert.equal(result.response.status, 200)
-    assert.equal(database.state.memberships.find((item) => item.id === 22).role, 'member')
-
-    result = await call(baseUrl, '/api/families/current/members/22', { method: 'DELETE' })
-    assert.equal(result.response.status, 200)
-    assert.equal(database.state.memberships.find((item) => item.id === 22).status, 'left')
+    assert.equal(database.state.memberships.find((item) => item.id === 21).status, 'left')
   })
 })
 
 test('members cannot manage others and owner rows are protected', async () => {
   const database = makeDatabase({ memberships: [
     { id: 31, family: familyA, user_id: member.id, role: 'member' },
-    { id: 32, family: familyA, user_id: owner.id, role: 'owner' }
+    { id: 32, family: familyA, user_id: owner.id, role: 'admin' }
   ] })
   await withServer(makeApp(database, member), async (baseUrl) => {
     const result = await call(baseUrl, '/api/families/current/members/32', { method: 'DELETE' })
@@ -243,10 +269,10 @@ test('members cannot manage others and owner rows are protected', async () => {
 
   const adminDatabase = makeDatabase({ memberships: [
     { id: 33, family: familyA, user_id: admin.id, role: 'admin' },
-    { id: 34, family: familyA, user_id: owner.id, role: 'owner' }
+    { id: 34, family: familyA, user_id: owner.id, role: 'admin' }
   ] })
   await withServer(makeApp(adminDatabase, admin), async (baseUrl) => {
-    let result = await call(baseUrl, '/api/families/current/members/34/role', { method: 'PATCH', body: JSON.stringify({ role: 'member' }) })
+    let result = await call(baseUrl, '/api/families/current/transfer-admin', { method: 'POST', body: JSON.stringify({ memberId: 34 }) })
     assert.equal(result.response.status, 409)
     result = await call(baseUrl, '/api/families/current/members/34', { method: 'DELETE' })
     assert.equal(result.response.status, 409)
@@ -256,8 +282,9 @@ test('members cannot manage others and owner rows are protected', async () => {
 })
 
 test('member management is scoped to the administrator current family', async () => {
-  const database = makeDatabase({ memberships: [
-    { id: 41, family: familyA, user_id: admin.id, role: 'admin' },
+  const currentFamily = { ...familyA, admin_user_id: admin.id }
+  const database = makeDatabase({ families: [currentFamily, familyB], memberships: [
+    { id: 41, family: currentFamily, user_id: admin.id, role: 'admin' },
     { id: 42, family: familyB, user_id: outsider.id, role: 'member' }
   ] })
   await withServer(makeApp(database, admin), async (baseUrl) => {
