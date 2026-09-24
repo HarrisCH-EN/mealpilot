@@ -38,7 +38,7 @@ function createCloudStorageService({ envId, fileIdPrefix, sdk } = {}) {
     try {
       const cloudbase = sdk || require('@cloudbase/node-sdk')
       app = cloudbase.init({ env: envId })
-      if (!app || typeof app.uploadFile !== 'function' || typeof app.getTempFileURL !== 'function' || typeof app.deleteFile !== 'function') throw new Error('invalid SDK instance')
+      if (!app || typeof app.uploadFile !== 'function' || typeof app.getTempFileURL !== 'function' || typeof app.deleteFile !== 'function' || typeof app.downloadFile !== 'function') throw new Error('invalid SDK instance')
       return app
     } catch (error) {
       throw storageError(failureStage(error, 'init'))
@@ -68,21 +68,6 @@ function createCloudStorageService({ envId, fileIdPrefix, sdk } = {}) {
   async function downloadBuffer(fileId, maxBytes) {
     if (!isCloudFileId(fileId) || !fileId.startsWith(`${validateFileIdPrefix(fileIdPrefix)}/`)) throw storageError('path')
     const app = getApp()
-    if (Number.isFinite(maxBytes) && maxBytes > 0) {
-      let info
-      try {
-        info = await app.getFileInfo({ fileList: [fileId] })
-      } catch (error) {
-        throw storageError(failureStage(error, 'info'))
-      }
-      const entry = info && Array.isArray(info.fileList) && info.fileList[0]
-      if (!entry || entry.fileID !== fileId || entry.code !== 'SUCCESS' || !Number.isSafeInteger(entry.size) || entry.size < 0) throw storageError('info')
-      if (entry.size > maxBytes) {
-        const error = storageError('size')
-        error.status = 413
-        throw error
-      }
-    }
     let result
     try {
       result = await app.downloadFile({ fileID: fileId })

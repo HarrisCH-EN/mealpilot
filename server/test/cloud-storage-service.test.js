@@ -9,7 +9,8 @@ function fakeSdk({ uploadFile, getTempFileURL, deleteFile, initError } = {}) {
   const app = {
     async uploadFile(input) { calls.upload.push(input); return uploadFile ? uploadFile(input) : { fileID: 'cloud://uploaded' } },
     async getTempFileURL(input) { calls.temp.push(input); return getTempFileURL ? getTempFileURL(input) : { fileList: input.fileList.map((fileID) => ({ fileID, tempFileURL: `https://temp.test/${encodeURIComponent(fileID)}` })) } },
-    async deleteFile(input) { calls.delete.push(input); return deleteFile ? deleteFile(input) : { fileList: input.fileList.map((fileID) => ({ fileID, code: 'SUCCESS' })) } }
+    async deleteFile(input) { calls.delete.push(input); return deleteFile ? deleteFile(input) : { fileList: input.fileList.map((fileID) => ({ fileID, code: 'SUCCESS' })) } },
+    async downloadFile() { return { fileContent: Buffer.from('image') } }
   }
   return {
     calls,
@@ -87,26 +88,22 @@ test('media URL service resolves stable values in nested response items without 
   assert.deepEqual(result, [{ id: 1, coverFileId: 'cloud://cover', coverUrl: 'https://temp.test/image' }])
 })
 
-test('storage refuses oversized staged files before downloading their contents', async () => {
-  const { createCloudStorageService } = require('../src/services/cloud-storage-service')
+test('storage rejects oversized downloaded buffers without a metadata API', async () => {
   let downloads = 0
   const sdk = { init() { return {
     uploadFile: async () => ({}), getTempFileURL: async () => ({}), deleteFile: async () => ({}),
-    getFileInfo: async ({ fileList }) => ({ fileList: [{ fileID: fileList[0], code: 'SUCCESS', size: 5 * 1024 * 1024 + 1 }] }),
-    downloadFile: async () => { downloads += 1; return { fileContent: Buffer.alloc(0) } }
+    downloadFile: async () => { downloads += 1; return { fileContent: Buffer.alloc(5 * 1024 * 1024 + 1) } }
   } } }
   const storage = createCloudStorageService({ envId: 'env', fileIdPrefix: 'cloud://env.bucket', sdk })
   await assert.rejects(storage.downloadBuffer('cloud://env.bucket/staging/users/7/avatars/id', 5 * 1024 * 1024), error => error.status === 413)
-  assert.equal(downloads, 0)
+  assert.equal(downloads, 1)
 })
 
-test('storage downloads the uploaded staging file as a Buffer', async () => {
-  const { createCloudStorageService } = require('../src/services/cloud-storage-service')
+test('storage downloads the staged file with the Server SDK download contract', async () => {
   const sdk = { init() { return {
     uploadFile: async () => ({ fileID: 'cloud://env.bucket/file' }),
     getTempFileURL: async () => ({ fileList: [] }),
     deleteFile: async () => ({ fileList: [] }),
-    getFileInfo: async ({ fileList }) => ({ fileList: [{ fileID: fileList[0], code: 'SUCCESS', size: 4 }] }),
     downloadFile: async ({ fileID }) => {
       assert.equal(fileID, 'cloud://env.bucket/staging/users/7/avatars/id')
       return { fileContent: Buffer.from([0xff, 0xd8, 0xff, 0xd9]) }
@@ -116,8 +113,19 @@ test('storage downloads the uploaded staging file as a Buffer', async () => {
   assert.deepEqual(await storage.downloadBuffer('cloud://env.bucket/staging/users/7/avatars/id', 5 * 1024 * 1024), Buffer.from([0xff, 0xd8, 0xff, 0xd9]))
 })
 
+test('storage rejects an SDK instance without downloadFile', async () => {
+  const storage = createCloudStorageService({ envId: 'env-test', fileIdPrefix: 'cloud://env-test.bucket', sdk: { init: () => ({ uploadFile: async () => ({}), getTempFileURL: async () => ({}), deleteFile: async () => ({}) }) } })
+  await assert.rejects(storage.downloadBuffer('cloud://env-test.bucket/staging/id', 5 * 1024 * 1024), error => error.code === 'CLOUDBASE_STORAGE_INIT_FAILED')
+})
+
 test('storage surfaces a missing file from a per-file delete result', async () => {
   const sdk = fakeSdk({ deleteFile: async ({ fileList }) => ({ fileList: [{ fileID: fileList[0], code: 'FILE_NOT_FOUND' }] }) })
   const storage = createCloudStorageService({ envId: 'env-test', fileIdPrefix: 'cloud://env-test.bucket', sdk })
   await assert.rejects(storage.deleteFile('cloud://env-test.bucket/staging/users/7/avatars/id'), error => error.code === 'CLOUDBASE_STORAGE_NOT_FOUND_FAILED')
+})
+
+test('installed CloudBase Server SDK exposes the downloadFile contract', () => {
+  const sdk = require('@cloudbase/node-sdk')
+  const app = sdk.init({ env: 'env-test' })
+  assert.equal(typeof app.downloadFile, 'function')
 })

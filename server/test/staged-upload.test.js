@@ -118,9 +118,9 @@ test('avatar database failure removes new final image while leaving staging clea
   })
 })
 
-test('oversized Storage metadata maps to HTTP 413 in the actual error contract', async () => {
+test('oversized downloaded staging image maps to HTTP 413 in the actual error contract', async () => {
   const { app, state, jobs } = harness()
-  // Replace the file bytes after prepare by using a storage size error from downloadBuffer.
+  // Simulate the storage size error returned after downloading the staged bytes.
   const { storageError } = require('../src/services/cloud-storage-service')
   state.downloadError = storageError('size')
   state.downloadError.status = 413

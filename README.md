@@ -38,7 +38,7 @@ MealPilot（饭有谱）是一款面向家庭场景的微信小程序，用于�
 | 微信小程序前端 | 已切换生产 API，正在进行真机与体验版验收 |
 | Backend | 已部署到腾讯 CloudBase 云托管 |
 | Backend 服务名 | `mealpilot-api` |
-| API Base | `https://mealpilot-api-315434-10-1423427242.sh.run.tcloudbase.com/api` |
+| 正式业务入口 | `wx.cloud.callContainer` → `mealpilot-api`（JSON）；图片走 `wx.cloud.uploadFile` |
 | MySQL | 已部署，业务数据库为 `mealpilot` |
 | Cloud Storage | CloudBase 私有 Storage |
 | 系统菜谱图片 | 已迁移到 `system/recipes/` |
@@ -54,7 +54,9 @@ activeEnvironment = 'production'
 生产环境：
 
 ```text
-https://mealpilot-api-315434-10-1423427242.sh.run.tcloudbase.com/api
+JSON API → wx.cloud.callContainer → mealpilot-api
+图片 → wx.cloud.uploadFile → staging → Backend commit
+旧公网 URL 只用于历史 /uploads/... 展示兼容
 ```
 
 生产环境关闭开发登录：
@@ -69,7 +71,7 @@ allowDevLogin = false
 
 - 微信开发者工具完整编译检查
 - 真机登录与业务链路验收
-- 微信后台合法域名配置核对
+- CloudBase Storage 写规则和图片临时 URL 展示核对
 - 体验版测试
 - 微信审核与正式发布
 - 重新导出最新 draw.io 图表 PNG
@@ -85,7 +87,7 @@ allowDevLogin = false
 │   WXML / WXSS / JavaScript   │
 └──────────────┬───────────────┘
                │
-               │ HTTPS
+               │ wx.cloud.callContainer
                │ Authorization: Bearer JWT
                ▼
 ┌──────────────────────────────┐
@@ -141,6 +143,7 @@ Backend
 → 使用 CloudBase 服务端凭据生成临时 HTTPS URL
 
 Mini Program
+→ wx.cloud.uploadFile 写入 staging，再经 Backend commit 校验并转存
 → 使用临时 HTTPS URL 展示图片
 ```
 
@@ -542,10 +545,12 @@ production
 http://127.0.0.1:3000/api
 ```
 
-生产 API：
+生产业务入口：
 
 ```text
-https://mealpilot-api-315434-10-1423427242.sh.run.tcloudbase.com/api
+JSON API → wx.cloud.callContainer（/api，JWT）
+图片 → wx.cloud.uploadFile（staging），Backend prepare/commit（JWT）
+旧公网 URL 仅保留历史图片路径兼容
 ```
 
 当前激活：
