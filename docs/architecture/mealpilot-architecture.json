@@ -1,0 +1,305 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "MealPilot 系统架构",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1375,
+      760
+    ],
+    "views": [
+      {
+        "id": "business",
+        "label": "业务数据",
+        "focus": [
+          "mini",
+          "client",
+          "container",
+          "express",
+          "domain",
+          "mysql"
+        ],
+        "note": "生产 JSON 请求经 CloudBase 云托管，JWT 与家庭边界在 Backend 校验。"
+      },
+      {
+        "id": "identity",
+        "label": "微信登录",
+        "focus": [
+          "mini",
+          "client",
+          "container",
+          "express",
+          "wechat",
+          "mysql"
+        ],
+        "note": "wx.login 的 code 经服务端 code2Session 换取 OpenID，再建立 JWT 会话。"
+      },
+      {
+        "id": "images",
+        "label": "图片上传",
+        "focus": [
+          "client",
+          "storage",
+          "express",
+          "uploads",
+          "mysql"
+        ],
+        "note": "Storage staging 上传与 Backend commit 分离；正式文件经服务端验证后生成。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "mini",
+      "type": "frontend",
+      "label": "MealPilot 小程序",
+      "sublabel": "页面 · wx.login",
+      "pos": [
+        32,
+        330
+      ],
+      "size": [
+        165,
+        78
+      ]
+    },
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "API 与认证运行时",
+      "sublabel": "api.js · http-client.js",
+      "pos": [
+        247,
+        330
+      ],
+      "size": [
+        175,
+        78
+      ]
+    },
+    {
+      "id": "container",
+      "type": "cloud",
+      "label": "CloudBase 云托管",
+      "sublabel": "callContainer · mealpilot-api",
+      "pos": [
+        474,
+        330
+      ],
+      "size": [
+        175,
+        78
+      ]
+    },
+    {
+      "id": "express",
+      "type": "backend",
+      "label": "Express /api",
+      "sublabel": "路由 · JWT · Family",
+      "pos": [
+        701,
+        330
+      ],
+      "size": [
+        175,
+        78
+      ]
+    },
+    {
+      "id": "domain",
+      "type": "backend",
+      "label": "业务服务",
+      "sublabel": "家庭 · 菜谱 · 推荐 · 菜单",
+      "pos": [
+        928,
+        330
+      ],
+      "size": [
+        185,
+        78
+      ]
+    },
+    {
+      "id": "mysql",
+      "type": "database",
+      "label": "MySQL",
+      "sublabel": "20 张表 · 家庭数据边界",
+      "pos": [
+        1165,
+        330
+      ],
+      "size": [
+        178,
+        78
+      ]
+    },
+    {
+      "id": "wechat",
+      "type": "external",
+      "label": "微信登录服务",
+      "sublabel": "code2Session → OpenID",
+      "pos": [
+        701,
+        90
+      ],
+      "size": [
+        175,
+        78
+      ]
+    },
+    {
+      "id": "storage",
+      "type": "cloud",
+      "label": "CloudBase Storage",
+      "sublabel": "staging/ · 正式 cloud://",
+      "pos": [
+        474,
+        548
+      ],
+      "size": [
+        175,
+        78
+      ]
+    },
+    {
+      "id": "uploads",
+      "type": "backend",
+      "label": "图片上传服务",
+      "sublabel": "校验 magic bytes · ≤5MB",
+      "pos": [
+        701,
+        548
+      ],
+      "size": [
+        175,
+        78
+      ]
+    },
+    {
+      "id": "recommend",
+      "type": "backend",
+      "label": "规则推荐引擎",
+      "sublabel": "过滤 · 候选 · 解释 · 持久化",
+      "pos": [
+        928,
+        548
+      ],
+      "size": [
+        185,
+        78
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "page-api",
+      "from": "mini",
+      "to": "client",
+      "label": "统一 request / upload",
+      "labelDy": -33
+    },
+    {
+      "id": "json-transport",
+      "from": "client",
+      "to": "container",
+      "label": "callContainer /api",
+      "variant": "emphasis",
+      "labelDy": -33
+    },
+    {
+      "id": "service-route",
+      "from": "container",
+      "to": "express",
+      "label": "X-WX-SERVICE",
+      "variant": "emphasis",
+      "labelDy": -33
+    },
+    {
+      "id": "auth-domain",
+      "from": "express",
+      "to": "domain",
+      "label": "JWT / Family 校验",
+      "variant": "security",
+      "labelDy": -33
+    },
+    {
+      "id": "domain-db",
+      "from": "domain",
+      "to": "mysql",
+      "label": "SQL 事务"
+    },
+    {
+      "id": "wechat-exchange",
+      "from": "express",
+      "to": "wechat",
+      "label": "code2Session",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "direct-storage",
+      "from": "client",
+      "to": "storage",
+      "label": "wx.cloud.uploadFile · staging",
+      "fromSide": "bottom",
+      "toSide": "left",
+      "variant": "emphasis"
+    },
+    {
+      "id": "commit-upload",
+      "from": "express",
+      "to": "uploads",
+      "label": "prepare / commit",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    },
+    {
+      "id": "validate-promote",
+      "from": "uploads",
+      "to": "storage",
+      "label": "下载校验 · 写正式文件",
+      "fromSide": "left",
+      "toSide": "right",
+      "variant": "security",
+      "labelDy": 63
+    },
+    {
+      "id": "recommend-engine",
+      "from": "domain",
+      "to": "recommend",
+      "label": "规则评分与候选",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelDy": 24
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "业务请求",
+      "items": [
+        "生产：callContainer → Express → JWT / Family → MySQL",
+        "开发：wx.request / wx.uploadFile → localhost"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "图片路径",
+      "items": [
+        "客户端写 staging；Backend 下载验真后写正式 File ID",
+        "临时 HTTPS URL 用于展示，cloud:// File ID 用于持久化"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "上线门槛",
+      "items": [
+        "当前 Storage 客户端规则仍未收紧到 staging/",
+        "架构图表示代码设计，不表示线上权限已验收"
+      ]
+    }
+  ]
+}

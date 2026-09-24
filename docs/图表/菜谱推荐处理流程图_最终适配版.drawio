@@ -1,12 +1,12 @@
 <mxfile host="Electron">
   <diagram id="P4nVcjRHJDQNwRj3qyVJ" name="第 1 页">
-    <mxGraphModel dx="2378" dy="1436" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="1">
+    <mxGraphModel dx="1587" dy="798" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="1">
       <root>
         <mxCell id="0" />
         <mxCell id="1" parent="0" />
         <UserObject label="" mermaidData="{&quot;data&quot;: &quot;%%{init: {\r\n  &quot;theme&quot;: &quot;base&quot;,\r\n  &quot;flowchart&quot;: {&quot;curve&quot;: &quot;linear&quot;, &quot;nodeSpacing&quot;: 18, &quot;rankSpacing&quot;: 24, &quot;htmlLabels&quot;: false},\r\n  &quot;themeVariables&quot;: {&quot;background&quot;: &quot;#ffffff&quot;, &quot;primaryColor&quot;: &quot;#ffffff&quot;, &quot;primaryTextColor&quot;: &quot;#000000&quot;, &quot;primaryBorderColor&quot;: &quot;#000000&quot;, &quot;lineColor&quot;: &quot;#000000&quot;, &quot;fontFamily&quot;: &quot;Microsoft YaHei&quot;}\r\n}}%%\r\n\r\nflowchart TB\r\n\r\n    A([开始])\r\n    B[&quot;用户设置推荐条件&lt;br/&gt;目标日期、餐次、selectedTagIds、准备时间、菜品数量与结构&quot;]\r\n    C[&quot;校验 JWT、当前家庭成员和推荐参数&quot;]\r\n    D{&quot;参数与身份&lt;br/&gt;是否合法？&quot;}\r\n    E[&quot;读取家庭有效菜谱、标签、食材、季节及近期菜单&quot;]\r\n    F[&quot;汇总所有有效成员的食材限制&quot;]\r\n    G[&quot;按忌口硬过滤并校验精确菜单结构&quot;]\r\n    H{&quot;是否存在&lt;br/&gt;可推荐组合？&quot;}\r\n    I[&quot;规范化当次标签偏好并汇总家庭类别偏好&quot;]\r\n    J[&quot;生成完整菜单候选并计算偏好、营养、季节、多样性、新颖度&quot;]\r\n    K[&quot;按准备时间 Tier 1 / Tier 2 选择候选，必要时使用超时 fallback&quot;]\r\n    L[&quot;保存最多 3 个 RecommendationCandidate / CandidateItem&quot;]\r\n    M[&quot;返回候选与推荐理由&quot;]\r\n    P[&quot;展示候选，支持换一组&quot;]\r\n    Q{&quot;用户是否&lt;br/&gt;应用候选？&quot;}\r\n    R[&quot;重新校验 Run、Candidate、家庭、成员、忌口、结构及菜谱状态&quot;]\r\n    S{&quot;候选是否仍然有效？&quot;}\r\n    T[&quot;开启数据库事务&quot;]\r\n    U[&quot;按日期与餐次获取或创建 Menu&quot;]\r\n    V[&quot;幂等写入当前 Candidate 的 MenuItem&quot;]\r\n    W[&quot;提交事务&quot;]\r\n    X[&quot;返回菜单应用成功&quot;]\r\n    Y[&quot;返回参数错误或不可行提示&quot;]\r\n    Z[&quot;回滚事务并返回候选失效提示&quot;]\r\n    END([结束])\r\n\r\n    A --&gt; B --&gt; C --&gt; D\r\n    D -- 否 --&gt; Y\r\n    D -- 是 --&gt; E --&gt; F --&gt; G --&gt; H\r\n    H -- 否 --&gt; Y\r\n    H -- 是 --&gt; I --&gt; J --&gt; K --&gt; L --&gt; M --&gt; P --&gt; Q\r\n    Q -- 否 --&gt; END\r\n    Q -- 是 --&gt; R --&gt; S\r\n    S -- 否 --&gt; Z\r\n    S -- 是 --&gt; T --&gt; U --&gt; V --&gt; W --&gt; X --&gt; END\r\n    Y --&gt; END\r\n    Z --&gt; END\r\n\r\n    classDef startEnd fill:#ffffff,stroke:#000000,stroke-width:1.5px,color:#000000;\r\n    classDef process fill:#ffffff,stroke:#000000,stroke-width:1px,color:#000000;\r\n    classDef decision fill:#ffffff,stroke:#000000,stroke-width:1.2px,color:#000000;\r\n    class A,END startEnd;\r\n    class B,C,E,F,G,I,J,K,L,M,P,R,T,U,V,W,X,Y,Z process;\r\n    class D,H,Q,S decision;\r\n    linkStyle default stroke:#000000,stroke-width:1px;&quot;, &quot;config&quot;: null}" id="59">
           <mxCell connectable="0" parent="1" style="group;transparentBounds=1;editIcon=1;lockedGroup=0;groupPadding=10;rounded=1;fontSize=17;fontStyle=0" vertex="1">
-            <mxGeometry as="geometry" />
+            <mxGeometry height="443" width="1200" as="geometry" />
           </mxCell>
         </UserObject>
         <UserObject label="开始" mermaidId="n:A" mermaidBaseStyle="html=1;rounded=1;whiteSpace=wrap;arcSize=50;strokeWidth=1.5;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="开始" id="2">
@@ -14,12 +14,12 @@
             <mxGeometry height="39" width="60" x="340" y="190" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="用户设置推荐条件&#10;目标日期、餐次、标签偏好、准备时间、菜品数量与结构" mermaidId="n:B" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;用户设置推荐条件&lt;/b&gt;&lt;br/&gt;目标日期、餐次、标签偏好、准备时间、菜品数量与结构" id="3">
+        <UserObject label="用户设置推荐条件&#10;日期/餐次、selectedTagIds、人数、时间上限、菜单结构" mermaidId="n:B" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;用户设置推荐条件&lt;/b&gt;&lt;br/&gt;目标日期、餐次、标签偏好、准备时间、菜品数量与结构" id="3">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
             <mxGeometry height="73" width="412" x="165" y="260" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="校验当前用户、家庭成员身份及推荐参数" mermaidId="n:C" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="校验当前用户、家庭成员身份及推荐参数" id="4">
+        <UserObject label="校验当前用户、家庭成员身份及输入参数" mermaidId="n:C" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="校验当前用户、家庭成员身份及推荐参数" id="4">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
             <mxGeometry height="54" width="348" x="197" y="362" as="geometry" />
           </mxCell>
@@ -29,19 +29,19 @@
             <mxGeometry height="144" width="144" x="299" y="450" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="读取当前家庭有效菜谱、标签、食材及推荐元数据" mermaidId="n:E" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;读取当前家庭有效菜谱、标签、食材及推荐元数据&lt;/b&gt;" id="6">
+        <UserObject label="读取家庭有效菜谱、标签、食材、季节&#10;成员偏好、近期菜单与评分反馈" mermaidId="n:E" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="读取家庭有效菜谱、标签、食材、季节&lt;br/&gt;成员偏好、近期菜单与评分反馈" id="6">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
-            <mxGeometry height="54" width="316" x="369" y="620" as="geometry" />
+            <mxGeometry height="73" width="316" x="369" y="620" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="汇总所有有效成员的食材限制（忌口）" mermaidId="n:F" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;汇总所有有效成员的食材限制（忌口）&lt;/b&gt;" id="7">
+        <UserObject label="汇总 active 成员忌口、家庭类别偏好&#10;及当前用户低评分菜谱" mermaidId="n:F" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="汇总 active 成员忌口、家庭类别偏好&lt;br/&gt;及当前用户低评分菜谱" id="7">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
-            <mxGeometry height="54" width="268" x="393" y="700" as="geometry" />
+            <mxGeometry height="73" width="268" x="393" y="700" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="按忌口硬过滤，并校验菜品数量与精确菜单结构容量" mermaidId="n:G" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;按忌口硬过滤，并校验菜品数量与精确菜单结构容量&lt;/b&gt;" id="8">
+        <UserObject label="按家庭边界 / 状态 / 忌口 / 低评分硬过滤&#10;并校验精确菜单结构容量" mermaidId="n:G" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="按家庭边界 / 状态 / 忌口 / 低评分硬过滤&lt;br/&gt;并校验精确菜单结构容量" id="8">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
-            <mxGeometry height="54" width="236" x="409" y="790" as="geometry" />
+            <mxGeometry height="73" width="236" x="409" y="790" as="geometry" />
           </mxCell>
         </UserObject>
         <UserObject label="硬约束下是否可形成&#10;完整菜单？" mermaidId="n:H" mermaidBaseStyle="rhombus;html=1;strokeWidth=1.2;whiteSpace=wrap;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="硬约束下是否可形成&#10;完整菜单？" id="9">
@@ -49,42 +49,45 @@
             <mxGeometry height="170" width="170" x="442" y="870" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="规范化当次标签偏好 selectedTagIds" mermaidId="n:I" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;规范化当次标签偏好 selectedTagIds&lt;/b&gt;" id="10">
+        <UserObject label="校验 selectedTagIds&#10;并构建 session_preferences" mermaidId="n:I" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="校验 selectedTagIds&lt;br/&gt;并构建 session_preferences" id="10">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
             <mxGeometry height="73" width="270" x="393" y="1096" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="生成完整菜单候选并计算质量评分&#10;标签匹配、结构可行性、时间与多样性" mermaidId="n:J" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;生成完整菜单候选并计算质量评分&lt;/b&gt;&lt;br/&gt;标签匹配、结构可行性、时间与多样性" id="11">
+        <UserObject label="生成完整菜单候选并计算六类得分&#10;偏好30 / 食材多样性15 / 做法多样性10&#10;营养15 / 季节10 / 新颖度20" mermaidId="n:J" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="生成完整菜单候选并计算六类得分&lt;br/&gt;偏好30 / 食材多样性15 / 做法多样性10&lt;br/&gt;营养15 / 季节10 / 新颖度20" id="11">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
-            <mxGeometry height="73" width="364" x="345" y="1200" as="geometry" />
+            <mxGeometry height="96" width="364" x="345" y="1200" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="计算整桌预计准备时间&#10;时间内 Tier 1 / 超时 Tier 2" mermaidId="n:K" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;计算整桌预计准备时间&lt;/b&gt;&lt;br/&gt;时间内 Tier 1 / 超时 Tier 2" id="12">
+        <UserObject label="估算整桌准备时间&#10;优先时间内 Tier 1；必要时使用超时 Tier 2" mermaidId="n:K" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="估算整桌准备时间&lt;br/&gt;优先时间内 Tier 1；必要时使用超时 Tier 2" id="12">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
             <mxGeometry height="73" width="253" x="401" y="1295" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="按时间层级与质量排序，在高质量窗口内受控探索&#10;最多保留 3 套候选" mermaidId="n:L" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;按时间层级与质量排序，在高质量窗口内受控探索&lt;/b&gt;&lt;br/&gt;最多保留 3 套候选" id="13">
+        <UserObject label="高质量窗口内受控探索 + 多样性去重&#10;最多保留 3 套候选" mermaidId="n:L" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="高质量窗口内受控探索 + 多样性去重&lt;br/&gt;最多保留 3 套候选" id="13">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
-            <mxGeometry height="54" width="204" x="425" y="1390" as="geometry" />
+            <mxGeometry height="73" width="204" x="425" y="1390" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="生成 Candidate A / B / C 及推荐理由" mermaidId="n:M" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;生成 Candidate A / B / C 及推荐理由&lt;/b&gt;" id="14">
+        <UserObject label="生成 Candidate 1 / 2 / 3&#10;分项得分与推荐理由" mermaidId="n:M" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="生成 Candidate 1 / 2 / 3&lt;br/&gt;分项得分与推荐理由" id="14">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
-            <mxGeometry height="54" width="268" x="863" y="200" as="geometry" />
+            <mxGeometry height="73" width="268" x="863" y="200" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="保存 RecommendationRun" mermaidId="n:N" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="保存 RecommendationRun" id="15">
+        <UserObject label="写入 recommendation_runs" mermaidId="n:N" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="保存 RecommendationRun" id="15">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
             <mxGeometry height="54" width="247" x="873.5" y="280" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="保存 RecommendationCandidate / CandidateItem&#10;候选方案、菜谱、得分与推荐理由" mermaidId="n:O" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="保存 RecommendationCandidate / CandidateItem&#10;候选方案、菜谱、得分与推荐理由" id="16">
+        <mxCell id="xNq2rT8YGw679rHKVi0L-59" edge="1" parent="59" source="16" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;" target="18" value="">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <UserObject label="写入 recommendation_candidates / candidate_items&#10;保存候选、菜谱、槽位、得分与理由" mermaidId="n:O" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="保存 RecommendationCandidate / CandidateItem&#10;候选方案、菜谱、得分与推荐理由" id="16">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
-            <mxGeometry height="73" width="253" x="871" y="360" as="geometry" />
+            <mxGeometry height="73" width="319" x="837.5" y="362" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="展示当前候选方案，并支持“换一组”" mermaidId="n:P" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;展示当前候选方案，并支持“换一组”&lt;/b&gt;" id="17">
+        <UserObject label="返回候选列表，并支持“换一组”" mermaidId="n:P" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;展示当前候选方案，并支持“换一组”&lt;/b&gt;" id="17">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
             <mxGeometry height="54" width="204" x="895.5" y="470" as="geometry" />
           </mxCell>
@@ -94,9 +97,9 @@
             <mxGeometry height="144" width="144" x="927" y="560" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="重新校验 Run、Candidate、成员忌口、结构及菜谱状态" mermaidId="n:R" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="&lt;b&gt;重新校验 Run、Candidate、成员忌口、结构及菜谱状态&lt;/b&gt;" id="19">
+        <UserObject label="应用前复核 Run / Candidate / 家庭 / 成员&#10;最新忌口、结构与菜谱状态" mermaidId="n:R" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="应用前复核 Run / Candidate / 家庭 / 成员&lt;br/&gt;最新忌口、结构与菜谱状态" id="19">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
-            <mxGeometry height="54" width="396" x="918" y="770" as="geometry" />
+            <mxGeometry height="73" width="396" x="918" y="770" as="geometry" />
           </mxCell>
         </UserObject>
         <UserObject label="当前候选&#10;是否仍然有效？" mermaidId="n:S" mermaidBaseStyle="rhombus;html=1;strokeWidth=1.2;whiteSpace=wrap;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="当前候选&#10;是否仍然有效？" id="20">
@@ -109,12 +112,12 @@
             <mxGeometry height="54" width="172" x="1169" y="1020" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="按日期与餐次获取或创建 Menu" mermaidId="n:U" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="按日期与餐次获取或创建 Menu" id="22">
+        <UserObject label="按日期与餐次获取或创建 menus 记录" mermaidId="n:U" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="按日期与餐次获取或创建 Menu" id="22">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
             <mxGeometry height="54" width="278" x="1117" y="1100" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="加入当前 Candidate 的 MenuItem&#10;已存在菜谱自动跳过" mermaidId="n:V" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="加入当前 Candidate 的 MenuItem&#10;已存在菜谱自动跳过" id="23">
+        <UserObject label="写入 menu_items（source = recommendation）&#10;已存在菜谱自动跳过" mermaidId="n:V" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="加入当前 Candidate 的 MenuItem&#10;已存在菜谱自动跳过" id="23">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
             <mxGeometry height="73" width="220" x="1145" y="1180" as="geometry" />
           </mxCell>
@@ -129,7 +132,7 @@
             <mxGeometry height="54" width="220" x="1145" y="1362" as="geometry" />
           </mxCell>
         </UserObject>
-        <UserObject label="返回参数错误或硬约束不可行提示" mermaidId="n:Y" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="返回参数错误或硬约束不可行提示" id="26">
+        <UserObject label="返回参数错误 / 无可行候选提示" mermaidId="n:Y" mermaidBaseStyle="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=16;" mermaidBaseValue="返回参数错误或硬约束不可行提示" id="26">
           <mxCell parent="59" style="html=1;whiteSpace=wrap;strokeWidth=1;fillColor=default;strokeColor=default;fontColor=default;fontFamily=Trebuchet MS,Verdana,Arial,sans-serif;fontSize=17;rounded=1;fontStyle=0" vertex="1">
             <mxGeometry height="54" width="284" x="10" y="1118" as="geometry" />
           </mxCell>

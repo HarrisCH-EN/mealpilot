@@ -7,10 +7,10 @@
         <mxCell id="users" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;用户 users&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;UK openid&lt;br&gt;display_name&lt;br&gt;avatar_url = stable cloud:// File ID" vertex="1">
           <mxGeometry height="145" width="210" x="-180" y="200" as="geometry" />
         </mxCell>
-        <mxCell id="families" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;家庭 families&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK owner_user_id&lt;br&gt;UK invite_code&lt;br&gt;name" vertex="1">
-          <mxGeometry height="145" width="210" x="85" y="130" as="geometry" />
+        <mxCell id="families" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;家庭 families&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK admin_user_id (nullable)&lt;br&gt;UK invite_code&lt;br&gt;name&lt;br&gt;status active/archived&lt;br&gt;disbanded_at / purge_after" vertex="1">
+          <mxGeometry height="205" width="210" x="85" y="130" as="geometry" />
         </mxCell>
-        <mxCell id="family_members" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;家庭成员 family_members&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK family_id&lt;br&gt;FK user_id&lt;br&gt;role = owner/member&lt;br&gt;nickname&lt;br&gt;status" vertex="1">
+        <mxCell id="family_members" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;家庭成员 family_members&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK family_id&lt;br&gt;FK user_id (nullable)&lt;br&gt;role = admin/member&lt;br&gt;nickname&lt;br&gt;status = active/left" vertex="1">
           <mxGeometry height="185" width="250" x="255" y="297.5" as="geometry" />
         </mxCell>
         <mxCell id="ingredients" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;食材 ingredients&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;UK name&lt;br&gt;calories_per_100g&lt;br&gt;protein / fat / carbohydrate" vertex="1">
@@ -31,13 +31,13 @@
         <mxCell id="prefs" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;成员类别偏好 member_category_preferences&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK,FK member_id&lt;br&gt;PK category&lt;br&gt;preference_score 1–5" vertex="1">
           <mxGeometry height="125" width="270" x="-210" y="355" as="geometry" />
         </mxCell>
-        <mxCell id="runs" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;推荐运行 recommendation_runs&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK family_id&lt;br&gt;FK created_by_member_id&lt;br&gt;menu_date / meal_type / people_count&lt;br&gt;max_cook_minutes / max_prep_minutes&lt;br&gt;menu_structure / session_preferences" vertex="1">
+        <mxCell id="runs" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;推荐运行 recommendation_runs&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK family_id&lt;br&gt;FK created_by_member_id&lt;br&gt;menu_date / meal_type / people_count&lt;br&gt;max_prep_minutes&lt;br&gt;menu_structure / session_preferences" vertex="1">
           <mxGeometry height="185" width="300" x="40" y="530" as="geometry" />
         </mxCell>
         <mxCell id="legacy_items" parent="1" style="whiteSpace=wrap;html=1;fillColor=#fafafa;strokeColor=#666666;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;dashed=1;" value="&lt;b&gt;兼容推荐项 recommendation_items&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK recommendation_run_id&lt;br&gt;FK recipe_id&lt;br&gt;dish_score / reason_text" vertex="1">
           <mxGeometry height="145" width="285" x="540" y="460" as="geometry" />
         </mxCell>
-        <mxCell id="candidates" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;推荐候选 recommendation_candidates&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK recommendation_run_id&lt;br&gt;UK candidate_rank (1–3)&lt;br&gt;estimated_prep_minutes&lt;br&gt;total_score / score_breakdown&lt;br&gt;reason_text" vertex="1">
+        <mxCell id="candidates" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;推荐候选 recommendation_candidates&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK recommendation_run_id&lt;br&gt;UK run_id + candidate_rank (1–3)&lt;br&gt;estimated_prep_minutes&lt;br&gt;total_score / score_breakdown&lt;br&gt;reason_text" vertex="1">
           <mxGeometry height="185" width="300" x="-150" y="725" as="geometry" />
         </mxCell>
         <mxCell id="candidate_items" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;候选菜谱 recommendation_candidate_items&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK,FK recommendation_candidate_id&lt;br&gt;PK,FK recipe_id&lt;br&gt;UK slot_no&lt;br&gt;category&lt;br&gt;dish_score / reason_text" vertex="1">
@@ -49,7 +49,7 @@
         <mxCell id="feedback" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;用餐反馈 menu_feedback&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK menu_item_id&lt;br&gt;FK member_id&lt;br&gt;UK menu_item_id + member_id&lt;br&gt;rating 1–5 / comment" vertex="1">
           <mxGeometry height="165" width="300" x="1470" y="540" as="geometry" />
         </mxCell>
-        <mxCell id="er_u_f" edge="1" parent="1" source="users" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;exitPerimeter=1;entryPerimeter=1;" target="families" value="1 : N  拥有">
+        <mxCell id="er_u_f" edge="1" parent="1" source="users" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;exitPerimeter=1;entryPerimeter=1;" target="families" value="1 : N  管理">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="er_u_fm" edge="1" parent="1" source="users" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" target="family_members" value="1 : N">
@@ -93,10 +93,10 @@
         <mxCell id="er_fm_p" edge="1" parent="1" source="family_members" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=1;entryY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" target="prefs" value="1 : N">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="er_fm_res" edge="1" parent="1" source="menus" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;" target="restrictions" value="1 : N">
+        <mxCell id="er_fm_res" edge="1" parent="1" source="family_members" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;" target="restrictions" value="1 : N">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="er_i_res" edge="1" parent="1" source="recipe_ing" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" target="restrictions" value="1 : N">
+        <mxCell id="er_i_res" edge="1" parent="1" source="ingredients" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0;exitY=0.5;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" target="restrictions" value="1 : N">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="er_f_run" edge="1" parent="1" source="families" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;entryPerimeter=1;exitDx=0;exitDy=0;" target="runs" value="1 : N">
@@ -120,13 +120,13 @@
         <mxCell id="er_r_ci" edge="1" parent="1" source="recipes" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;" target="candidate_items" value="1 : N">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="er_f_m" edge="1" parent="1" source="recipes" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" target="menus" value="1 : N">
+        <mxCell id="er_f_m" edge="1" parent="1" source="families" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" target="menus" value="1 : N">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="er_fm_m" edge="1" parent="1" source="family_members" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" target="menus" value="1 : N 创建">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="er_run_m" edge="1" parent="1" source="restrictions" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" target="menus" value="1 : 0..N（可为空）">
+        <mxCell id="er_run_m" edge="1" parent="1" source="runs" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" target="menus" value="1 : 0..N（可为空）">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
         <mxCell id="er_m_mi" edge="1" parent="1" source="menus" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=1.011;exitY=0.57;entryX=0;entryY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;exitPerimeter=0;" target="menu_items" value="1 : N">
@@ -138,46 +138,22 @@
         <mxCell id="er_mi_fb" edge="1" parent="1" source="menu_items" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=0;entryX=0.5;entryY=1;entryDx=0;entryDy=0;exitDx=0;exitDy=0;" target="feedback" value="1 : N">
           <mxGeometry relative="1" as="geometry" />
         </mxCell>
-        <mxCell id="er_fm_fb" edge="1" parent="1" source="restrictions" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0;entryY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" target="feedback" value="1 : N">
+        <mxCell id="er_fm_fb" edge="1" parent="1" source="family_members" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0;entryY=0.5;exitDx=0;exitDy=0;entryDx=0;entryDy=0;" target="feedback" value="1 : N">
           <mxGeometry relative="1" as="geometry" />
-        </mxCell>
-        <mxCell id="kxjZDH4cmrQGzrqJYwGn-1" edge="1" parent="1" source="families" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;exitPerimeter=1;entryPerimeter=1;" target="recipes" value="">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="550" y="263" as="sourcePoint" />
-            <mxPoint x="1210" y="927" as="targetPoint" />
-          </mxGeometry>
         </mxCell>
         <mxCell id="recipes" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;菜谱 recipes&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK family_id&lt;br&gt;FK created_by_member_id&lt;br&gt;title / category&lt;br&gt;cover_url = stable cloud:// File ID&lt;br&gt;status" vertex="1">
           <mxGeometry height="185" width="260" x="885" y="360" as="geometry" />
         </mxCell>
-        <mxCell id="kxjZDH4cmrQGzrqJYwGn-2" edge="1" parent="1" source="ingredients" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=1;entryY=0.5;entryPerimeter=1;exitDx=0;exitDy=0;" target="recipe_ing" value="">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="1260" y="283" as="sourcePoint" />
-            <mxPoint x="680" y="897" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
         <mxCell id="recipe_ing" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;菜谱食材 recipe_ingredients&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK,FK recipe_id&lt;br&gt;PK,FK ingredient_id&lt;br&gt;amount_grams&lt;br&gt;note" vertex="1">
           <mxGeometry height="145" width="245" x="1200" y="480" as="geometry" />
-        </mxCell>
-        <mxCell id="kxjZDH4cmrQGzrqJYwGn-4" edge="1" parent="1" source="runs" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=1;exitY=0.5;entryX=0;entryY=0.5;exitPerimeter=1;entryPerimeter=1;" target="restrictions" value="">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="720" y="882" as="sourcePoint" />
-            <mxPoint x="1210" y="927" as="targetPoint" />
-          </mxGeometry>
         </mxCell>
         <mxCell id="restrictions" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;成员食材限制 member_ingredient_restrictions&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK,FK member_id&lt;br&gt;PK,FK ingredient_id&lt;br&gt;reason" vertex="1">
           <mxGeometry height="125" width="290" x="950" y="640" as="geometry" />
         </mxCell>
-        <mxCell id="uKgHouTyZtftZ9Xr0kzH-1" edge="1" parent="1" source="family_members" style="rounded=0;orthogonalLoop=1;jettySize=16;html=1;strokeColor=#444444;strokeWidth=1.2;endArrow=none;endFill=1;fontSize=11;fontColor=#111827;labelBackgroundColor=#ffffff;exitX=0.5;exitY=1;entryX=0.5;entryY=0;exitPerimeter=1;entryPerimeter=1;" target="menus" value="">
-          <mxGeometry relative="1" as="geometry">
-            <mxPoint x="380" y="483" as="sourcePoint" />
-            <mxPoint x="825" y="975" as="targetPoint" />
-          </mxGeometry>
-        </mxCell>
-        <mxCell id="menus" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;菜单 menus&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK family_id&lt;br&gt;FK created_by_member_id&lt;br&gt;FK recommendation_run_id (nullable)&lt;br&gt;UK family_id + menu_date + meal_type&lt;br&gt;status" vertex="1">
+        <mxCell id="menus" parent="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;菜单 menus&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;FK family_id&lt;br&gt;FK created_by_member_id&lt;br&gt;FK recommendation_run_id (nullable)&lt;br&gt;UK family_id + menu_date + meal_type&lt;br&gt;status = active/completed" vertex="1">
           <mxGeometry height="185" width="300" x="580" y="740" as="geometry" />
         </mxCell>
-      </root>
+      <mxCell id="storage_cleanup" parent="1" vertex="1" style="whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#333333;strokeWidth=1.2;fontSize=16;fontColor=#111827;align=center;verticalAlign=middle;spacing=6;rounded=1;arcSize=14;" value="&lt;b&gt;存储清理任务 storage_cleanup_jobs&lt;/b&gt;&lt;br&gt;────────────&lt;br&gt;PK id&lt;br&gt;UK file_id&lt;br&gt;kind = avatar/family_recipe&lt;br&gt;attempts&lt;br&gt;next_attempt_at&lt;br&gt;&lt;i&gt;运行维护表，无业务 FK&lt;/i&gt;"><mxGeometry height="170" width="300" x="1370" y="995" as="geometry" /></mxCell></root>
     </mxGraphModel>
   </diagram>
 </mxfile>

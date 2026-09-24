@@ -1,0 +1,196 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "MealPilot 图片上传时序",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1080,
+      520
+    ],
+    "views": [
+      {
+        "id": "prepare",
+        "label": "准备路径",
+        "focus": [
+          "mini",
+          "client",
+          "api",
+          "mysql"
+        ],
+        "note": "JWT 和当前家庭身份由 Backend 判定，staging 路径由服务端生成。"
+      },
+      {
+        "id": "upload",
+        "label": "直传文件",
+        "focus": [
+          "client",
+          "storage"
+        ],
+        "note": "图片字节走 wx.cloud.uploadFile；普通 JSON 调用仍走 callContainer。"
+      },
+      {
+        "id": "commit",
+        "label": "验货入库",
+        "focus": [
+          "client",
+          "api",
+          "storage",
+          "mysql"
+        ],
+        "note": "服务端下载真实文件、限制大小和格式、重存正式路径，再返回 File ID。"
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "mini",
+      "type": "frontend",
+      "label": "小程序页面",
+      "sublabel": "选择头像 / 封面"
+    },
+    {
+      "id": "client",
+      "type": "frontend",
+      "label": "httpClient.upload",
+      "sublabel": "统一传输封装"
+    },
+    {
+      "id": "api",
+      "type": "backend",
+      "label": "mealpilot-api",
+      "sublabel": "JWT · Family · 校验"
+    },
+    {
+      "id": "storage",
+      "type": "cloud",
+      "label": "CloudBase Storage",
+      "sublabel": "staging / final"
+    },
+    {
+      "id": "mysql",
+      "type": "database",
+      "label": "MySQL",
+      "sublabel": "用户 · 清理任务"
+    }
+  ],
+  "segments": [
+    {
+      "label": "Prepare · 服务端决定路径",
+      "to": 207,
+      "from": 160
+    },
+    {
+      "label": "Upload · 文件直传",
+      "to": 266,
+      "from": 215
+    },
+    {
+      "label": "Commit · 验证与入库",
+      "to": 448,
+      "from": 275
+    }
+  ],
+  "messages": [
+    {
+      "id": "prepare-request",
+      "from": "client",
+      "to": "api",
+      "y": 165,
+      "label": "POST /api/uploads/{kind}/prepare · JWT",
+      "variant": "emphasis"
+    },
+    {
+      "id": "return-path",
+      "from": "api",
+      "to": "client",
+      "y": 195,
+      "label": "cloudPath · 服务端 UUID",
+      "variant": "return"
+    },
+    {
+      "id": "upload-stage",
+      "from": "client",
+      "to": "storage",
+      "y": 225,
+      "label": "wx.cloud.uploadFile → staging/",
+      "variant": "emphasis"
+    },
+    {
+      "id": "return-file-id",
+      "from": "storage",
+      "to": "client",
+      "y": 255,
+      "label": "fileID",
+      "variant": "return"
+    },
+    {
+      "id": "commit-request",
+      "from": "client",
+      "to": "api",
+      "y": 285,
+      "label": "POST /api/uploads/{kind}/commit · JWT",
+      "variant": "emphasis"
+    },
+    {
+      "id": "lookup-job",
+      "from": "api",
+      "to": "mysql",
+      "y": 315,
+      "label": "校验 scope + prepare 记录",
+      "variant": "security"
+    },
+    {
+      "id": "download-stage",
+      "from": "api",
+      "to": "storage",
+      "y": 345,
+      "label": "downloadFile(fileID)",
+      "variant": "default"
+    },
+    {
+      "id": "promote",
+      "from": "api",
+      "to": "storage",
+      "y": 375,
+      "label": "验 magic bytes / ≤5MB；写 final/",
+      "variant": "security"
+    },
+    {
+      "id": "delete-stage",
+      "from": "api",
+      "to": "storage",
+      "y": 405,
+      "label": "删除 staging 文件",
+      "variant": "dashed"
+    },
+    {
+      "id": "return-result",
+      "from": "api",
+      "to": "client",
+      "y": 435,
+      "label": "201 user / coverFileId + coverUrl",
+      "variant": "return"
+    }
+  ],
+  "cards": [
+    {
+      "title": "业务边界",
+      "dot": "emerald",
+      "items": [
+        "前端直传 staging，Backend 下载后验真并重存正式文件",
+        "头像 commit 更新 users；菜谱封面保存时写入 recipes"
+      ]
+    },
+    {
+      "title": "发布检查",
+      "dot": "amber",
+      "items": [
+        "Storage 客户端规则尚未限制 staging/ 写入",
+        "孤儿 staging 文件与放弃保存的正式封面需清理"
+      ]
+    }
+  ]
+}
