@@ -39,7 +39,12 @@ async function processStorageCleanupJobs(database, cloudStorageService, limit = 
       await cloudStorageService.deleteFile(job.fileId)
       await database.execute('DELETE FROM storage_cleanup_jobs WHERE id = ?', [job.id])
       deleted += 1
-    } catch (_error) {
+    } catch (error) {
+      if (error && error.code === 'CLOUDBASE_STORAGE_NOT_FOUND_FAILED') {
+        await database.execute('DELETE FROM storage_cleanup_jobs WHERE id = ?', [job.id])
+        deleted += 1
+        continue
+      }
       await database.execute('UPDATE storage_cleanup_jobs SET attempts = attempts + 1, next_attempt_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL LEAST(24, POW(2, LEAST(attempts, 4))) HOUR) WHERE id = ?', [job.id])
       failed += 1
     }

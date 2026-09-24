@@ -237,6 +237,15 @@ test('the current administrator can rename the family while members cannot', asy
   })
 })
 
+test('PUT family name endpoint accepts the canonical update method', async () => {
+  const database = makeDatabase({ families: [{ ...familyA, admin_user_id: admin.id }], memberships: [{ family: { ...familyA, admin_user_id: admin.id }, user_id: admin.id, role: 'admin' }] })
+  await withServer(makeApp(database, admin), async baseUrl => {
+    const result = await call(baseUrl, '/api/families/current/name', { method: 'PUT', body: JSON.stringify({ name: '新名字' }) })
+    assert.equal(result.response.status, 200)
+    assert.equal(result.body.data.name, '新名字')
+  })
+})
+
 test('admins can transfer administrator identity and remove active members', async () => {
   const currentFamily = { ...familyA, admin_user_id: admin.id }
   const database = makeDatabase({ families: [currentFamily], memberships: [

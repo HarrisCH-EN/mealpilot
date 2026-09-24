@@ -86,3 +86,38 @@ test('media URL service resolves stable values in nested response items without 
   const result = await media.resolveRecords([{ id: 1, coverUrl: 'cloud://cover' }], { stableField: 'coverFileId', displayField: 'coverUrl' })
   assert.deepEqual(result, [{ id: 1, coverFileId: 'cloud://cover', coverUrl: 'https://temp.test/image' }])
 })
+
+test('storage refuses oversized staged files before downloading their contents', async () => {
+  const { createCloudStorageService } = require('../src/services/cloud-storage-service')
+  let downloads = 0
+  const sdk = { init() { return {
+    uploadFile: async () => ({}), getTempFileURL: async () => ({}), deleteFile: async () => ({}),
+    getFileInfo: async ({ fileList }) => ({ fileList: [{ fileID: fileList[0], code: 'SUCCESS', size: 5 * 1024 * 1024 + 1 }] }),
+    downloadFile: async () => { downloads += 1; return { fileContent: Buffer.alloc(0) } }
+  } } }
+  const storage = createCloudStorageService({ envId: 'env', fileIdPrefix: 'cloud://env.bucket', sdk })
+  await assert.rejects(storage.downloadBuffer('cloud://env.bucket/staging/users/7/avatars/id', 5 * 1024 * 1024), error => error.status === 413)
+  assert.equal(downloads, 0)
+})
+
+test('storage downloads the uploaded staging file as a Buffer', async () => {
+  const { createCloudStorageService } = require('../src/services/cloud-storage-service')
+  const sdk = { init() { return {
+    uploadFile: async () => ({ fileID: 'cloud://env.bucket/file' }),
+    getTempFileURL: async () => ({ fileList: [] }),
+    deleteFile: async () => ({ fileList: [] }),
+    getFileInfo: async ({ fileList }) => ({ fileList: [{ fileID: fileList[0], code: 'SUCCESS', size: 4 }] }),
+    downloadFile: async ({ fileID }) => {
+      assert.equal(fileID, 'cloud://env.bucket/staging/users/7/avatars/id')
+      return { fileContent: Buffer.from([0xff, 0xd8, 0xff, 0xd9]) }
+    }
+  } } }
+  const storage = createCloudStorageService({ envId: 'env', fileIdPrefix: 'cloud://env.bucket', sdk })
+  assert.deepEqual(await storage.downloadBuffer('cloud://env.bucket/staging/users/7/avatars/id', 5 * 1024 * 1024), Buffer.from([0xff, 0xd8, 0xff, 0xd9]))
+})
+
+test('storage surfaces a missing file from a per-file delete result', async () => {
+  const sdk = fakeSdk({ deleteFile: async ({ fileList }) => ({ fileList: [{ fileID: fileList[0], code: 'FILE_NOT_FOUND' }] }) })
+  const storage = createCloudStorageService({ envId: 'env-test', fileIdPrefix: 'cloud://env-test.bucket', sdk })
+  await assert.rejects(storage.deleteFile('cloud://env-test.bucket/staging/users/7/avatars/id'), error => error.code === 'CLOUDBASE_STORAGE_NOT_FOUND_FAILED')
+})

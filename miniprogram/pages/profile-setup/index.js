@@ -119,7 +119,7 @@ Page({
         })
       }
 
-      await request('/auth/profile', 'PATCH', { displayName })
+      await request('/auth/profile', 'PUT', { displayName })
       const session = await authService.restoreSession()
       if (session.profileComplete !== true) throw new Error('资料尚未完成，请确认头像和昵称后重试')
       this.redirectToHome()

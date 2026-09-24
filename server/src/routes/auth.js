@@ -21,10 +21,12 @@ function router({ authService, auth, devAuthEnabled }) {
     response.json({ ok: true, data: await authService.getSession({ user: request.user }) })
   }))
 
-  result.patch('/auth/profile', auth, asyncRoute(async (request, response) => {
+  const updateProfile = asyncRoute(async (request, response) => {
     requireFields(request.body, ['displayName'])
     response.json({ ok: true, data: await authService.updateProfile({ userId: request.user.id, displayName: request.body.displayName }) })
-  }))
+  })
+  result.put('/auth/profile', auth, updateProfile)
+  result.patch('/auth/profile', auth, updateProfile)
 
   result.delete('/auth/account', auth, asyncRoute(async (request, response) => {
     response.json({ ok: true, data: await authService.deleteAccount({ userId: request.user.id }) })

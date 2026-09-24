@@ -80,6 +80,17 @@ test('profile endpoint updates the authenticated display name and returns the fr
   })
 })
 
+test('PUT profile endpoint accepts the canonical update method', async () => {
+  const database = makeProfileDatabase()
+  await withServer(makeAuthRouterApp(database), async baseUrl => {
+    const response = await fetch(`${baseUrl}/api/auth/profile`, {
+      method: 'PUT', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ displayName: 'PUT 用户' })
+    })
+    assert.equal(response.status, 200)
+    assert.equal((await response.json()).data.user.display_name, 'PUT 用户')
+  })
+})
+
 test('current family members expose stable avatarFileId and temporary avatarUrl', async () => {
   const database = {
     async execute(sql) {

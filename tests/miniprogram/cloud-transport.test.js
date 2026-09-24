@@ -13,19 +13,8 @@ function createStore(token = 'jwt-token') {
 
 function cloudWx({ responses = [], failures = [] } = {}) {
   const calls = []
-  const reads = []
   return {
     calls,
-    reads,
-    getFileSystemManager() {
-      return {
-        readFile(options) {
-          reads.push(options)
-          const data = new Uint8Array([0xff, 0xd8, 0xff, 0xd9]).buffer
-          setTimeout(() => options.success({ data }), 0)
-        }
-      }
-    },
     cloud: {
       callContainer(options) {
         calls.push(options)
@@ -103,20 +92,27 @@ test('cloud transport failure preserves errMsg and code', async () => {
   })
 })
 
-test('cloud upload sends ArrayBuffer with JWT and returns the existing response shape', async () => {
-  const wx = cloudWx({ responses: [{ statusCode: 201, data: { ok: true, data: { coverFileId: 'cloud://cover', coverUrl: 'https://temp.test/cover' } } }] })
-  const client = createHttpClient({
-    transport: 'cloud', cloudEnvId: 'env', cloudServiceName: 'mealpilot-api', cloudApiPrefix: '/api', store: createStore(), wxApi: wx
-  })
-  const result = await client.upload('/uploads/recipe-cover', '/tmp/cover.jpg')
-  assert.deepEqual(result, { coverFileId: 'cloud://cover', coverUrl: 'https://temp.test/cover' })
-  assert.equal(wx.reads.length, 1)
-  assert.equal(wx.reads[0].filePath, '/tmp/cover.jpg')
-  assert.equal(wx.calls[0].path, '/api/uploads/recipe-cover')
-  assert.equal(wx.calls[0].header['X-WX-SERVICE'], 'mealpilot-api')
+test('cloud upload prepares, uploads with CloudBase, then commits without sending image bytes to Backend', async () => {
+  const wx = cloudWx({ responses: [
+    { statusCode: 200, data: { ok: true, data: { cloudPath: 'staging/users/7/avatars/server-uuid' } } },
+    { statusCode: 201, data: { ok: true, data: { user: { avatarFileId: 'cloud://bucket/users/7/avatars/final.png' } } } }
+  ] })
+  const uploads = []
+  wx.cloud.uploadFile = (options) => {
+    uploads.push(options)
+    options.success({ fileID: 'cloud://bucket/staging/users/7/avatars/server-uuid' })
+  }
+  wx.getFileSystemManager = () => { throw new Error('binary read must not be used') }
+  const client = createHttpClient({ transport: 'cloud', cloudEnvId: 'env', cloudServiceName: 'mealpilot-api', store: createStore(), wxApi: wx })
+  const result = await client.upload('/uploads/avatar', '/tmp/avatar.png')
+  assert.deepEqual(result, { user: { avatarFileId: 'cloud://bucket/users/7/avatars/final.png' } })
+  assert.deepEqual(wx.calls.map(call => call.path), ['/api/uploads/avatar/prepare', '/api/uploads/avatar/commit'])
   assert.equal(wx.calls[0].header.Authorization, 'Bearer jwt-token')
-  assert.equal(wx.calls[0].header['Content-Type'], 'application/octet-stream')
-  assert.equal(wx.calls[0].data instanceof ArrayBuffer, true)
+  assert.equal(wx.calls[1].header.Authorization, 'Bearer jwt-token')
+  assert.deepEqual(wx.calls[0].data, {})
+  assert.deepEqual(wx.calls[1].data, { fileId: 'cloud://bucket/staging/users/7/avatars/server-uuid' })
+  assert.equal(uploads[0].cloudPath, 'staging/users/7/avatars/server-uuid')
+  assert.equal(uploads[0].filePath, '/tmp/avatar.png')
 })
 
 test('production config requires cloud transport credentials and development accepts HTTP', () => {
@@ -243,33 +239,16 @@ test('concurrent cloud 401 responses share one reauthentication', async () => {
   assert.deepEqual(attempts, { '/api/recipes': 2, '/api/auth/me': 2 })
 })
 
-test('cloud avatar upload retries once after 401 and retains its user response', async () => {
-  const wx = cloudWx({ responses: [
-    { statusCode: 401, data: { ok: false } },
-    { statusCode: 201, data: { ok: true, data: { user: { id: 7, avatarFileId: 'cloud://avatar' } } } }
-  ] })
-  const store = createStore('expired-token')
-  let reauthCalls = 0
-  const client = createHttpClient({
-    transport: 'cloud', cloudEnvId: 'env', cloudServiceName: 'mealpilot-api', store, wxApi: wx,
-    reauthenticate: async () => { reauthCalls += 1; store.setSession({ token: 'fresh-token' }) }
-  })
-  assert.deepEqual(await client.upload('/uploads/avatar', '/tmp/avatar.png'), { user: { id: 7, avatarFileId: 'cloud://avatar' } })
-  assert.equal(wx.calls.length, 2)
-  assert.equal(wx.calls[1].header.Authorization, 'Bearer fresh-token')
-  assert.equal(reauthCalls, 1)
-})
-
-test('cloud upload reports local read errors without contacting Backend', async () => {
-  const wx = cloudWx()
-  wx.getFileSystemManager = () => ({ readFile(options) { options.fail({ errMsg: 'readFile:fail missing', code: 'ENOENT' }) } })
+test('cloud upload failure preserves errMsg and does not commit', async () => {
+  const wx = cloudWx({ responses: [{ statusCode: 200, data: { ok: true, data: { cloudPath: 'staging/families/10/recipes/id' } } }] })
+  wx.cloud.uploadFile = options => options.fail({ errMsg: 'cloud.uploadFile:fail denied', code: 'STORAGE_DENIED' })
   const client = createHttpClient({ transport: 'cloud', cloudEnvId: 'env', cloudServiceName: 'mealpilot-api', store: createStore(), wxApi: wx })
-  await assert.rejects(client.upload('/uploads/avatar', '/tmp/missing.png'), (error) => {
-    assert.equal(error.errMsg, 'readFile:fail missing')
-    assert.equal(error.code, 'ENOENT')
+  await assert.rejects(client.upload('/uploads/recipe-cover', '/tmp/cover.png'), error => {
+    assert.equal(error.errMsg, 'cloud.uploadFile:fail denied')
+    assert.equal(error.code, 'STORAGE_DENIED')
     return true
   })
-  assert.equal(wx.calls.length, 0)
+  assert.deepEqual(wx.calls.map(call => call.path), ['/api/uploads/recipe-cover/prepare'])
 })
 
 function launchApp(transport, cloud) {
@@ -292,14 +271,6 @@ function launchApp(transport, cloud) {
   definition.onLaunch()
   return { definition, warnings }
 }
-
-test('cloud upload rejects a non-ArrayBuffer file read before contacting Backend', async () => {
-  const wx = cloudWx()
-  wx.getFileSystemManager = () => ({ readFile(options) { options.success({ data: 'not binary data' }) } })
-  const client = createHttpClient({ transport: 'cloud', cloudEnvId: 'env', cloudServiceName: 'mealpilot-api', store: createStore(), wxApi: wx })
-  await assert.rejects(client.upload('/uploads/avatar', '/tmp/avatar.png'), (error) => error.code === 'FILE_READ_INVALID_DATA')
-  assert.equal(wx.calls.length, 0)
-})
 
 test('App initializes cloud only for cloud transport and keeps token when unavailable', () => {
   const initCalls = []

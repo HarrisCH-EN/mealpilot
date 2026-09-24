@@ -65,6 +65,39 @@ function createCloudStorageService({ envId, fileIdPrefix, sdk } = {}) {
     return { fileId }
   }
 
+  async function downloadBuffer(fileId, maxBytes) {
+    if (!isCloudFileId(fileId) || !fileId.startsWith(`${validateFileIdPrefix(fileIdPrefix)}/`)) throw storageError('path')
+    const app = getApp()
+    if (Number.isFinite(maxBytes) && maxBytes > 0) {
+      let info
+      try {
+        info = await app.getFileInfo({ fileList: [fileId] })
+      } catch (error) {
+        throw storageError(failureStage(error, 'info'))
+      }
+      const entry = info && Array.isArray(info.fileList) && info.fileList[0]
+      if (!entry || entry.fileID !== fileId || entry.code !== 'SUCCESS' || !Number.isSafeInteger(entry.size) || entry.size < 0) throw storageError('info')
+      if (entry.size > maxBytes) {
+        const error = storageError('size')
+        error.status = 413
+        throw error
+      }
+    }
+    let result
+    try {
+      result = await app.downloadFile({ fileID: fileId })
+    } catch (error) {
+      throw storageError(failureStage(error, 'download'))
+    }
+    if (!result || result.code || !Buffer.isBuffer(result.fileContent)) throw storageError(failureStage(result, 'download'))
+    if (Number.isFinite(maxBytes) && result.fileContent.length > maxBytes) {
+      const error = storageError('size')
+      error.status = 413
+      throw error
+    }
+    return result.fileContent
+  }
+
   async function getTemporaryUrl(fileId) {
     const result = await getTemporaryUrls([fileId])
     const value = result[fileId]
@@ -101,10 +134,11 @@ function createCloudStorageService({ envId, fileIdPrefix, sdk } = {}) {
     } catch (error) {
       throw storageError(failureStage(error, 'delete'))
     }
-    if (!result || result.code || (Array.isArray(result.fileList) && result.fileList.some((entry) => entry && entry.code && entry.code !== 'SUCCESS'))) throw storageError(failureStage(result, 'delete'))
+    const failedEntry = result && Array.isArray(result.fileList) && result.fileList.find((entry) => entry && entry.code && entry.code !== 'SUCCESS')
+    if (!result || result.code || failedEntry) throw storageError(failureStage(failedEntry || result, 'delete'))
   }
 
-  return { fileIdForPath, uploadBuffer, getTemporaryUrl, getTemporaryUrls, deleteFile }
+  return { fileIdForPath, uploadBuffer, downloadBuffer, getTemporaryUrl, getTemporaryUrls, deleteFile }
 }
 
 module.exports = { createCloudStorageService, isCloudFileId, storageError, MAX_TEMP_URL_BATCH }

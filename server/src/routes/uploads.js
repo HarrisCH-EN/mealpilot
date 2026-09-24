@@ -8,7 +8,7 @@ function router({ cloudStorageService, mediaUrlService, storageFileIdPrefix = ''
 
   result.post('/uploads/recipe-cover', auth, family, asyncRoute(async (request, response) => {
     requireStorage(cloudStorageService)
-    const file = await readUploadFile(request, maxBytes)
+    const file = await readMultipartFile(request, maxBytes)
     const extension = validateImage(file, maxBytes)
     const cloudPath = `families/${request.membership.family_id}/recipes/${crypto.randomUUID()}${extension}`
     const stored = await cloudStorageService.uploadBuffer({ cloudPath, buffer: file.buffer })
@@ -27,7 +27,7 @@ function router({ cloudStorageService, mediaUrlService, storageFileIdPrefix = ''
     const [oldRows] = await database.execute('SELECT avatar_url FROM users WHERE id = ?', [request.user.id])
     if (!oldRows[0]) throw new HttpError(401, '登录已失效')
     const oldFileId = String(oldRows[0].avatar_url || '').trim()
-    const file = await readUploadFile(request, maxBytes)
+    const file = await readMultipartFile(request, maxBytes)
     const extension = validateImage(file, maxBytes)
     const cloudPath = `users/${request.user.id}/avatars/${crypto.randomUUID()}${extension}`
     const stored = await cloudStorageService.uploadBuffer({ cloudPath, buffer: file.buffer })
@@ -45,7 +45,108 @@ function router({ cloudStorageService, mediaUrlService, storageFileIdPrefix = ''
     const user = { ...rows[0], avatarFileId: stored.fileId, avatar_url: displayUrl, avatarUrl: displayUrl }
     response.status(201).json({ ok: true, data: { user } })
   }))
+  result.post('/uploads/recipe-cover/prepare', auth, family, asyncRoute(async (request, response) => {
+    const cloudPath = await prepareStaging(database, cloudStorageService, `staging/families/${request.membership.family_id}/recipes`, 'family_recipe')
+    response.json({ ok: true, data: { cloudPath } })
+  }))
+
+  result.post('/uploads/recipe-cover/commit', auth, family, asyncRoute(async (request, response) => {
+    const fileId = await requireStagedFile(request, database, cloudStorageService, `staging/families/${request.membership.family_id}/recipes`, 'family_recipe')
+    const buffer = await downloadStagedImage(cloudStorageService, fileId, maxBytes)
+    const extension = validateImage({ buffer }, maxBytes)
+    const cloudPath = `families/${request.membership.family_id}/recipes/${crypto.randomUUID()}${extension}`
+    const stored = await cloudStorageService.uploadBuffer({ cloudPath, buffer })
+    let coverUrl
+    try {
+      coverUrl = await cloudStorageService.getTemporaryUrl(stored.fileId)
+    } catch (error) {
+      await bestEffortDelete(cloudStorageService, stored.fileId)
+      throw error
+    }
+    await cleanupStaging(database, cloudStorageService, fileId)
+    response.status(201).json({ ok: true, data: { coverFileId: stored.fileId, coverUrl } })
+  }))
+
+  result.post('/uploads/avatar/prepare', auth, asyncRoute(async (request, response) => {
+    if (!database) throw new HttpError(500, '头像服务未配置')
+    const cloudPath = await prepareStaging(database, cloudStorageService, `staging/users/${request.user.id}/avatars`, 'avatar')
+    response.json({ ok: true, data: { cloudPath } })
+  }))
+
+  result.post('/uploads/avatar/commit', auth, asyncRoute(async (request, response) => {
+    if (!database) throw new HttpError(500, '头像服务未配置')
+    const [oldRows] = await database.execute('SELECT avatar_url FROM users WHERE id = ?', [request.user.id])
+    if (!oldRows[0]) throw new HttpError(401, '登录已失效')
+    const oldFileId = String(oldRows[0].avatar_url || '').trim()
+    const fileId = await requireStagedFile(request, database, cloudStorageService, `staging/users/${request.user.id}/avatars`, 'avatar')
+    const buffer = await downloadStagedImage(cloudStorageService, fileId, maxBytes)
+    const extension = validateImage({ buffer }, maxBytes)
+    const cloudPath = `users/${request.user.id}/avatars/${crypto.randomUUID()}${extension}`
+    const stored = await cloudStorageService.uploadBuffer({ cloudPath, buffer })
+    let displayUrl
+    try {
+      displayUrl = await cloudStorageService.getTemporaryUrl(stored.fileId)
+      await database.execute('UPDATE users SET avatar_url = ? WHERE id = ?', [stored.fileId, request.user.id])
+    } catch (error) {
+      await bestEffortDelete(cloudStorageService, stored.fileId)
+      throw error
+    }
+    const [rows] = await database.execute('SELECT id, openid, display_name, avatar_url FROM users WHERE id = ?', [request.user.id])
+    if (!rows[0]) throw new HttpError(401, '登录已失效')
+    await deleteOldAvatar(cloudStorageService, oldFileId, storageFileIdPrefix, request.user.id)
+    await cleanupStaging(database, cloudStorageService, fileId)
+    const user = { ...rows[0], avatarFileId: stored.fileId, avatar_url: displayUrl, avatarUrl: displayUrl }
+    response.status(201).json({ ok: true, data: { user } })
+  }))
+
   return result
+}
+
+async function prepareStaging(database, storage, scope, kind) {
+  requireStaging(storage)
+  if (!database) throw new HttpError(500, '上传服务未配置')
+  const cloudPath = `${scope}/${crypto.randomUUID()}`
+  const fileId = storage.fileIdForPath(cloudPath)
+  await database.execute("INSERT IGNORE INTO storage_cleanup_jobs (file_id, kind, next_attempt_at) VALUES (?, ?, DATE_ADD(CURRENT_TIMESTAMP, INTERVAL 24 HOUR))", [fileId, kind])
+  return cloudPath
+}
+
+async function requireStagedFile(request, database, storage, scope, kind) {
+  requireStaging(storage)
+  if (!database) throw new HttpError(500, '上传服务未配置')
+  const fileId = request.body && request.body.fileId
+  const prefix = `${storage.fileIdForPath(scope)}/`
+  if (typeof fileId !== 'string' || !fileId.startsWith(prefix) || !/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(fileId.slice(prefix.length))) {
+    throw new HttpError(400, '上传文件路径无效')
+  }
+  const [jobs] = await database.execute('SELECT id FROM storage_cleanup_jobs WHERE file_id = ? AND kind = ? LIMIT 1', [fileId, kind])
+  if (!jobs[0]) throw new HttpError(400, '上传准备记录不存在或已过期')
+  return fileId
+}
+
+async function downloadStagedImage(storage, fileId, maxBytes) {
+  try {
+    return await storage.downloadBuffer(fileId, maxBytes)
+  } catch (error) {
+    if (error && error.code === 'CLOUDBASE_STORAGE_SIZE_FAILED') throw new HttpError(413, '图片不能超过 5MB')
+    throw error
+  }
+}
+
+async function cleanupStaging(database, storage, fileId) {
+  try {
+    await storage.deleteFile(fileId)
+    await database.execute('DELETE FROM storage_cleanup_jobs WHERE file_id = ?', [fileId])
+  } catch (error) {
+    console.warn('[MealPilot Storage Warning]', { operation: 'delete-staging', errorCode: error && error.code || 'CLOUDBASE_STORAGE_DELETE_FAILED' })
+  }
+}
+
+function requireStaging(storage) {
+  requireStorage(storage)
+  if (typeof storage.fileIdForPath !== 'function' || typeof storage.downloadBuffer !== 'function' || typeof storage.deleteFile !== 'function') {
+    throw new HttpError(503, '图片存储服务未配置')
+  }
 }
 
 function requireStorage(cloudStorageService) {
@@ -94,14 +195,6 @@ async function readMultipartFile(request, maxBytes) {
     cursor = nextBoundary
   }
   throw new HttpError(400, '请选择要上传的图片')
-}
-
-async function readUploadFile(request, maxBytes) {
-  const contentType = String(request.headers['content-type'] || '').toLowerCase()
-  if (contentType.startsWith('application/octet-stream')) {
-    return { filename: 'upload', mime: 'application/octet-stream', buffer: await readRequestBody(request, maxBytes) }
-  }
-  return readMultipartFile(request, maxBytes)
 }
 
 function readRequestBody(request, maxBytes) {

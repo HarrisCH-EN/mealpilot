@@ -192,3 +192,16 @@ test('the administrator archives a family, all members leave, and only that admi
   assert.equal(database.state.memberships.find((item) => item.user_id === 1).status, 'left')
   assert.notEqual(database.state.families[0].invite_code, 'Old123')
 })
+
+test('staging cleanup considers a file that was never uploaded already removed', async () => {
+  const { processStorageCleanupJobs } = require('../src/services/family-lifecycle-service')
+  const queries = []
+  const database = { async execute(sql, params) {
+    queries.push({ sql, params })
+    return /SELECT id, file_id/.test(sql) ? [[{ id: 12, fileId: 'cloud://env.bucket/staging/users/7/avatars/id', attempts: 0 }]] : [{ affectedRows: 1 }]
+  } }
+  const storage = { async deleteFile() { throw Object.assign(new Error('not found'), { code: 'CLOUDBASE_STORAGE_NOT_FOUND_FAILED' }) } }
+  assert.deepEqual(await processStorageCleanupJobs(database, storage), { deleted: 1, failed: 0 })
+  assert.match(queries[1].sql, /^DELETE FROM storage_cleanup_jobs/)
+  assert.deepEqual(queries[1].params, [12])
+})

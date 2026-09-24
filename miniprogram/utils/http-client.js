@@ -131,19 +131,21 @@ function createHttpClient({
     }
   }
 
-  function readFileAsArrayBuffer(filePath) {
+  function uploadToCloud(cloudPath, filePath) {
     return new Promise((resolve, reject) => {
+      const cloud = wxApi && wxApi.cloud
+      if (!cloud || typeof cloud.uploadFile !== 'function') {
+        reject(createTransportError({ code: 'CLOUD_UPLOAD_UNAVAILABLE' }, '微信云存储上传 API 不可用'))
+        return
+      }
       try {
-        const manager = wxApi && typeof wxApi.getFileSystemManager === 'function' ? wxApi.getFileSystemManager() : null
-        if (!manager || typeof manager.readFile !== 'function') {
-          reject(createTransportError({ code: 'FILE_SYSTEM_UNAVAILABLE' }, '微信文件系统 API 不可用'))
-          return
-        }
-        manager.readFile({
+        cloud.uploadFile({
+          cloudPath,
           filePath,
           success: (result) => {
-            if (result && result.data instanceof ArrayBuffer) return resolve(result.data)
-            reject(createTransportError({ code: 'FILE_READ_INVALID_DATA' }, '读取图片未返回 ArrayBuffer'))
+            const fileId = result && (result.fileID || result.fileId)
+            if (!fileId) return reject(createTransportError({ code: 'CLOUD_UPLOAD_INVALID_RESPONSE' }, '云存储未返回 File ID'))
+            resolve(fileId)
           },
           fail: (error) => reject(createTransportError(error))
         })
@@ -153,10 +155,12 @@ function createHttpClient({
     })
   }
 
-  async function performUpload(path, filePath, token) {
+  async function performUpload(path, filePath, token, options = {}) {
     if (transport === 'cloud') {
-      const data = await readFileAsArrayBuffer(filePath)
-      return callTransport({ method: 'POST', path, data, header: headersFor(token, { 'Content-Type': 'application/octet-stream' }) })
+      const prepared = await request(path + '/prepare', 'POST', {}, options)
+      if (!prepared || !prepared.cloudPath) throw createTransportError({ code: 'CLOUD_PREPARE_INVALID_RESPONSE' }, '上传准备响应无效')
+      const fileId = await uploadToCloud(prepared.cloudPath, filePath)
+      return request(path + '/commit', 'POST', { fileId }, options)
     }
     return new Promise((resolve, reject) => {
       if (!wxApi || typeof wxApi.uploadFile !== 'function') {
@@ -181,6 +185,7 @@ function createHttpClient({
   async function upload(path, filePath, fallbackMessage = '上传失败', options = {}) {
     const token = store && store.getState ? store.getState().token : ''
     if (!token && !options.skipAuth) return Promise.reject(Object.assign(new Error('请先登录'), { status: 401, code: 'AUTH_REQUIRED' }))
+    if (transport === 'cloud') return performUpload(path, filePath, token, options)
     try {
       const response = await performUpload(path, filePath, token)
       return parseUploadResponse(response, fallbackMessage)

@@ -65,7 +65,7 @@ Page({
     if (!result.confirm || !result.content || !result.content.trim()) return
     this.setData({ actionLoading: true })
     try {
-      await request('/families/current/name', 'PATCH', { name: result.content.trim() })
+      await request('/families/current/name', 'PUT', { name: result.content.trim() })
       await this.loadFamily()
     } catch (error) {
       wx.showToast({ title: error.message || '修改失败', icon: 'none' })

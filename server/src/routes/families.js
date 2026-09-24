@@ -80,13 +80,15 @@ function router({ database, auth, family, familyAdmin = requireFamilyAdmin(datab
       response.json({ ok: true, data: { ...membership, members: resolvedMembers } })
   }))
 
-  result.patch('/families/current/name', auth, familyAdmin, asyncRoute(async (request, response) => {
+  const updateFamilyName = asyncRoute(async (request, response) => {
     requireFields(request.body, ['name'])
     const name = String(request.body.name).trim()
     if (name.length > 40) throw new HttpError(400, '家庭名称不能超过40个字符')
     await database.execute('UPDATE families SET name = ? WHERE id = ?', [name, request.membership.family_id])
     response.json({ ok: true, data: { familyId: request.membership.family_id, name } })
-  }))
+  })
+  result.put('/families/current/name', auth, familyAdmin, updateFamilyName)
+  result.patch('/families/current/name', auth, familyAdmin, updateFamilyName)
 
   result.get('/families/current/invite-code', auth, family, asyncRoute(async (request, response) => {
     response.json({ ok: true, data: { inviteCode: request.membership.invite_code } })

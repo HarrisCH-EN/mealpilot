@@ -202,7 +202,7 @@ test('editing the display name persists it and refreshes the account session', a
   await harness.modals[0].success({ confirm: true, content: '新名字' })
 
   assert.equal(receivedRequest.pathName, '/auth/profile')
-  assert.equal(receivedRequest.method, 'PATCH')
+  assert.equal(receivedRequest.method, 'PUT')
   assert.equal(receivedRequest.data.displayName, '新名字')
   assert.equal(harness.context.data.user.display_name, '新名字')
   assert.equal(harness.store.getState().user.display_name, '新名字')
@@ -247,7 +247,7 @@ test('account profile exposes a right-side edit button with avatar and name edit
   assert.match(script, /editProfile\(\)/)
   assert.match(script, /wx\.showActionSheet/)
   assert.match(script, /wx\.chooseMedia|wx\.chooseImage/)
-  assert.match(script, /request\(\s*['"]\/auth\/profile['"]\s*,\s*['"]PATCH['"]/) 
+  assert.match(script, /request\(\s*['"]\/auth\/profile['"]\s*,\s*['"]PUT['"]/)
   assert.match(script, /uploadAvatar\(/)
   assert.match(api, /uploadAvatar:/)
   assert.match(styles, /\.account-profile__edit\s*\{[^}]*width:\s*64rpx;[^}]*flex:\s*0 0 64rpx;[^}]*margin:\s*0 0 0 auto;/s)

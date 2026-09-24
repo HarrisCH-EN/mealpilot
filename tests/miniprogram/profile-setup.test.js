@@ -24,7 +24,7 @@ test('profile setup is a registered authenticated page using current WeChat prof
   assert.match(template, /type="nickname"/)
   assert.match(template, /bindinput="onNicknameInput"/)
   assert.match(script, /uploadAvatar\(/)
-  assert.match(script, /request\(['"]\/auth\/profile['"],\s*['"]PATCH['"]/) 
+  assert.match(script, /request\(['"]\/auth\/profile['"],\s*['"]PUT['"]/)
   assert.match(script, /authService\.restoreSession\(\)/)
   assert.match(script, /profileComplete/)
   assert.doesNotMatch(template, /getUserInfo|scope\.userInfo/)

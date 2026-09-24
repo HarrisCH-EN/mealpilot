@@ -144,7 +144,7 @@ Page({
         }
         this.setData({ profileUpdating: true })
         try {
-          const data = await request('/auth/profile', 'PATCH', { displayName })
+          const data = await request('/auth/profile', 'PUT', { displayName })
           this.applyUser(data && data.user)
           wx.showToast({ title: '名字已更新', icon: 'success' })
         } catch (error) {
