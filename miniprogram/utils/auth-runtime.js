@@ -1,4 +1,11 @@
-const { apiBaseUrl, allowDevLogin } = require('../config')
+const {
+  apiBaseUrl,
+  allowDevLogin,
+  transport,
+  cloudEnvId,
+  cloudServiceName,
+  cloudApiPrefix
+} = require('../config')
 const { createAuthStore } = require('./auth-store')
 const { createWechatAuth } = require('./wechat-auth')
 const { createHttpClient } = require('./http-client')
@@ -25,8 +32,15 @@ const store = createAuthStore({
 let authService
 const httpClient = createHttpClient({
   baseUrl: apiBaseUrl,
+
+  transport,
+  cloudEnvId,
+  cloudServiceName,
+  cloudApiPrefix,
+
   store,
   wxApi,
+
   reauthenticate: () => authService.reauthenticate()
 })
 authService = createAuthService({ store, wechatAuth: createWechatAuth({ wxApi }), httpClient, allowDevLogin })

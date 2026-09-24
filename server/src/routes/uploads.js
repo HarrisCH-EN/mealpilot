@@ -8,7 +8,7 @@ function router({ cloudStorageService, mediaUrlService, storageFileIdPrefix = ''
 
   result.post('/uploads/recipe-cover', auth, family, asyncRoute(async (request, response) => {
     requireStorage(cloudStorageService)
-    const file = await readMultipartFile(request, maxBytes)
+    const file = await readUploadFile(request, maxBytes)
     const extension = validateImage(file, maxBytes)
     const cloudPath = `families/${request.membership.family_id}/recipes/${crypto.randomUUID()}${extension}`
     const stored = await cloudStorageService.uploadBuffer({ cloudPath, buffer: file.buffer })
@@ -27,7 +27,7 @@ function router({ cloudStorageService, mediaUrlService, storageFileIdPrefix = ''
     const [oldRows] = await database.execute('SELECT avatar_url FROM users WHERE id = ?', [request.user.id])
     if (!oldRows[0]) throw new HttpError(401, '登录已失效')
     const oldFileId = String(oldRows[0].avatar_url || '').trim()
-    const file = await readMultipartFile(request, maxBytes)
+    const file = await readUploadFile(request, maxBytes)
     const extension = validateImage(file, maxBytes)
     const cloudPath = `users/${request.user.id}/avatars/${crypto.randomUUID()}${extension}`
     const stored = await cloudStorageService.uploadBuffer({ cloudPath, buffer: file.buffer })
@@ -94,6 +94,14 @@ async function readMultipartFile(request, maxBytes) {
     cursor = nextBoundary
   }
   throw new HttpError(400, '请选择要上传的图片')
+}
+
+async function readUploadFile(request, maxBytes) {
+  const contentType = String(request.headers['content-type'] || '').toLowerCase()
+  if (contentType.startsWith('application/octet-stream')) {
+    return { filename: 'upload', mime: 'application/octet-stream', buffer: await readRequestBody(request, maxBytes) }
+  }
+  return readMultipartFile(request, maxBytes)
 }
 
 function readRequestBody(request, maxBytes) {

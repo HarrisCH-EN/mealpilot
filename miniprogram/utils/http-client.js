@@ -1,8 +1,29 @@
+function createTransportError(error, fallback = '网络请求失败') {
+  const message = String(
+    error && (error.errMsg || error.message) || fallback
+  ).trim()
+
+  const wrapped = new Error(message || fallback)
+
+  wrapped.code =
+    error && error.code ||
+    'NETWORK_REQUEST_FAILED'
+
+  wrapped.errMsg =
+    error && error.errMsg ||
+    ''
+
+  if (error && error.statusCode) wrapped.status = Number(error.statusCode) || 0
+
+  return wrapped
+}
+
 function createHttpError(response, fallbackMessage = '请求失败') {
   const body = response && response.data && typeof response.data === 'object' ? response.data : {}
   const error = new Error(body.message || fallbackMessage)
   error.status = Number(response && response.statusCode) || 0
   error.code = body.code || ''
+  error.errMsg = response && response.errMsg || ''
   return error
 }
 
@@ -20,8 +41,55 @@ function parseUploadResponse(response, fallbackMessage) {
   throw error
 }
 
-function createHttpClient({ baseUrl, store, wxApi = typeof wx === 'undefined' ? null : wx, reauthenticate = null, onAuthenticationFailure = null } = {}) {
+function normalizeCloudPath(prefix, path) {
+  const normalizedPrefix = String(prefix || '/api').trim().replace(/\/+$/, '') || '/api'
+  const normalizedPath = `/${String(path || '').replace(/^\/+/, '')}`
+  return normalizedPath === normalizedPrefix || normalizedPath.startsWith(`${normalizedPrefix}/`)
+    ? normalizedPath
+    : normalizedPrefix + normalizedPath
+}
+
+function createHttpClient({
+  baseUrl,
+  transport = 'http',
+  cloudEnvId = '',
+  cloudServiceName = '',
+  cloudApiPrefix = '/api',
+  store,
+  wxApi = typeof wx === 'undefined' ? null : wx,
+  reauthenticate = null,
+  onAuthenticationFailure = null
+} = {}) {
   let reauthPromise = null
+
+  function callTransport(payload) {
+    return new Promise((resolve, reject) => {
+      const isCloud = transport === 'cloud'
+      const api = isCloud ? wxApi && wxApi.cloud && wxApi.cloud.callContainer : wxApi && wxApi.request
+      if (typeof api !== 'function') {
+        const code = isCloud ? 'CLOUD_TRANSPORT_UNAVAILABLE' : 'HTTP_TRANSPORT_UNAVAILABLE'
+        reject(createTransportError({ code }, isCloud ? '微信云容器 API 不可用' : '微信网络 API 不可用'))
+        return
+      }
+      try {
+        api.call(isCloud ? wxApi.cloud : wxApi, {
+          ...payload,
+          ...(isCloud ? { config: { env: cloudEnvId }, path: normalizeCloudPath(cloudApiPrefix, payload.path) } : { url: baseUrl + payload.path }),
+          success: resolve,
+          fail: (error) => reject(createTransportError(error))
+        })
+      } catch (error) {
+        reject(createTransportError(error))
+      }
+    })
+  }
+
+  function headersFor(token, extra = {}) {
+    const headers = { ...extra }
+    if (transport === 'cloud') headers['X-WX-SERVICE'] = cloudServiceName
+    if (token) headers.Authorization = 'Bearer ' + token
+    return headers
+  }
 
   function recoverAuthentication() {
     if (!reauthenticate) return Promise.reject(Object.assign(new Error('登录已失效，请重新登录'), { status: 401, code: 'AUTH_SESSION_EXPIRED' }))
@@ -29,68 +97,108 @@ function createHttpClient({ baseUrl, store, wxApi = typeof wx === 'undefined' ? 
     return reauthPromise
   }
 
-  function request(path, method = 'GET', data = {}, options = {}) {
+  async function request(path, method = 'GET', data = {}, options = {}) {
     const token = store && store.getState ? store.getState().token : ''
     const isAuthEndpoint = /^\/auth\/(wechat-login|dev-login)$/.test(path)
     if (!options.skipAuth && !isAuthEndpoint && !token) {
       return Promise.reject(Object.assign(new Error('请先登录'), { status: 401, code: 'AUTH_REQUIRED' }))
     }
-    if (!wxApi || typeof wxApi.request !== 'function') return Promise.reject(new Error('微信网络 API 不可用'))
-    return new Promise((resolve, reject) => wxApi.request({
-      url: baseUrl + path,
-      method,
-      data,
-      header: token ? { Authorization: 'Bearer ' + token } : {},
-      success: async (response) => {
-        if (response.statusCode >= 200 && response.statusCode < 300 && (!response.data || response.data.ok !== false)) {
-          return resolve(response.data && Object.prototype.hasOwnProperty.call(response.data, 'data') ? response.data.data : response.data)
-        }
-        const error = createHttpError(response)
-        if (error.status !== 401 || options.skipReauth || options.retried) return reject(error)
-        try {
-          await recoverAuthentication()
-          return resolve(await request(path, method, data, { ...options, skipReauth: true, retried: true }))
-        } catch (_reauthError) {
-          if (store && typeof store.clear === 'function') store.clear()
-          const expired = Object.assign(new Error('登录已失效，请重新登录'), { status: 401, code: 'AUTH_SESSION_EXPIRED' })
-          if (typeof onAuthenticationFailure === 'function') onAuthenticationFailure(expired)
-          return reject(expired)
-        }
-      },
-      fail: reject
-    }))
+    try {
+      const response = await callTransport({
+        method,
+        data,
+        path,
+        header: headersFor(token, options.header || {})
+      })
+      if (response.statusCode >= 200 && response.statusCode < 300 && (!response.data || response.data.ok !== false)) {
+        return response.data && Object.prototype.hasOwnProperty.call(response.data, 'data') ? response.data.data : response.data
+      }
+      const error = createHttpError(response)
+      if (error.status !== 401 || options.skipReauth || options.retried) throw error
+      try {
+        await recoverAuthentication()
+        return await request(path, method, data, { ...options, skipReauth: true, retried: true })
+      } catch (_reauthError) {
+        if (store && typeof store.clear === 'function') store.clear()
+        const expired = Object.assign(new Error('登录已失效，请重新登录'), { status: 401, code: 'AUTH_SESSION_EXPIRED' })
+        if (typeof onAuthenticationFailure === 'function') onAuthenticationFailure(expired)
+        throw expired
+      }
+    } catch (error) {
+      throw error && (error.status !== undefined || error.code === 'AUTH_REQUIRED' || error.code === 'AUTH_SESSION_EXPIRED')
+        ? error
+        : createTransportError(error)
+    }
   }
 
-  function upload(path, filePath, fallbackMessage = '上传失败', options = {}) {
+  function readFileAsArrayBuffer(filePath) {
+    return new Promise((resolve, reject) => {
+      try {
+        const manager = wxApi && typeof wxApi.getFileSystemManager === 'function' ? wxApi.getFileSystemManager() : null
+        if (!manager || typeof manager.readFile !== 'function') {
+          reject(createTransportError({ code: 'FILE_SYSTEM_UNAVAILABLE' }, '微信文件系统 API 不可用'))
+          return
+        }
+        manager.readFile({
+          filePath,
+          success: (result) => {
+            if (result && result.data instanceof ArrayBuffer) return resolve(result.data)
+            reject(createTransportError({ code: 'FILE_READ_INVALID_DATA' }, '读取图片未返回 ArrayBuffer'))
+          },
+          fail: (error) => reject(createTransportError(error))
+        })
+      } catch (error) {
+        reject(createTransportError(error))
+      }
+    })
+  }
+
+  async function performUpload(path, filePath, token) {
+    if (transport === 'cloud') {
+      const data = await readFileAsArrayBuffer(filePath)
+      return callTransport({ method: 'POST', path, data, header: headersFor(token, { 'Content-Type': 'application/octet-stream' }) })
+    }
+    return new Promise((resolve, reject) => {
+      if (!wxApi || typeof wxApi.uploadFile !== 'function') {
+        reject(createTransportError({ code: 'HTTP_UPLOAD_UNAVAILABLE' }, '微信上传 API 不可用'))
+        return
+      }
+      try {
+        wxApi.uploadFile({
+          url: baseUrl + path,
+          filePath,
+          name: 'file',
+          header: headersFor(token),
+          success: resolve,
+          fail: (error) => reject(createTransportError(error))
+        })
+      } catch (error) {
+        reject(createTransportError(error))
+      }
+    })
+  }
+
+  async function upload(path, filePath, fallbackMessage = '上传失败', options = {}) {
     const token = store && store.getState ? store.getState().token : ''
     if (!token && !options.skipAuth) return Promise.reject(Object.assign(new Error('请先登录'), { status: 401, code: 'AUTH_REQUIRED' }))
-    if (!wxApi || typeof wxApi.uploadFile !== 'function') return Promise.reject(new Error('微信上传 API 不可用'))
-    return new Promise((resolve, reject) => wxApi.uploadFile({
-      url: baseUrl + path,
-      filePath,
-      name: 'file',
-      header: token ? { Authorization: 'Bearer ' + token } : {},
-      success: async (response) => {
-        try {
-          return resolve(parseUploadResponse(response, fallbackMessage))
-        } catch (error) {
-          if (error.status !== 401 || options.skipReauth || options.retried) return reject(error)
-          try {
-            await recoverAuthentication()
-            return resolve(await upload(path, filePath, fallbackMessage, { ...options, skipReauth: true, retried: true }))
-          } catch (_reauthError) {
-            if (store && typeof store.clear === 'function') store.clear()
-            const expired = Object.assign(new Error('登录已失效，请重新登录'), { status: 401, code: 'AUTH_SESSION_EXPIRED' })
-            if (typeof onAuthenticationFailure === 'function') onAuthenticationFailure(expired)
-            return reject(expired)
-          }
-        }
-      },
-      fail: reject
-    }))
+    try {
+      const response = await performUpload(path, filePath, token)
+      return parseUploadResponse(response, fallbackMessage)
+    } catch (error) {
+      if (error.status !== 401 || options.skipReauth || options.retried) throw error
+      try {
+        await recoverAuthentication()
+        return upload(path, filePath, fallbackMessage, { ...options, skipReauth: true, retried: true })
+      } catch (_reauthError) {
+        if (store && typeof store.clear === 'function') store.clear()
+        const expired = Object.assign(new Error('登录已失效，请重新登录'), { status: 401, code: 'AUTH_SESSION_EXPIRED' })
+        if (typeof onAuthenticationFailure === 'function') onAuthenticationFailure(expired)
+        throw expired
+      }
+    }
   }
 
   return { request, upload, parseUploadResponse }
 }
 
-module.exports = { createHttpClient, createHttpError, parseUploadResponse }
+module.exports = { createHttpClient, createHttpError, parseUploadResponse, createTransportError, normalizeCloudPath }
